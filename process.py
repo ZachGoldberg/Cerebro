@@ -11,18 +11,18 @@ def GetSystemCPUUsage():
     Read out an array of info from /proc/stat
     utime, nicetime, stime, idle, iowate, irq, softiq
     """
-    cpuStats = file("/proc/stat", "r").readline()
-    columns = cpuStats.replace("cpu", "").split(" ")
+    cpu_stats = file("/proc/stat", "r").readline()
+    columns = cpu_stats.replace("cpu", "").split(" ")
     return map(int, filter(None, columns))
 
 
 def GetProcCPUUsage(pid):
     """
-    Read out an array of info from /proc/stat
+    Read out an array of info from /proc/pid/stat
     utime, nicetime, stime, idle, iowate, irq, softiq
     """
-    cpuStats = file("/proc/%d/stat" % pid, "r").readline()
-    columns = cpuStats.split(" ")
+    cpu_stats = file("/proc/%d/stat" % pid, "r").readline()
+    columns = cpu_stats.split(" ")
     return map(int, [columns[13], 0, columns[14], 0, 0, 0, 0])
 
 
