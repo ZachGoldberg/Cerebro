@@ -9,7 +9,11 @@ class Process(object):
         self.pid = pid
 
     def IsAlive(self):
-        return os.WIFEXITED(self.pid)
+        try:
+            os.waitpid(self.pid, os.WNOHANG)
+            return True
+        except OSError:
+            return False
 
     def WaitForCompletion(self):
         return os.waitpid(self.pid, 0)

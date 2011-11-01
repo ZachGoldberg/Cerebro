@@ -9,17 +9,18 @@ class Constraint(object):
         self.name = name
         self.value = value
 
-    def check_violation(self, child_proc):
+    def CheckViolation(self, child_proc):
+        print "check generic violation %s" % child_proc.pid
         return 0
 
 
 class CPUConstraint(Constraint):
 
     def __init__(self, cpu_limit):
-        super(self, CPUConstraint).__init__("CPU Based Constraint",
+        super(CPUConstraint, self).__init__("CPU Based Constraint",
                                              cpu_limit)
 
-    def check_violation(self, child_proc):
+    def CheckViolation(self, child_proc):
         print child_proc
         print "CPU Usage:"
 
@@ -27,9 +28,9 @@ class CPUConstraint(Constraint):
 class MemoryConstraint(Constraint):
 
     def __init__(self, mem_limit):
-        super(self, CPUConstraint).__init__("Memory Based Constraint",
+        super(MemoryConstraint, self).__init__("Memory Based Constraint",
                                              mem_limit)
 
-    def check_violation(self, child_proc):
+    def CheckViolation(self, child_proc):
         print child_proc
         print "Memory Usage:"
