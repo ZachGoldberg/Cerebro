@@ -1,2 +1,2 @@
 #!/bin/bash
-nosetests test/
+nosetests test/ -v  $@

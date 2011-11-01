@@ -2,6 +2,7 @@
 A class to encapsulate data about a process
 """
 import os
+import resource
 import signal
 import time
 
@@ -17,6 +18,7 @@ class Process(object):
         self.system_usage = None
         self.last_system_usage = None
         self.cpu_usage = 0
+        self.mem_usage = None
 
     def IsAlive(self):
         try:
@@ -50,6 +52,13 @@ class Process(object):
         cpu_stats = file("/proc/%d/stat" % self.pid, "r").readline()
         columns = cpu_stats.split(" ")
         return map(int, [columns[13], 0, columns[14], 0, 0, 0, 0])
+
+    def GetProcMemUsage(self):
+        mem_stats = file("/proc/%d/stat" % self.pid, "r").readline()
+        columns = mem_stats.split(" ")
+        print columns
+        return [int(columns[22]), (int(columns[23])
+                                   * resource.getpagesize())]
 
     def CalculateCPUUsage(self):
         """
@@ -105,9 +114,14 @@ class Process(object):
             self.previous_update_time = self.last_usage_update
             self.last_usage_update = now
             self.last_usage = self.usage
-            self.usage = self.GetProcCPUUsage()
-            self.last_system_usage = self.system_usage
-            self.system_usage = Process.GetSystemCPUUsage()
+            try:
+                self.usage = self.GetProcCPUUsage()
+                self.last_system_usage = self.system_usage
+                self.system_usage = Process.GetSystemCPUUsage()
+                self.mem_usage = self.GetProcMemUsage()
+            except IOError:
+                # Process died and /proc/PID no longer exists
+                return
 
             self.CalculateCPUUsage()
 

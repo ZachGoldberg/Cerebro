@@ -35,8 +35,16 @@ class CPUConstraint(Constraint):
 class MemoryConstraint(Constraint):
 
     def __init__(self, mem_limit):
+        # convert MB to bytes
+        mem_limit = int(mem_limit) * 1024 * 1024
         super(MemoryConstraint, self).__init__("Memory Based Constraint",
                                              mem_limit)
 
     def CheckViolation(self, child_proc):
-        child_proc.UpdateUsage()
+        if child_proc.UpdateUsage():
+            print child_proc.mem_usage
+            print self.value
+            if child_proc.mem_usage[1] > self.value:
+                print "Memory Limit Exceeded"
+                return True
+            return False
