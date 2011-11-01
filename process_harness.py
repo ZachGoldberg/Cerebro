@@ -15,7 +15,6 @@ class ProcessHarness(object):
         while True:
             # Check that child PID still exists
             if not self.child_proc.IsAlive():
-                print "Child Died"
                 return
 
             for constraint in self.constraints:

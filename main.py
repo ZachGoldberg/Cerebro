@@ -76,10 +76,15 @@ def BuildConstraints(args):
     return proc_constraints
 
 
-def main():
+def main(sys_args=None):
     """Run the task sitter."""
 
-    args = ParseArgs(sys.argv[1:])
+    if not sys_args:
+        sys_args = sys.argv[1:]
+
+    print sys_args
+
+    args = ParseArgs(sys_args)
     constraints = BuildConstraints(args)
 
     #StartHTTPMonitor()

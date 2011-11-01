@@ -21,7 +21,6 @@ class CPUConstraint(Constraint):
                                              cpu_limit)
 
     def CheckViolation(self, child_proc):
-        print child_proc
         print "CPU Usage:"
 
 
@@ -32,5 +31,4 @@ class MemoryConstraint(Constraint):
                                              mem_limit)
 
     def CheckViolation(self, child_proc):
-        print child_proc
         print "Memory Usage:"
