@@ -2,3 +2,4 @@ Implement restarting and alerting limits
 Implement HTTP Watcher
 Implement 'flexible' limits, aka how long a process can be in
    violation before its killed
+Add Logging
