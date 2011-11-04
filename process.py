@@ -33,7 +33,11 @@ class Process(object):
         os.killpg(self.pid, signal.SIGKILL)
 
     def WaitForCompletion(self):
-        return os.waitpid(self.pid, 0)
+        try:
+            return os.waitpid(self.pid, 0)
+        except OSError:
+            # child already exited
+            return 0, 0
 
     @classmethod
     def GetSystemCPUUsage(klass):
@@ -46,16 +50,39 @@ class Process(object):
         columns = cpu_stats.replace("cpu", "").split(" ")
         return map(int, filter(None, columns))
 
-    def GetProcCPUUsage(self):
+    def GetProcCPUUsage(self, deep=False):
         """
         Read out an array of info from /proc/pid/stat
         utime, nicetime, stime, idle, iowate, irq, softiq
         """
-        cpu_stats = file("/proc/%d/stat" % self.pid, "r").readline()
-        columns = cpu_stats.split(" ")
-        return map(int, [columns[13], 0, columns[14], 0, 0, 0, 0])
 
-    def GetProcMemUsage(self, deepmem=False):
+        def get_proc_cpu(pid, pgrp=None):
+            cpu_stats = file("/proc/%d/stat" % pid, "r").readline()
+            columns = cpu_stats.split(" ")
+            if not pgrp or pgrp == int(columns[4]):
+                return map(int, [columns[13], 0, columns[14], 0, 0, 0, 0])
+            else:
+                return [0] * 7
+
+        if not deep:
+            return get_proc_cpu(self.pid)
+
+        # Deep means get the cpu usage for all processes in our pgrp
+        # Best way I can figure to do this is to check ALL procs in
+        # the kernel process table, sadface.
+        cpu_usage = [0] * 7
+        for proc in os.listdir('/proc'):
+            try:
+                usage = get_proc_cpu(int(proc), self.pid)
+                for index, i in enumerate(usage):
+                    cpu_usage[index] += i
+            except ValueError:
+                # proc isn't a pid
+                pass
+
+        return cpu_usage
+
+    def GetProcMemUsage(self, deep=False):
 
         def get_proc_mem(pid, pgrp=None):
             mem_stats = file("/proc/%d/stat" % pid, "r").readline()
@@ -66,10 +93,10 @@ class Process(object):
             else:
                 return [0, 0]
 
-        if not deepmem:
+        if not deep:
             return get_proc_mem(self.pid)
 
-        # Deepmem means get the memory for all processes in our pgrp
+        # Deep means get the memory for all processes in our pgrp
         # Best way I can figure to do this is to check ALL procs in
         # the kernel process table, sadface.
         mem_usage = [0, 0]
@@ -126,7 +153,7 @@ class Process(object):
         #print self.cpu_usage
         return self.cpu_usage
 
-    def UpdateUsage(self, deepmem=False):
+    def UpdateUsage(self, deep=False):
         """Update process usage.
 
         Only updates at most once per 0.1 seconds
@@ -140,10 +167,10 @@ class Process(object):
             self.last_usage_update = now
             self.last_usage = self.usage
             try:
-                self.usage = self.GetProcCPUUsage()
+                self.usage = self.GetProcCPUUsage(deep)
                 self.last_system_usage = self.system_usage
                 self.system_usage = Process.GetSystemCPUUsage()
-                self.mem_usage = self.GetProcMemUsage(deepmem)
+                self.mem_usage = self.GetProcMemUsage(deep)
             except IOError:
                 # Process died and /proc/PID no longer exists
                 return

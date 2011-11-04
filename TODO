@@ -1,5 +1,4 @@
-Deep pgrp inspection for CPU
-
+Don't scan the proc table twice on each update() call
 Implement restarting and alerting limits
 Implement HTTP Watcher
 Implement 'flexible' limits, aka how long a process can be in
