@@ -10,7 +10,7 @@ If a job is 'flapping' or being rebooted too often it knows how to trigger
 an alert.
 """
 
-import argparse
+import arg_parser as argparse
 import os
 import sys
 
