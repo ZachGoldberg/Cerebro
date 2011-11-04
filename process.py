@@ -8,6 +8,7 @@ import time
 
 
 class Process(object):
+
     def __init__(self, pid):
         self.pid = pid
 
@@ -29,6 +30,7 @@ class Process(object):
 
     def ForceExit(self):
         os.kill(self.pid, signal.SIGKILL)
+        os.killpg(self.pid, signal.SIGKILL)
 
     def WaitForCompletion(self):
         return os.waitpid(self.pid, 0)
@@ -53,12 +55,35 @@ class Process(object):
         columns = cpu_stats.split(" ")
         return map(int, [columns[13], 0, columns[14], 0, 0, 0, 0])
 
-    def GetProcMemUsage(self):
-        mem_stats = file("/proc/%d/stat" % self.pid, "r").readline()
-        columns = mem_stats.split(" ")
-        print columns
-        return [int(columns[22]), (int(columns[23])
-                                   * resource.getpagesize())]
+    def GetProcMemUsage(self, deepmem=False):
+
+        def get_proc_mem(pid, pgrp=None):
+            mem_stats = file("/proc/%d/stat" % pid, "r").readline()
+            columns = mem_stats.split(" ")
+            if not pgrp or pgrp == int(columns[4]):
+                return [int(columns[22]), (int(columns[23])
+                                           * resource.getpagesize())]
+            else:
+                return [0, 0]
+
+        if not deepmem:
+            return get_proc_mem(self.pid)
+
+        # Deepmem means get the memory for all processes in our pgrp
+        # Best way I can figure to do this is to check ALL procs in
+        # the kernel process table, sadface.
+        mem_usage = [0, 0]
+        for proc in os.listdir('/proc'):
+            try:
+                usage = get_proc_mem(int(proc), self.pid)
+                mem_usage[0] += usage[0]
+                mem_usage[1] += usage[1]
+            except ValueError:
+                # proc isn't a pid
+                pass
+
+
+        return mem_usage
 
     def CalculateCPUUsage(self):
         """
@@ -101,7 +126,7 @@ class Process(object):
         #print self.cpu_usage
         return self.cpu_usage
 
-    def UpdateUsage(self):
+    def UpdateUsage(self, deepmem=False):
         """Update process usage.
 
         Only updates at most once per 0.1 seconds
@@ -118,7 +143,7 @@ class Process(object):
                 self.usage = self.GetProcCPUUsage()
                 self.last_system_usage = self.system_usage
                 self.system_usage = Process.GetSystemCPUUsage()
-                self.mem_usage = self.GetProcMemUsage()
+                self.mem_usage = self.GetProcMemUsage(deepmem)
             except IOError:
                 # Process died and /proc/PID no longer exists
                 return

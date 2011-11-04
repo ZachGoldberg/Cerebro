@@ -33,6 +33,9 @@ def RunCommandWithHarness(command, constraints):
     pid = os.fork()
     if pid == 0:
         # We're the child, we'll exec
+        # Put ourselves into our own pgrp, for sanity
+        os.setpgrp()
+
         # parse the command
         cmd = '/bin/bash'
         args = [cmd, "-c", command]

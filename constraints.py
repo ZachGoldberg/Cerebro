@@ -41,9 +41,8 @@ class MemoryConstraint(Constraint):
                                              mem_limit)
 
     def CheckViolation(self, child_proc):
-        if child_proc.UpdateUsage():
-            print child_proc.mem_usage
-            print self.value
+        if child_proc.UpdateUsage(deepmem=True):
+            print child_proc.mem_usage, self.value
             if child_proc.mem_usage[1] > self.value:
                 print "Memory Limit Exceeded"
                 return True
