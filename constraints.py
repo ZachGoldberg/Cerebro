@@ -25,6 +25,7 @@ class CPUConstraint(Constraint):
         Calculate child CPU usage and see if it violates the constraint.
         """
         if child_proc.UpdateUsage(deep=True):
+            print child_proc.cpu_usage, self.value
             if child_proc.cpu_usage > float(self.value):
                 print "CPU Limit Exceeded"
                 return True

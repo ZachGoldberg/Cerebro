@@ -1,4 +1,15 @@
+CPU tests are flaky as if your just looking at one or two jiffys its
+impossible to guage real usage.  Need to implement laggy detection (aka
+ needs to fail at least 3 times in a row before detection)
+  -- Another option is to just keep the CPU occupied with other things
+  -- so we're measuring CPU of the child process better (aka there is 
+  -- competition for jiffys so if the child is getting them it means 
+  -- something, as opposed to now where you can be at '100% cpu' and
+  -- only use 1 or 2 jiffys out of 1 or 2 jiffys.  Maybe a background
+  -- spin thread?
+
 Don't scan the proc table twice on each update() call
+
 Implement restarting and alerting limits
 Implement HTTP Watcher
 Implement 'flexible' limits, aka how long a process can be in

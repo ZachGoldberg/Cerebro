@@ -20,23 +20,23 @@ class BasicTests(unittest.TestCase):
         self.run_check(["--mem=10", "--command", "ls >/dev/null"])
 
     def test_quick_command_cpu_mem_constraint(self):
-        self.run_check(["--cpu=.1", "--mem=10", "--command", "ls >/dev/null"])
+        self.run_check(["--cpu=.2", "--mem=10", "--command", "ls >/dev/null"])
 
     def test_slow_command(self):
-        self.run_check(["--command", "ls >/dev/null; sleep .11"])
+        self.run_check(["--command", "ls >/dev/null; sleep .21"])
 
     def test_slow_command_cpu_constraint(self):
-        self.run_check(["--cpu=.1", "--command", "ls >/dev/null; sleep .11"])
+        self.run_check(["--cpu=.5", "--command", "ls >/dev/null; sleep .21"])
 
     def test_slow_command_mem_constraint(self):
-        self.run_check(["--mem=10", "--command", "ls >/dev/null; sleep .11"])
+        self.run_check(["--mem=10", "--command", "ls >/dev/null; sleep .21"])
 
     def test_slow_command_cpu_mem_constraint(self):
-        self.run_check(["--cpu=.1", "--mem=10",
-                        "--command", "ls >/dev/null; sleep .11"])
+        self.run_check(["--cpu=.5", "--mem=10",
+                        "--command", "ls >/dev/null; sleep .51"])
 
     def test_cpu_constraint(self):
-        self.run_check(["--cpu=.1", "--command", "./test/spin.sh"], 9)
+        self.run_check(["--cpu=.5", "--command", "./test/spin.sh"], 9)
 
     def test_cpu_constraint_redirect(self):
         for i in range(1, 5):
