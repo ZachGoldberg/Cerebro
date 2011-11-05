@@ -68,10 +68,9 @@ class ProcessHarness(object):
                 print "Restarting child command %s" % self.command
                 self.StartProcess()
                 self.DoMonitoring()
-            else:
-                self.child_running = False
-        else:
-            self.child_running = False
+                return
+
+        self.child_running = False
 
     def BeginMonitoring(self):
         """Split off a thread to monitor the child process"""
