@@ -1,3 +1,3 @@
 #!/bin/bash
 export PYTHONPATH=.:..:$PYTHONPATH
-nosetests test/ -v  $@
+nosetests test/ -v --process-timeout=10 $@

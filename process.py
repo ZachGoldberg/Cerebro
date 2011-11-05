@@ -57,8 +57,7 @@ class Process(object):
         """
 
         def get_proc_cpu(pid, pgrp=None):
-            cpu_stats = file("/proc/%d/stat" % pid, "r").readline()
-            columns = cpu_stats.split(" ")
+            columns = self.proc_stats[pid]
             if not pgrp or pgrp == int(columns[4]):
                 return map(int, [columns[13], 0, columns[14], 0, 0, 0, 0])
             else:
@@ -71,22 +70,29 @@ class Process(object):
         # Best way I can figure to do this is to check ALL procs in
         # the kernel process table, sadface.
         cpu_usage = [0] * 7
+        for proc in self.proc_stats.keys():
+            usage = get_proc_cpu(int(proc), self.pid)
+            for index, i in enumerate(usage):
+                cpu_usage[index] += i
+
+        return cpu_usage
+
+    def GetProcStats(self):
+        stats = {}
         for proc in os.listdir('/proc'):
             try:
-                usage = get_proc_cpu(int(proc), self.pid)
-                for index, i in enumerate(usage):
-                    cpu_usage[index] += i
+                raw_stats = file("/proc/%d/stat" % int(proc), "r").readline()
+                stats[int(proc)] = raw_stats.split(" ")
             except ValueError:
                 # proc isn't a pid
                 pass
 
-        return cpu_usage
+        return stats
 
     def GetProcMemUsage(self, deep=False):
 
         def get_proc_mem(pid, pgrp=None):
-            mem_stats = file("/proc/%d/stat" % pid, "r").readline()
-            columns = mem_stats.split(" ")
+            columns = self.proc_stats[pid]
             if not pgrp or pgrp == int(columns[4]):
                 return [int(columns[22]), (int(columns[23])
                                            * resource.getpagesize())]
@@ -100,15 +106,10 @@ class Process(object):
         # Best way I can figure to do this is to check ALL procs in
         # the kernel process table, sadface.
         mem_usage = [0, 0]
-        for proc in os.listdir('/proc'):
-            try:
-                usage = get_proc_mem(int(proc), self.pid)
-                mem_usage[0] += usage[0]
-                mem_usage[1] += usage[1]
-            except ValueError:
-                # proc isn't a pid
-                pass
-
+        for proc in self.proc_stats.keys():
+            usage = get_proc_mem(proc, self.pid)
+            mem_usage[0] += usage[0]
+            mem_usage[1] += usage[1]
 
         return mem_usage
 
@@ -167,6 +168,7 @@ class Process(object):
             self.last_usage_update = now
             self.last_usage = self.usage
             try:
+                self.proc_stats = self.GetProcStats()
                 self.usage = self.GetProcCPUUsage(deep)
                 self.last_system_usage = self.system_usage
                 self.system_usage = Process.GetSystemCPUUsage()

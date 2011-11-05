@@ -7,6 +7,7 @@ import time
 
 
 class ProcessHarness(object):
+
     def __init__(self, child_proc, constraints):
         self.child_proc = child_proc
         self.constraints = constraints
