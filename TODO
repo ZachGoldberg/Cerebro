@@ -1,4 +1,5 @@
-Implement and test infinite restarting, but with alerting
+Fix TODO in process_harness
+Implement restarting and alerting limits
 Implement HTTP Watcher
 Implement 'flexible' limits, aka how long a process can be in
    violation before its killed

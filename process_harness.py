@@ -53,6 +53,8 @@ class ProcessHarness(object):
                         self.ChildViolationOccured(c)
                         return
 
+                # There is no living constraint and child is dead,
+                # so set running to false
                 self.child_running = False
                 return
 
@@ -70,6 +72,8 @@ class ProcessHarness(object):
                 self.DoMonitoring()
                 return
 
+        # @TODO -- if kill_on_violation is False and the constraint
+        # doesn't mean the child is dead then this is broken
         self.child_running = False
 
     def BeginMonitoring(self):
