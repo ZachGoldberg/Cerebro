@@ -29,8 +29,12 @@ class Process(object):
             return False
 
     def ForceExit(self):
-        os.kill(self.pid, signal.SIGKILL)
-        os.killpg(self.pid, signal.SIGKILL)
+        try:
+            os.killpg(self.pid, signal.SIGKILL)
+            os.kill(self.pid, signal.SIGKILL)
+        except OSError:
+            # Already dead
+            pass
 
     def WaitForCompletion(self):
         try:

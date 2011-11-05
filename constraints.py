@@ -8,10 +8,24 @@ class Constraint(object):
     def __init__(self, name, value):
         self.name = name
         self.value = value
+        self.kill_on_violation = True
 
     def CheckViolation(self, child_proc):
         print "check generic violation %s" % child_proc.pid
         return 0
+
+
+class LivingConstraint(Constraint):
+    def __init__(self):
+        super(LivingConstraint, self).__init__("Child is alive? Constraints",
+                                               True)
+        self.kill_on_violation = False
+
+    def CheckViolation(self, child_proc):
+        return child_proc.IsAlive() != self.value
+
+    def __str__(self):
+        return "LivingConstraint"
 
 
 class CPUConstraint(Constraint):
@@ -32,6 +46,9 @@ class CPUConstraint(Constraint):
 
         return False
 
+    def __str__(self):
+        return "CPU Constraint (%s)" % self.value
+
 
 class MemoryConstraint(Constraint):
 
@@ -48,3 +65,6 @@ class MemoryConstraint(Constraint):
                 print "Memory Limit Exceeded"
                 return True
             return False
+
+    def __str__(self):
+        return "Memory Constraint (%s MB)" % (self.value / 1024 / 1024)

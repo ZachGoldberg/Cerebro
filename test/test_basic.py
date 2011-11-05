@@ -1,6 +1,8 @@
 import main
-import unittest
+import os
 import subprocess
+import tempfile
+import unittest
 
 spin_proc = None
 
@@ -46,7 +48,7 @@ class BasicTests(unittest.TestCase):
 
     def test_slow_command_cpu_mem_constraint(self):
         self.run_check(["--cpu=.5", "--mem=10",
-                        "--command", "ls >/dev/null; sleep .51"])
+                        "--command", "ls >/dev/null; sleep .31"])
 
     def test_cpu_constraint(self):
         self.run_check(["--cpu=.5", "--command", "./test/spin.sh"], 9)
@@ -81,3 +83,25 @@ class BasicTests(unittest.TestCase):
         for i in range(1, 3):
             self.run_check(["--mem=3",
                             "--command", "./test/mem.sh 2>/dev/null"], 9)
+
+    def test_restarting(self):
+        filename = tempfile.mktemp()
+        self.run_check(["--cpu=.5", "--restart", "--max_restarts=2",
+                        "--command",
+                        "echo '1' >> %s ; ./test/spin.sh" % filename], 9)
+
+        lines = open(filename).readlines()
+        print lines
+        os.unlink(filename)
+        self.assertEqual(3, len(lines))
+
+    def test_ensure_alive(self):
+        filename = tempfile.mktemp()
+        self.run_check(["--ensure_alive", "--restart", "--max_restarts=2",
+                        "--command",
+                        "echo '1' >> %s" % filename])
+
+        lines = open(filename).readlines()
+        print lines
+        os.unlink(filename)
+        self.assertEqual(3, len(lines))

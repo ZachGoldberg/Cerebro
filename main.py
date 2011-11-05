@@ -11,38 +11,27 @@ an alert.
 """
 
 import arg_parser as argparse
-import os
 import sys
 
 import constraints
-import process
 import process_harness
 
 
-def RunCommandWithHarness(command, constraints):
+def RunCommandWithHarness(command, args, constraints):
     """Execute the child command.
 
     Args:
       command: a string which includes the file and args
+      args: An object which containts configuration options
       constraints: an array of Constraint objects
 
     Return:
       A Harness object encapsulating the child process
       and all the current constraints
     """
-    pid = os.fork()
-    if pid == 0:
-        # We're the child, we'll exec
-        # Put ourselves into our own pgrp, for sanity
-        os.setpgrp()
-
-        # parse the command
-        cmd = '/bin/bash'
-        args = [cmd, "-c", command]
-        os.execvp(cmd, args)
-
-    child_proc = process.Process(pid)
-    return process_harness.ProcessHarness(child_proc, constraints)
+    return process_harness.ProcessHarness(command, constraints,
+                                          restart=args.restart,
+                                          max_restarts=args.max_restarts)
 
 
 def ParseArgs(args):
@@ -58,6 +47,23 @@ def ParseArgs(args):
                         help='The amount of memory in MB that this'
                         'task can use')
 
+    parser.add_argument('--restart', dest='restart',
+                        action='store_true',
+                        default=False,
+                        help='Restart the task if it violates any of its'
+                        'constraints')
+
+    parser.add_argument('--max_restarts', dest='max_restarts',
+                        default=-1,
+                        help='Number of times to reboot the task when it'
+                        'violates constraints before bailing out.')
+
+    parser.add_argument('--ensure_alive', dest='ensure_alive',
+                        default=False,
+                        action='store_true',
+                        help='Restart the task if it exists normally.  A '
+                        'normal exit does incremement the restart counter')
+
     parser.add_argument('--command', dest='command',
                         required=True,
                         help='The command to run')
@@ -69,6 +75,9 @@ def ParseArgs(args):
 
 def BuildConstraints(args):
     proc_constraints = []
+
+    if args.ensure_alive:
+        proc_constraints.append(constraints.LivingConstraint())
 
     if args.cpu:
         proc_constraints.append(constraints.CPUConstraint(args.cpu))
@@ -91,10 +100,10 @@ def main(sys_args=None):
     constraints = BuildConstraints(args)
 
     #StartHTTPMonitor()
-    harness = RunCommandWithHarness(args.command, constraints)
+    harness = RunCommandWithHarness(args.command, args, constraints)
     harness.BeginMonitoring()
 
-    _, exit_code = harness.WaitForChildToFinish()
+    exit_code = harness.WaitForChildToFinish()
 
     sys.exit(exit_code)
 
