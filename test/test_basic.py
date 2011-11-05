@@ -1,5 +1,18 @@
 import main
 import unittest
+import subprocess
+
+spin_proc = None
+
+
+def setUp(self):
+    global spin_proc
+    spin_proc = subprocess.Popen('yes', stdout=open('/dev/null', 'w'))
+
+
+def tearDown(self):
+    global spin_proc
+    spin_proc.terminate()
 
 
 class BasicTests(unittest.TestCase):
@@ -39,16 +52,25 @@ class BasicTests(unittest.TestCase):
         self.run_check(["--cpu=.5", "--command", "./test/spin.sh"], 9)
 
     def test_cpu_constraint_redirect(self):
-        for i in range(1, 5):
-            self.run_check(["--cpu=.1", "--command",
-                            "bash -c './test/spin.sh 2>/dev/null'"],
-                           9)
+        self.run_check(["--cpu=.1", "--command",
+                        "bash -c './test/spin.sh 2>/dev/null'"],
+                       9)
 
-    def test_mem_constraint(self):
-        self.run_check(["--mem=10", "--command", "./test/mem.sh"],
+    def test_cpu_constraint_subprocess(self):
+        self.run_check(["--cpu=.1", "--command",
+                        "bash -c 'bash -c \'./test/spin.sh\''"],
                        9)
 
     def test_mem_constraint(self):
+        self.run_check(["--mem=3", "--command", "./test/mem.sh"],
+                       9)
+
+    def test_mem_constraint_redirect_subprocess(self):
+        self.run_check(["--mem=3", "--command",
+                        "bash -c 'bash -c \'./test/mem.sh\''"],
+                       9)
+
+    def test_mem_constraint_redirect(self):
         """
         Test process group memory checking
 
@@ -56,6 +78,6 @@ class BasicTests(unittest.TestCase):
         redirection.  We want to ensure we catch ALL children and account for
         ALL their memory usage
         """
-        for i in range(1, 5):
+        for i in range(1, 3):
             self.run_check(["--mem=3",
                             "--command", "./test/mem.sh 2>/dev/null"], 9)
