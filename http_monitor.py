@@ -29,7 +29,9 @@ class HTTPMonitor(object):
         self.stopped = False
 
     def get_stats(self):
-        return simplejson.dumps({'child_pid': 10})
+        metadata = self.stats.get_metadata()
+
+        return simplejson.dumps(metadata)
 
     def start(self):
         if self.stopped:

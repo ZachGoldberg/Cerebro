@@ -2,6 +2,7 @@
 A class which encapsulates a process and a set of constraints
 and ensures that they are constantly fulfilled.
 """
+import datetime
 import os
 import threading
 import time
@@ -20,9 +21,17 @@ class ProcessHarness(object):
         self.max_restarts = int(max_restarts)
         self.start_count = 0
         self.child_running = True
+
+        #Statistics
+        self.task_start = datetime.datetime.now()
+        self.process_start = None
+
+        # Start the child process
         self.StartProcess()
 
     def StartProcess(self):
+        self.process_start = datetime.datetime.now()
+
         pid = os.fork()
         if pid == 0:
             # We're the child, we'll exec
@@ -80,6 +89,10 @@ class ProcessHarness(object):
                                              name='Child Monitoring')
 
         monitoring_thread.start()
+
+    def TerminateChild(self):
+        self.child_proc.ForceExit()
+        self.WaitForChildToFinish()
 
     def WaitForChildToFinish(self):
         code = 0

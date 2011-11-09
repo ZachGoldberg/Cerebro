@@ -13,7 +13,7 @@ class HTTPMonitoringTests(unittest.TestCase):
         print "Port %s Chosen" % port
         args.append("--http-monitoring")
         args.append("--http-monitoring-port=%s" % port)
-        stats, httpd = main.main(args, wait_for_child=False)
+        stats, httpd, harness = main.main(args, wait_for_child=False)
         data = None
 
         # stop execution of this thread to give the HTTP thread time to
@@ -25,6 +25,7 @@ class HTTPMonitoringTests(unittest.TestCase):
             pass
 
         httpd.stop()
+        harness.TerminateChild()
 
         return simplejson.loads(data)
 
@@ -34,3 +35,9 @@ class HTTPMonitoringTests(unittest.TestCase):
         print data
 
         self.assertTrue("child_pid" in data)
+        self.assertTrue(data["process_start_time"] is not None)
+        self.assertTrue(data["task_start_time"] is not None)
+        self.assertEquals(data["max_restarts"], -1)
+        self.assertEquals(data["num_task_starts"], 1)
+        self.assertTrue("spin.sh" in data["command"])
+        self.assertTrue("sleep" in data["command"])

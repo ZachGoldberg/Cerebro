@@ -129,7 +129,7 @@ def main(sys_args=None, wait_for_child=True):
         sys.exit(exit_code)
 
     else:
-        return stats, httpd
+        return stats, httpd, harness
 
 if __name__ == '__main__':
     main()
