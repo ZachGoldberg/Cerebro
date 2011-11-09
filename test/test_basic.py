@@ -73,13 +73,6 @@ class BasicTests(unittest.TestCase):
                        9)
 
     def test_mem_constraint_redirect(self):
-        """
-        Test process group memory checking
-
-        There is a case where bash forks children strangely when there is
-        redirection.  We want to ensure we catch ALL children and account for
-        ALL their memory usage
-        """
         self.run_check(["--mem=3",
                         "--command", "./test/mem.sh 2>/dev/null"], 9)
 

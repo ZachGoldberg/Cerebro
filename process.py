@@ -29,14 +29,25 @@ class Process(object):
             return False
 
     def ForceExit(self):
+        print "Killing Process %s" % self.pid
         try:
-            os.killpg(self.pid, signal.SIGKILL)
             os.kill(self.pid, signal.SIGKILL)
         except OSError:
+            print "Process already dead? %s" % self.pid
             # Already dead
             pass
 
+        try:
+            os.killpg(self.pid, signal.SIGKILL)
+        except OSError:
+            # Already dead
+            print "Process group already dead? %s" % self.pid
+            pass
+
     def WaitForCompletion(self):
+        if not self.IsAlive():
+            return None, None
+
         try:
             return os.waitpid(self.pid, 0)
         except OSError:

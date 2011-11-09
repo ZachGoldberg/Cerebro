@@ -86,6 +86,11 @@ class ProcessHarness(object):
     def WaitForChildToFinish(self):
         code = 0
         while self.child_running:
-            _, code = self.child_proc.WaitForCompletion()
+            _, newcode = self.child_proc.WaitForCompletion()
+            if newcode:
+                code = newcode
+
+            print "Child %s exited %s" % (self.child_proc.pid, code)
+            time.sleep(.1)
 
         return code
