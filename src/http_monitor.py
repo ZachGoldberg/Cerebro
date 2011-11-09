@@ -15,9 +15,22 @@ class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     def do_GET(self):
         urldata = urlparse.urlparse(self.path)
-        args = urlparse.parse_qs(urldata.query)
+        array_args = urlparse.parse_qs(urldata.query)
+        args = dict([(k, v[0]) for k, v in array_args.items()])
 
-        self.wfile.write(self.monitor.get_stats())
+        stats = self.monitor.get_stats()
+
+        output = ""
+        if "format" in args and args["format"] != "flat":
+            if args['format'] == "json":
+                output = simplejson.dumps(stats)
+            else:
+                output = "Invalid Format"
+        else:
+            for key, value in stats.items():
+                output += "%s=%s\n" % (key, value)
+
+        self.wfile.write(output)
         return
 
 
@@ -30,8 +43,7 @@ class HTTPMonitor(object):
 
     def get_stats(self):
         metadata = self.stats.get_metadata()
-
-        return simplejson.dumps(metadata)
+        return metadata
 
     def start(self):
         if self.stopped:

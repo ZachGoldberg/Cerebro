@@ -8,7 +8,7 @@ import urllib2
 
 
 class HTTPMonitoringTests(unittest.TestCase):
-    def run_check(self, args):
+    def run_check(self, args, output_format='json'):
         port = 1024 + int(10000 * random.random())
         print "Port %s Chosen" % port
         args.append("--http_monitoring")
@@ -20,18 +20,50 @@ class HTTPMonitoringTests(unittest.TestCase):
         # boot up
         time.sleep(.1)
         try:
-            data = urllib2.urlopen('http://localhost:%s/stats' % port).read()
+            data = urllib2.urlopen(
+                'http://localhost:%s/stats?format=%s' % (port,
+                                                         output_format)).read()
         except:
             pass
 
         httpd.stop()
         harness.TerminateChild()
 
-        return simplejson.loads(data)
+        print data
+        if not data:
+            return {}
 
-    def test_basic_monitoring(self):
+        if output_format == 'json':
+            return simplejson.loads(data)
+        else:
+            rows = data.split("\n")
+            return_data = {}
+            for row in rows:
+                if not row:
+                    continue
+
+                k, v = row.split('=')
+                return_data[k] = v
+
+            return return_data
+
+    def test_basic_monitoring_flat(self):
         data = self.run_check(['--cpu=.2',
-                   '--command', 'sleep .2; ./test/spin.sh'])
+                               '--command', 'sleep .2; ./test/spin.sh'],
+                              output_format="flat")
+        print data
+
+        self.assertTrue("child_pid" in data)
+        self.assertTrue(data["process_start_time"] is not None)
+        self.assertTrue(data["task_start_time"] is not None)
+        self.assertEquals(data["max_restarts"], '-1')
+        self.assertEquals(data["num_task_starts"], '1')
+        self.assertTrue("spin.sh" in data["command"])
+        self.assertTrue("sleep" in data["command"])
+
+    def test_basic_monitoring_json(self):
+        data = self.run_check(['--cpu=.2',
+                               '--command', 'sleep .2; ./test/spin.sh'])
         print data
 
         self.assertTrue("child_pid" in data)
