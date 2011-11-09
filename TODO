@@ -1,3 +1,4 @@
+Don't use recursion in ensure_alive -- can hit a maximum!
 Test infinite restarting somehow
 Implement HTTP Watcher
 Implement Alerting in HTTP Interface
