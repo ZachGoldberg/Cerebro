@@ -75,7 +75,8 @@ class ProcessHarness(object):
             self.child_proc.ForceExit()
 
         if self.restart:
-            if self.start_count <= self.max_restarts:
+            if (self.max_restarts == -1 or
+                self.start_count <= self.max_restarts):
                 print "Restarting child command %s" % self.command
                 self.StartProcess()
                 self.DoMonitoring()

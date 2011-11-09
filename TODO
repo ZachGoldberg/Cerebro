@@ -1,3 +1,4 @@
+Test infinite restarting somehow
 Implement HTTP Watcher
 Implement Alerting in HTTP Interface
 Implement 'flexible' limits, aka how long a process can be in

@@ -66,13 +66,13 @@ def ParseArgs(args):
                         help='Restart the task if it exists normally.  A '
                         'normal exit does incremement the restart counter')
 
-    parser.add_argument('--http-monitoring', dest='http_monitoring',
+    parser.add_argument('--http_monitoring', dest='http_monitoring',
                         default=False,
                         action='store_true',
                         help='Expose an interface via HTTP for collecting '
                         'task statistics and metadata')
 
-    parser.add_argument('--http-monitoring-port', dest='http_monitoring_port',
+    parser.add_argument('--http_monitoring_port', dest='http_monitoring_port',
                         default=8080,
                         help='Port to do HTTP Monitoring (Default: 80)')
 
