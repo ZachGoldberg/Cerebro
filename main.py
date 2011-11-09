@@ -14,7 +14,9 @@ import arg_parser as argparse
 import sys
 
 import constraints
+import http_monitor
 import process_harness
+import stats_collector
 
 
 def RunCommandWithHarness(command, args, constraints):
@@ -40,22 +42,22 @@ def ParseArgs(args):
     parser = argparse.ArgumentParser(description="Run a task with a"
                                      "cpu/memory harness")
     parser.add_argument('--cpu', dest='cpu',
-                        help='The amount of cores (in float)'
+                        help='The amount of cores (in float) '
                         'this task can use')
 
     parser.add_argument('--mem', dest='mem',
-                        help='The amount of memory in MB that this'
+                        help='The amount of memory in MB that this '
                         'task can use')
 
     parser.add_argument('--restart', dest='restart',
                         action='store_true',
                         default=False,
-                        help='Restart the task if it violates any of its'
+                        help='Restart the task if it violates any of its '
                         'constraints')
 
     parser.add_argument('--max_restarts', dest='max_restarts',
                         default=-1,
-                        help='Number of times to reboot the task when it'
+                        help='Number of times to reboot the task when it '
                         'violates constraints before bailing out.')
 
     parser.add_argument('--ensure_alive', dest='ensure_alive',
@@ -63,6 +65,16 @@ def ParseArgs(args):
                         action='store_true',
                         help='Restart the task if it exists normally.  A '
                         'normal exit does incremement the restart counter')
+
+    parser.add_argument('--http-monitoring', dest='http_monitoring',
+                        default=False,
+                        action='store_true',
+                        help='Expose an interface via HTTP for collecting '
+                        'task statistics and metadata')
+
+    parser.add_argument('--http-monitoring-port', dest='http_monitoring_port',
+                        default=8080,
+                        help='Port to do HTTP Monitoring (Default: 80)')
 
     parser.add_argument('--command', dest='command',
                         required=True,
@@ -88,7 +100,7 @@ def BuildConstraints(args):
     return proc_constraints
 
 
-def main(sys_args=None):
+def main(sys_args=None, wait_for_child=True):
     """Run the task sitter."""
 
     if not sys_args:
@@ -99,13 +111,17 @@ def main(sys_args=None):
     args = ParseArgs(sys_args)
     constraints = BuildConstraints(args)
 
-    #StartHTTPMonitor()
     harness = RunCommandWithHarness(args.command, args, constraints)
     harness.BeginMonitoring()
 
-    exit_code = harness.WaitForChildToFinish()
+    stats = stats_collector.StatsCollector(harness)
 
-    sys.exit(exit_code)
+    if args.http_monitoring:
+        http_monitor.HTTPMonitor(stats, args.http_monitoring_port).start()
+
+    if wait_for_child:
+        exit_code = harness.WaitForChildToFinish()
+        sys.exit(exit_code)
 
 if __name__ == '__main__':
     main()
