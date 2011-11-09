@@ -80,9 +80,8 @@ class BasicTests(unittest.TestCase):
         redirection.  We want to ensure we catch ALL children and account for
         ALL their memory usage
         """
-        for i in range(1, 3):
-            self.run_check(["--mem=3",
-                            "--command", "./test/mem.sh 2>/dev/null"], 9)
+        self.run_check(["--mem=3",
+                        "--command", "./test/mem.sh 2>/dev/null"], 9)
 
     def test_restarting(self):
         filename = tempfile.mktemp()
