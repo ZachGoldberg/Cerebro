@@ -1,16 +1,30 @@
 import main
 import os
+import random
 import simplejson
+import time
 import unittest
 import urllib2
 
+
 class HTTPMonitoringTests(unittest.TestCase):
     def run_check(self, args):
+        port = 1024 + int(10000 * random.random())
+        print "Port %s Chosen" % port
         args.append("--http-monitoring")
-        args.append("--http-monitoring-port=1234")
-        main.main(args, wait_for_child=False)
+        args.append("--http-monitoring-port=%s" % port)
+        stats, httpd = main.main(args, wait_for_child=False)
+        data = None
 
-        data = urllib2.urlopen('http://localhost:1234/stats').read()
+        # stop execution of this thread to give the HTTP thread time to
+        # boot up
+        time.sleep(.1)
+        try:
+            data = urllib2.urlopen('http://localhost:%s/stats' % port).read()
+        except:
+            pass
+
+        httpd.stop()
 
         return simplejson.loads(data)
 

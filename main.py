@@ -115,13 +115,21 @@ def main(sys_args=None, wait_for_child=True):
     harness.BeginMonitoring()
 
     stats = stats_collector.StatsCollector(harness)
+    httpd = None
 
     if args.http_monitoring:
-        http_monitor.HTTPMonitor(stats, args.http_monitoring_port).start()
+        httpd = http_monitor.HTTPMonitor(stats, args.http_monitoring_port)
+        httpd.start()
 
     if wait_for_child:
         exit_code = harness.WaitForChildToFinish()
+        if httpd:
+            httpd.stop()
+
         sys.exit(exit_code)
+
+    else:
+        return stats, httpd
 
 if __name__ == '__main__':
     main()
