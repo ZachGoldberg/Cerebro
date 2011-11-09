@@ -1,6 +1,5 @@
-Fix TODO in process_harness
-Implement restarting and alerting limits
 Implement HTTP Watcher
+Implement Alerting in HTTP Interface
 Implement 'flexible' limits, aka how long a process can be in
    violation before its killed
 Add Logging

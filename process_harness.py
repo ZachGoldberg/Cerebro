@@ -72,9 +72,8 @@ class ProcessHarness(object):
                 self.DoMonitoring()
                 return
 
-        # @TODO -- if kill_on_violation is False and the constraint
-        # doesn't mean the child is dead then this is broken
-        self.child_running = False
+        if violated_constraint.kill_on_violation:
+            self.child_running = False
 
     def BeginMonitoring(self):
         """Split off a thread to monitor the child process"""
