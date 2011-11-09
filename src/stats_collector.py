@@ -22,7 +22,9 @@ class StatsCollector(object):
                 'process_start_time': str(self.harness.process_start),
                 'num_task_starts': self.harness.start_count,
                 'max_restarts': self.harness.max_restarts,
-                'command': self.harness.command
+                'command': self.harness.command,
+                'restart': self.harness.restart,
+                'constraints': ','.join(map(str, self.harness.constraints))
                 }
 
         return data
