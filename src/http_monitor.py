@@ -40,12 +40,19 @@ class HTTPMonitor(object):
         self.stats = stats
         self.httpd = None
         self.stopped = False
+        self.run_thread = None
 
     def get_stats(self):
+        """
+        Return metadata and running stats for the process
+        """
         metadata = self.stats.get_metadata()
         return metadata
 
     def start(self):
+        """
+        Begin serving HTTP requests with stats data
+        """
         if self.stopped:
             return
 
@@ -53,12 +60,18 @@ class HTTPMonitor(object):
         self.run_thread.start()
 
     def stop(self):
+        """
+        Stop the HTTP server
+        """
         if self.httpd:
             self.httpd.shutdown()
 
         self.stopped = True
 
     def _start_server(self):
+        """
+        Internal method to start the server.
+        """
         handler = lambda x, y, z: HTTPMonitorHandler(self, x, y, z)
         self.httpd = SocketServer.TCPServer(('', self.port), handler)
         self.httpd.serve_forever(poll_interval=0.1)

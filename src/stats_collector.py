@@ -4,19 +4,32 @@ and process.  Exposes a simple interface to get all this information.
 """
 import threading
 
+
 class StatsCollector(object):
+    """
+    Collect various kinds of statistics about running the child process.
+    """
     def __init__(self, harness):
         self.harness = harness
         self.thread = None
 
     def start(self):
+        """
+        Public interface to start the collection thread
+        """
         self.thread = threading.Thread(target=self._start_collecting)
         self.thread.start()
 
     def _start_collecting(self):
+        """
+        Collect stats as the process is running.
+        """
         pass
 
     def get_metadata(self):
+        """
+        Return metadata about the child process
+        """
         data = {'child_pid': self.harness.child_proc.pid,
                 'task_start_time': str(self.harness.task_start),
                 'process_start_time': str(self.harness.process_start),
@@ -24,7 +37,8 @@ class StatsCollector(object):
                 'max_restarts': self.harness.max_restarts,
                 'command': self.harness.command,
                 'restart': self.harness.restart,
-                'constraints': ','.join(map(str, self.harness.constraints))
+                'constraints': ','.join(
+                [str(c) for c in self.harness.constraints])
                 }
 
         return data

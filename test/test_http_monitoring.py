@@ -27,7 +27,7 @@ class HTTPMonitoringTests(unittest.TestCase):
             pass
 
         httpd.stop()
-        harness.TerminateChild()
+        harness.terminate_child()
 
         print data
         if not data:

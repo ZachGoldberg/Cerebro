@@ -1,3 +1,6 @@
+"""
+A wrapper around optparse to provide argparse compatibility
+"""
 PARSER = "argparse"
 
 import optparse
@@ -13,12 +16,18 @@ class OptParserWrapper(optparse.OptionParser):
         optparse.OptionParser.__init__(self, usage=description, *args,
                                      **kwargs)
 
-    def add_argument(self, name, dest=None, help=None, action=None,
+    def add_argument(self, name, dest=None, helpstr=None, action=None,
                      const=None, default=None, required=None):
-        self.add_option(name, dest=dest, help=help, action=action,
+        """
+        Same args / output as argparse.add_argument
+        """
+        self.add_option(name, dest=dest, help=helpstr, action=action,
                       default=default)
 
     def parse_args(self, args):
+        """
+        Same args / output as argparse.parse_args
+        """
         (options, args) = optparse.OptionParser.parse_args(self, args)
         return options
 

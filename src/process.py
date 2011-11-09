@@ -8,7 +8,9 @@ import time
 
 
 class Process(object):
-
+    """
+    An object representing the child process or running task
+    """
     def __init__(self, pid):
         self.pid = pid
 
@@ -20,20 +22,26 @@ class Process(object):
         self.last_system_usage = None
         self.cpu_usage = 0
         self.mem_usage = None
+        self.proc_stats = []
 
-    def IsAlive(self):
+    def is_alive(self):
+        """
+        Check if the child process is alive
+        """
         try:
             os.waitpid(self.pid, os.WNOHANG)
             return True
         except OSError:
             return False
 
-    def ForceExit(self):
+    def force_exit(self):
+        """
+        Send a SIGKILL to the child process
+        """
         print "Killing Process %s" % self.pid
         try:
             os.kill(self.pid, signal.SIGKILL)
         except OSError:
-            print "Process already dead? %s" % self.pid
             # Already dead
             pass
 
@@ -41,11 +49,16 @@ class Process(object):
             os.killpg(self.pid, signal.SIGKILL)
         except OSError:
             # Already dead
-            print "Process group already dead? %s" % self.pid
             pass
 
-    def WaitForCompletion(self):
-        if not self.IsAlive():
+    def wait_for_completion(self):
+        """
+        Wait for the child process to finish.
+        Returns:
+         None, None if the child is already dead
+         return value of os.waitpid() if we wait for it to exit
+        """
+        if not self.is_alive():
             return None, None
 
         try:
@@ -55,7 +68,7 @@ class Process(object):
             return 0, 0
 
     @classmethod
-    def GetSystemCPUUsage(klass):
+    def get_system_cpu_usage(cls):
         """
         Read out an array of info from /proc/stat
         utime, nicetime, stime, idle, iowate, irq, softiq
@@ -63,9 +76,9 @@ class Process(object):
 
         cpu_stats = file("/proc/stat", "r").readline()
         columns = cpu_stats.replace("cpu", "").split(" ")
-        return map(int, filter(None, columns))
+        return [int(a) for a in columns if a]
 
-    def GetProcCPUUsage(self, deep=False):
+    def get_proc_cpu_usage(self, deep=False):
         """
         Read out an array of info from /proc/pid/stat
         utime, nicetime, stime, idle, iowate, irq, softiq
@@ -74,7 +87,8 @@ class Process(object):
         def get_proc_cpu(pid, pgrp=None):
             columns = self.proc_stats[pid]
             if not pgrp or pgrp == int(columns[4]):
-                return map(int, [columns[13], 0, columns[14], 0, 0, 0, 0])
+                return [int(c) for c in
+                        [columns[13], 0, columns[14], 0, 0, 0, 0]]
             else:
                 return [0] * 7
 
@@ -92,7 +106,10 @@ class Process(object):
 
         return cpu_usage
 
-    def GetProcStats(self):
+    def get_proc_stats(self):
+        """
+        Cache /proc/ID/stat so we only have to read it once
+        """
         stats = {}
         for proc in os.listdir('/proc'):
             try:
@@ -104,7 +121,10 @@ class Process(object):
 
         return stats
 
-    def GetProcMemUsage(self, deep=False):
+    def get_proc_mem_usage(self, deep=False):
+        """
+        Get memory usage of the child process
+        """
 
         def get_proc_mem(pid, pgrp=None):
             columns = self.proc_stats[pid]
@@ -128,7 +148,7 @@ class Process(object):
 
         return mem_usage
 
-    def CalculateCPUUsage(self):
+    def calculate_cpu_usage(self):
         """
         Calculate CPU Usage for this process.
 
@@ -169,7 +189,7 @@ class Process(object):
         #print self.cpu_usage
         return self.cpu_usage
 
-    def UpdateUsage(self, deep=False):
+    def update_usage(self, deep=False):
         """Update process usage.
 
         Only updates at most once per 0.1 seconds
@@ -183,16 +203,16 @@ class Process(object):
             self.last_usage_update = now
             self.last_usage = self.usage
             try:
-                self.proc_stats = self.GetProcStats()
-                self.usage = self.GetProcCPUUsage(deep)
+                self.proc_stats = self.get_proc_stats()
+                self.usage = self.get_proc_cpu_usage(deep)
                 self.last_system_usage = self.system_usage
-                self.system_usage = Process.GetSystemCPUUsage()
-                self.mem_usage = self.GetProcMemUsage(deep)
+                self.system_usage = Process.get_system_cpu_usage()
+                self.mem_usage = self.get_proc_mem_usage(deep)
             except IOError:
                 # Process died and /proc/PID no longer exists
                 return
 
-            self.CalculateCPUUsage()
+            self.calculate_cpu_usage()
 
             return True
 

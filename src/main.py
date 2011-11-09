@@ -19,7 +19,7 @@ import process_harness
 import stats_collector
 
 
-def RunCommandWithHarness(command, args, constraints):
+def run_command_with_harness(command, args, constraints_list):
     """Execute the child command.
 
     Args:
@@ -31,12 +31,12 @@ def RunCommandWithHarness(command, args, constraints):
       A Harness object encapsulating the child process
       and all the current constraints
     """
-    return process_harness.ProcessHarness(command, constraints,
+    return process_harness.ProcessHarness(command, constraints_list,
                                           restart=args.restart,
                                           max_restarts=args.max_restarts)
 
 
-def ParseArgs(args):
+def parse_args(args):
     """ Parse command line args."""
 
     parser = argparse.ArgumentParser(description="Run a task with a"
@@ -85,7 +85,10 @@ def ParseArgs(args):
     return parser.parse_args(args=args)
 
 
-def BuildConstraints(args):
+def build_constraints(args):
+    """
+    Build an array of Constraint objects based on invokation ars.
+    """
     proc_constraints = []
 
     if args.ensure_alive:
@@ -108,11 +111,11 @@ def main(sys_args=None, wait_for_child=True):
 
     print sys_args
 
-    args = ParseArgs(sys_args)
-    constraints = BuildConstraints(args)
+    args = parse_args(sys_args)
+    constraints_list = build_constraints(args)
 
-    harness = RunCommandWithHarness(args.command, args, constraints)
-    harness.BeginMonitoring()
+    harness = run_command_with_harness(args.command, args, constraints_list)
+    harness.begin_monitoring()
 
     stats = stats_collector.StatsCollector(harness)
     httpd = None
@@ -122,7 +125,7 @@ def main(sys_args=None, wait_for_child=True):
         httpd.start()
 
     if wait_for_child:
-        exit_code = harness.WaitForChildToFinish()
+        exit_code = harness.wait_for_child_to_finish()
         if httpd:
             httpd.stop()
 

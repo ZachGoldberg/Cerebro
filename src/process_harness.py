@@ -11,7 +11,10 @@ import process
 
 
 class ProcessHarness(object):
-
+    """
+    An object which manages the lifecycle of a single child process, killing it
+    when it violates constraitns and rebooting it as necessary
+    """
     def __init__(self, command, constraints, restart=False,
                  max_restarts=-1):
         self.command = command
@@ -27,9 +30,12 @@ class ProcessHarness(object):
         self.process_start = None
 
         # Start the child process
-        self.StartProcess()
+        self.start_process()
 
-    def StartProcess(self):
+    def start_process(self):
+        """
+        Start a new instance of the child task
+        """
         self.process_start = datetime.datetime.now()
 
         pid = os.fork()
@@ -46,20 +52,23 @@ class ProcessHarness(object):
         self.child_proc = process.Process(pid)
         self.start_count += 1
 
-    def DoMonitoring(self):
+    def do_monitoring(self):
+        """
+        Begin monitoring the child process
+        """
         while True:
             for constraint in self.constraints:
-                if constraint.CheckViolation(self.child_proc):
-                    self.ChildViolationOccured(constraint)
+                if constraint.check_violation(self.child_proc):
+                    self.child_violation_occured(constraint)
                     return
 
-            if not self.child_proc.IsAlive():
+            if not self.child_proc.is_alive():
                 # The child proc could have died inbetween checking
                 # constraints and now.  If there is a LivingConstraint
                 # then fire it
-                for c in self.constraints:
-                    if str(c) == "LivingConstraint":
-                        self.ChildViolationOccured(c)
+                for constraint in self.constraints:
+                    if str(constraint) == "LivingConstraint":
+                        self.child_violation_occured(constraint)
                         return
 
                 # There is no living constraint and child is dead,
@@ -69,36 +78,45 @@ class ProcessHarness(object):
 
             time.sleep(.1)
 
-    def ChildViolationOccured(self, violated_constraint):
+    def child_violation_occured(self, violated_constraint):
+        """
+        Take appropriate action when we're in violation
+        """
         print "Violated Constraint %s" % str(violated_constraint)
         if violated_constraint.kill_on_violation:
-            self.child_proc.ForceExit()
+            self.child_proc.force_exit()
 
         if self.restart:
             if (self.max_restarts == -1 or
                 self.start_count <= self.max_restarts):
                 print "Restarting child command %s" % self.command
-                self.StartProcess()
-                self.DoMonitoring()
+                self.start_process()
+                self.do_monitoring()
                 return
 
         self.child_running = False
 
-    def BeginMonitoring(self):
+    def begin_monitoring(self):
         """Split off a thread to monitor the child process"""
-        monitoring_thread = threading.Thread(target=self.DoMonitoring,
+        monitoring_thread = threading.Thread(target=self.do_monitoring,
                                              name='Child Monitoring')
 
         monitoring_thread.start()
 
-    def TerminateChild(self):
-        self.child_proc.ForceExit()
-        self.WaitForChildToFinish()
+    def terminate_child(self):
+        """
+        Kill the child process
+        """
+        self.child_proc.force_exit()
+        self.wait_for_child_to_finish()
 
-    def WaitForChildToFinish(self):
+    def wait_for_child_to_finish(self):
+        """
+        Wait for the child process to complete naturally.
+        """
         code = 0
         while self.child_running:
-            _, newcode = self.child_proc.WaitForCompletion()
+            _, newcode = self.child_proc.wait_for_completion()
             if newcode:
                 code = newcode
 
