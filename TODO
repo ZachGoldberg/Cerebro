@@ -1,6 +1,8 @@
+Set CPU Core Affinity
+STDOUT Redirection / Logging
+Configurable Constraint Poll Interval
 Have constraints output a % instead of a bool so we can do warnings at
 thresholds.
-
 Don't use recursion in ensure_alive -- can hit a maximum!
 Test infinite restarting somehow
 Implement HTTP Watcher
