@@ -9,18 +9,37 @@ import BaseHTTPServer
 
 
 class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+
     def __init__(self, monitor, *args, **kwargs):
         self.monitor = monitor
+
+        self.handlers = {
+            "/stats": self._get_stats,
+            "/logs": self._get_logs,
+            }
+
         BaseHTTPServer.BaseHTTPRequestHandler.__init__(self, *args, **kwargs)
 
-    def do_GET(self):
-        urldata = urlparse.urlparse(self.path)
-        array_args = urlparse.parse_qs(urldata.query)
-        args = dict([(k, v[0]) for k, v in array_args.items()])
+    def _usage(self, args):
+        output = """
+<html>
+<body>
+Invalid Path Requests.  Options:<br>
+<ul>
+"""
 
+        for handler in self.handlers.keys():
+            output += "<li><a href='%s'>%s</a></li>" % (handler, handler)
+        output += "</ul></body></html>"
+        return output
+
+    def _get_logs(self, args):
+        pass
+
+    def _get_stats(self, args):
         stats = self.monitor.get_stats()
-
         output = ""
+
         if "format" in args and args["format"] != "flat":
             if args['format'] == "json":
                 output = simplejson.dumps(stats)
@@ -30,7 +49,18 @@ class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             for key, value in stats.items():
                 output += "%s=%s\n" % (key, value)
 
-        self.wfile.write(output)
+        return output
+
+    def do_GET(self):
+        urldata = urlparse.urlparse(self.path)
+        array_args = urlparse.parse_qs(urldata.query)
+        args = dict([(k, v[0]) for k, v in array_args.items()])
+
+        if not urldata.path in self.handlers:
+            self.wfile.write(self._usage(args))
+            return
+
+        self.wfile.write(self.handlers[urldata.path](args))
         return
 
 
