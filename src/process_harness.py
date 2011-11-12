@@ -57,30 +57,40 @@ class ProcessHarness(object):
         Begin monitoring the child process
         """
         while True:
+            restarted = False
+
             for constraint in self.constraints:
                 if constraint.check_violation(self.child_proc):
-                    self.child_violation_occured(constraint)
-                    return
+                    if self.child_violation_occured(constraint):
+                        print "Restarting child command %s" % self.command
+                        self.start_process()
+                        restarted = True
 
-            if not self.child_proc.is_alive():
+            if not restarted and not self.child_proc.is_alive():
                 # The child proc could have died inbetween checking
                 # constraints and now.  If there is a LivingConstraint
                 # then fire it
                 for constraint in self.constraints:
                     if str(constraint) == "LivingConstraint":
-                        self.child_violation_occured(constraint)
-                        return
+                        if self.child_violation_occured(constraint):
+                            print "Restarting child command %s" % self.command
+                            self.start_process()
+                            restarted = True
 
                 # There is no living constraint and child is dead,
                 # so set running to false
-                self.child_running = False
-                return
+                if not restarted:
+                    self.child_running = False
+                    return
 
             time.sleep(.1)
 
     def child_violation_occured(self, violated_constraint):
         """
         Take appropriate action when we're in violation
+        Returns:
+          True means the process should be restarted
+          False means the caller should take no action
         """
         print "Violated Constraint %s" % str(violated_constraint)
         if violated_constraint.kill_on_violation:
@@ -89,12 +99,10 @@ class ProcessHarness(object):
         if self.restart:
             if (self.max_restarts == -1 or
                 self.start_count <= self.max_restarts):
-                print "Restarting child command %s" % self.command
-                self.start_process()
-                self.do_monitoring()
-                return
+                return True
 
         self.child_running = False
+        return False
 
     def begin_monitoring(self):
         """Split off a thread to monitor the child process"""
