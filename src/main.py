@@ -39,6 +39,7 @@ def run_command_with_harness(command, args, constraints_list):
                                           stdout_location=args.stdout_location,
                                           stderr_location=args.stderr_location)
 
+
 def parse_args(args):
     """ Parse command line args."""
 
@@ -102,6 +103,7 @@ def parse_args(args):
     # explicitly offer args the param incase we're parsing not from
     # sys.argv
     return parser.parse_args(args=args)
+
 
 def build_constraints(args):
     """

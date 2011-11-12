@@ -1,4 +1,5 @@
 import main
+import md5
 import os
 import subprocess
 import sys
@@ -27,24 +28,53 @@ class BasicTests(unittest.TestCase):
             self.assertEqual(e.code, retval)
 
     def test_stdout_redirect(self):
-        filename = tempfile.mktemp()
+        dirname = tempfile.mkdtemp()
         phrase = 'testing'
-        self.run_check(["--command", "echo -n '%s'" % phrase,
-                        "--stdout-location=%s" % filename])
+        command = "echo -n '%s'" % phrase
+        self.run_check(["--command", command,
+                        "--restart",
+                        "--max-restarts=2",
+                        "--ensure-alive",
+                        "--stdout-location=%s" % dirname])
 
-        data = open(filename).read()
-        os.unlink(filename)
-        self.assertEqual(data, phrase)
+        filename = "%s/%s.0" % (dirname,
+                                md5.md5(command).hexdigest())
+
+        data = []
+        for i in range(0, 3):
+            filename = "%s/%s.%s" % (dirname,
+                                     md5.md5(command).hexdigest(),
+                                     i)
+
+            data.append(open(filename).read())
+            os.unlink(filename)
+
+        os.rmdir(dirname)
+        for d in data:
+            self.assertEqual(d, phrase)
 
     def test_stderr_redirect(self):
-        filename = tempfile.mktemp()
+        dirname = tempfile.mkdtemp()
         phrase = 'testing'
-        self.run_check(["--command", "echo -n '%s' 1>&2" % phrase,
-                        "--stderr-location=%s" % filename])
+        command = "echo -n '%s' 1>&2" % phrase
+        self.run_check(["--command", command,
+                        "--restart",
+                        "--max-restarts=2",
+                        "--ensure-alive",
+                        "--stderr-location=%s" % dirname])
 
-        data = open(filename).read()
-        os.unlink(filename)
-        self.assertEqual(data, phrase)
+        data = []
+        for i in range(0, 3):
+            filename = "%s/%s.%s" % (dirname,
+                                     md5.md5(command).hexdigest(),
+                                     i)
+
+            data.append(open(filename).read())
+            os.unlink(filename)
+
+        os.rmdir(dirname)
+        for d in data:
+            self.assertEqual(d, phrase)
 
     def test_quick_command(self):
         self.run_check(["--command", "ls >/dev/null"])

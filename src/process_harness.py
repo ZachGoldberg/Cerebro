@@ -3,6 +3,7 @@ A class which encapsulates a process and a set of constraints
 and ensures that they are constantly fulfilled.
 """
 import datetime
+import md5
 import os
 import threading
 import time
@@ -36,6 +37,14 @@ class ProcessHarness(object):
         # Start the child process
         self.start_process()
 
+    def _calculate_filename(self, directory):
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+        return "%s/%s.%s" % (directory,
+                             md5.md5(self.command).hexdigest(),
+                             self.start_count)
+
     def start_process(self):
         """
         Start a new instance of the child task
@@ -51,13 +60,15 @@ class ProcessHarness(object):
             # Configure STDOUT and STDERR
             if self.stdout_location != '-':
                 print "Configuring STDOUT to %s" % self.stdout_location
-                stdout = open(self.stdout_location, 'w')
+                stdout = open(self._calculate_filename(self.stdout_location),
+                              'w')
                 stdout_fileno = stdout.fileno()
                 os.dup2(stdout_fileno, 1)
 
             if self.stderr_location != '-':
                 print "Configuring STDERR to %s" % self.stderr_location
-                stderr = open(self.stderr_location, 'w')
+                stderr = open(self._calculate_filename(self.stderr_location),
+                              'w')
                 stderr_fileno = stderr.fileno()
                 os.dup2(stderr_fileno, 2)
 
