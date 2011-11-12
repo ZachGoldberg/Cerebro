@@ -21,10 +21,10 @@ class ProcessHarness(object):
         self.child_proc = None
         self.constraints = constraints
         self.restart = restart
-        self.max_restarts = int(max_restarts)
+        self.max_restarts = max_restarts
         self.start_count = 0
         self.child_running = True
-        self.poll_interval = float(poll_interval)
+        self.poll_interval = poll_interval
 
         #Statistics
         self.task_start = datetime.datetime.now()

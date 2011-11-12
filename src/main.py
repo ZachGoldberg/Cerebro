@@ -42,11 +42,11 @@ def parse_args(args):
 
     parser = argparse.ArgumentParser(description="Run a task with a"
                                      "cpu/memory harness")
-    parser.add_argument('--cpu', dest='cpu',
+    parser.add_argument('--cpu', dest='cpu', type=float,
                         help='The amount of cores (in float) '
                         'this task can use')
 
-    parser.add_argument('--mem', dest='mem',
+    parser.add_argument('--mem', dest='mem', type=float,
                         help='The amount of memory in MB that this '
                         'task can use')
 
@@ -57,7 +57,7 @@ def parse_args(args):
                         'constraints')
 
     parser.add_argument('--max-restarts', dest='max_restarts',
-                        default=-1,
+                        default=-1, type=int,
                         help='Number of times to reboot the task when it '
                         'violates constraints before bailing out.')
 
@@ -74,7 +74,7 @@ def parse_args(args):
                         'task statistics and metadata')
 
     parser.add_argument('--http-monitoring-port', dest='http_monitoring_port',
-                        default=8080,
+                        default=8080, type=int,
                         help='Port to do HTTP Monitoring (Default: 80)')
 
     parser.add_argument('--command', dest='command',
@@ -82,7 +82,7 @@ def parse_args(args):
                         help='The command to run')
 
     parser.add_argument('--poll-interval', dest='poll_interval',
-                        default=0.1,
+                        default=0.1, type=float,
                         help='How frequently (seconds) to poll the child '
                         'process for constraint violations '
                         '(default=0.1 seconds)')
