@@ -11,8 +11,8 @@ class HTTPMonitoringTests(unittest.TestCase):
     def run_check(self, args, output_format='json'):
         port = 1024 + int(10000 * random.random())
         print "Port %s Chosen" % port
-        args.append("--http_monitoring")
-        args.append("--http_monitoring_port=%s" % port)
+        args.append("--http-monitoring")
+        args.append("--http-monitoring-port=%s" % port)
         stats, httpd, harness = main.main(args, wait_for_child=False)
         data = None
 

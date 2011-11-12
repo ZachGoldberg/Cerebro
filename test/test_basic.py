@@ -78,7 +78,7 @@ class BasicTests(unittest.TestCase):
 
     def test_restarting(self):
         filename = tempfile.mktemp()
-        self.run_check(["--cpu=.5", "--restart", "--max_restarts=2",
+        self.run_check(["--cpu=.5", "--restart", "--max-restarts=2",
                         "--command",
                         "echo '1' >> %s ; ./test/spin.sh" % filename], 9)
 
@@ -89,7 +89,7 @@ class BasicTests(unittest.TestCase):
 
     def test_ensure_alive(self):
         filename = tempfile.mktemp()
-        self.run_check(["--ensure_alive", "--restart", "--max_restarts=2",
+        self.run_check(["--ensure-alive", "--restart", "--max-restarts=2",
                         "--command",
                         "echo '1' >> %s" % filename])
 

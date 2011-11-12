@@ -55,24 +55,24 @@ def parse_args(args):
                         help='Restart the task if it violates any of its '
                         'constraints')
 
-    parser.add_argument('--max_restarts', dest='max_restarts',
+    parser.add_argument('--max-restarts', dest='max_restarts',
                         default=-1,
                         help='Number of times to reboot the task when it '
                         'violates constraints before bailing out.')
 
-    parser.add_argument('--ensure_alive', dest='ensure_alive',
+    parser.add_argument('--ensure-alive', dest='ensure_alive',
                         default=False,
                         action='store_true',
                         help='Restart the task if it exists normally.  A '
                         'normal exit does incremement the restart counter')
 
-    parser.add_argument('--http_monitoring', dest='http_monitoring',
+    parser.add_argument('--http-monitoring', dest='http_monitoring',
                         default=False,
                         action='store_true',
                         help='Expose an interface via HTTP for collecting '
                         'task statistics and metadata')
 
-    parser.add_argument('--http_monitoring_port', dest='http_monitoring_port',
+    parser.add_argument('--http-monitoring-port', dest='http_monitoring_port',
                         default=8080,
                         help='Port to do HTTP Monitoring (Default: 80)')
 
