@@ -1,18 +1,19 @@
 import main
 import os
 import subprocess
+import sys
 import tempfile
 import unittest
 
 spin_proc = None
 
 
-def setUp(self):
+def setUp():
     global spin_proc
     spin_proc = subprocess.Popen('yes', stdout=open('/dev/null', 'w'))
 
 
-def tearDown(self):
+def tearDown():
     global spin_proc
     spin_proc.terminate()
 
@@ -99,12 +100,23 @@ class BasicTests(unittest.TestCase):
         self.assertEqual(3, len(lines))
 
     def test_ensure_alive_many_times(self):
+        # This test is CPU intensive and we don't need the spin overhead
+        # process, so pause it.  Also, limit recursive depth to speed up
+        # this test
+        tearDown()
+
+        sys.setrecursionlimit(70)
         filename = tempfile.mktemp()
-        self.run_check(["--ensure-alive", "--restart", "--max-restarts=551",
+        self.run_check(["--ensure-alive", "--restart", "--max-restarts=71",
+                        "--poll-interval=0.001",
                         "--command",
                         "echo '1' >> %s" % filename])
 
+        # reactivate spin process
+        setUp()
+        sys.setrecursionlimit(500)
+
         lines = open(filename).readlines()
-        print lines
+        print len(lines)
         os.unlink(filename)
-        self.assertEqual(552, len(lines))
+        self.assertEqual(72, len(lines))

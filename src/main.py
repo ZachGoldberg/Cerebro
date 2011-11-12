@@ -31,10 +31,11 @@ def run_command_with_harness(command, args, constraints_list):
       A Harness object encapsulating the child process
       and all the current constraints
     """
+
     return process_harness.ProcessHarness(command, constraints_list,
                                           restart=args.restart,
-                                          max_restarts=args.max_restarts)
-
+                                          max_restarts=args.max_restarts,
+                                          poll_interval=args.poll_interval)
 
 def parse_args(args):
     """ Parse command line args."""
@@ -79,6 +80,12 @@ def parse_args(args):
     parser.add_argument('--command', dest='command',
                         required=True,
                         help='The command to run')
+
+    parser.add_argument('--poll-interval', dest='poll_interval',
+                        default=0.1,
+                        help='How frequently (seconds) to poll the child '
+                        'process for constraint violations '
+                        '(default=0.1 seconds)')
 
     # explicitly offer args the param incase we're parsing not from
     # sys.argv

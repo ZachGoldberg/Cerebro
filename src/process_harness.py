@@ -16,7 +16,7 @@ class ProcessHarness(object):
     when it violates constraitns and rebooting it as necessary
     """
     def __init__(self, command, constraints, restart=False,
-                 max_restarts=-1):
+                 max_restarts=-1, poll_interval=.1):
         self.command = command
         self.child_proc = None
         self.constraints = constraints
@@ -24,6 +24,7 @@ class ProcessHarness(object):
         self.max_restarts = int(max_restarts)
         self.start_count = 0
         self.child_running = True
+        self.poll_interval = float(poll_interval)
 
         #Statistics
         self.task_start = datetime.datetime.now()
@@ -83,7 +84,7 @@ class ProcessHarness(object):
                     self.child_running = False
                     return
 
-            time.sleep(.1)
+            time.sleep(self.poll_interval)
 
     def child_violation_occured(self, violated_constraint):
         """
