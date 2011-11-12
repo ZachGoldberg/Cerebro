@@ -26,6 +26,26 @@ class BasicTests(unittest.TestCase):
         except SystemExit, e:
             self.assertEqual(e.code, retval)
 
+    def test_stdout_redirect(self):
+        filename = tempfile.mktemp()
+        phrase = 'testing'
+        self.run_check(["--command", "echo -n '%s'" % phrase,
+                        "--stdout-location=%s" % filename])
+
+        data = open(filename).read()
+        os.unlink(filename)
+        self.assertEqual(data, phrase)
+
+    def test_stderr_redirect(self):
+        filename = tempfile.mktemp()
+        phrase = 'testing'
+        self.run_check(["--command", "echo -n '%s' 1>&2" % phrase,
+                        "--stderr-location=%s" % filename])
+
+        data = open(filename).read()
+        os.unlink(filename)
+        self.assertEqual(data, phrase)
+
     def test_quick_command(self):
         self.run_check(["--command", "ls >/dev/null"])
 

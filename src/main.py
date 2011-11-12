@@ -35,7 +35,9 @@ def run_command_with_harness(command, args, constraints_list):
     return process_harness.ProcessHarness(command, constraints_list,
                                           restart=args.restart,
                                           max_restarts=args.max_restarts,
-                                          poll_interval=args.poll_interval)
+                                          poll_interval=args.poll_interval,
+                                          stdout_location=args.stdout_location,
+                                          stderr_location=args.stderr_location)
 
 def parse_args(args):
     """ Parse command line args."""
@@ -87,10 +89,19 @@ def parse_args(args):
                         'process for constraint violations '
                         '(default=0.1 seconds)')
 
+    parser.add_argument('--stdout-location', dest='stdout_location',
+                        default='-',
+                        help='Directory where stdout logs should be placed '
+                        'default is to print to caller\'s STDOUT')
+
+    parser.add_argument('--stderr-location', dest='stderr_location',
+                        default='-',
+                        help='Directory where stdout logs should be placed '
+                        'default is to print to caller\'s STDERR')
+
     # explicitly offer args the param incase we're parsing not from
     # sys.argv
     return parser.parse_args(args=args)
-
 
 def build_constraints(args):
     """

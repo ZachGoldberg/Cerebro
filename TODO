@@ -1,3 +1,4 @@
+fix the type= parameter for python 2.6 compatibility
 CPU Usage should be calculated taking into account IDLE jiffies?
 Keep a list of vioated constraints and expose via HTTP
 Seperate logs per task invokation

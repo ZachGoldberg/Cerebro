@@ -16,15 +16,18 @@ class ProcessHarness(object):
     when it violates constraitns and rebooting it as necessary
     """
     def __init__(self, command, constraints, restart=False,
-                 max_restarts=-1, poll_interval=.1):
-        self.command = command
+                 max_restarts=-1, poll_interval=.1,
+                 stdout_location='-', stderr_location='-'):
         self.child_proc = None
-        self.constraints = constraints
-        self.restart = restart
-        self.max_restarts = max_restarts
-        self.start_count = 0
         self.child_running = True
+        self.command = command
+        self.constraints = constraints
+        self.max_restarts = max_restarts
         self.poll_interval = poll_interval
+        self.restart = restart
+        self.start_count = 0
+        self.stderr_location = stderr_location
+        self.stdout_location = stdout_location
 
         # Statistics
         self.task_start = datetime.datetime.now()
@@ -44,6 +47,19 @@ class ProcessHarness(object):
             # We're the child, we'll exec
             # Put ourselves into our own pgrp, for sanity
             os.setpgrp()
+
+            # Configure STDOUT and STDERR
+            if self.stdout_location != '-':
+                print "Configuring STDOUT to %s" % self.stdout_location
+                stdout = open(self.stdout_location, 'w')
+                stdout_fileno = stdout.fileno()
+                os.dup2(stdout_fileno, 1)
+
+            if self.stderr_location != '-':
+                print "Configuring STDERR to %s" % self.stderr_location
+                stderr = open(self.stderr_location, 'w')
+                stderr_fileno = stderr.fileno()
+                os.dup2(stderr_fileno, 2)
 
             # parse the command
             cmd = '/bin/bash'
