@@ -97,3 +97,14 @@ class BasicTests(unittest.TestCase):
         print lines
         os.unlink(filename)
         self.assertEqual(3, len(lines))
+
+    def test_ensure_alive_many_times(self):
+        filename = tempfile.mktemp()
+        self.run_check(["--ensure-alive", "--restart", "--max-restarts=551",
+                        "--command",
+                        "echo '1' >> %s" % filename])
+
+        lines = open(filename).readlines()
+        print lines
+        os.unlink(filename)
+        self.assertEqual(552, len(lines))
