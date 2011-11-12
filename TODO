@@ -1,3 +1,11 @@
+CPU Usage should be calculated taking into account IDLE jiffies?
+Keep a list of vioated constraints and expose via HTTP
+Seperate logs per task invokation
+Run as a different user
+Fixed expiration or task timeout
+Expose logs via http, maybe /logs?
+Think about where logs should go by default, /tmp?
+Expose task-sitter logs, too!
 Set CPU Core Affinity
 STDOUT Redirection / Logging
 Configurable Constraint Poll Interval
