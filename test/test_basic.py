@@ -36,10 +36,6 @@ class BasicTests(unittest.TestCase):
                         "--max-restarts=2",
                         "--ensure-alive",
                         "--stdout-location=%s" % dirname])
-
-        filename = "%s/%s.0" % (dirname,
-                                md5.md5(command).hexdigest())
-
         data = []
         for i in range(0, 3):
             filename = "%s/%s.%s" % (dirname,
@@ -66,7 +62,7 @@ class BasicTests(unittest.TestCase):
         data = []
         for i in range(0, 3):
             filename = "%s/%s.%s" % (dirname,
-                                     md5.md5(command).hexdigest(),
+                                     md5.md5(command + "err").hexdigest(),
                                      i)
 
             data.append(open(filename).read())

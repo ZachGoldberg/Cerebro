@@ -37,13 +37,22 @@ class ProcessHarness(object):
         # Start the child process
         self.start_process()
 
-    def _calculate_filename(self, directory):
+    def _calculate_filename(self, directory, stderr=False,
+                            number=None):
         if not os.path.exists(directory):
             os.makedirs(directory)
 
+        filenum = number
+        if not number:
+            filenum = self.start_count
+
+        payload = self.command
+        if stderr:
+            payload += "err"
+
         return "%s/%s.%s" % (directory,
-                             md5.md5(self.command).hexdigest(),
-                             self.start_count)
+                             md5.md5(payload).hexdigest(),
+                             filenum)
 
     def start_process(self):
         """
@@ -66,8 +75,8 @@ class ProcessHarness(object):
                 os.dup2(stdout_fileno, 1)
 
             if self.stderr_location != '-':
-                print "Configuring STDERR to %s" % self.stderr_location
-                stderr = open(self._calculate_filename(self.stderr_location),
+                stderr = open(self._calculate_filename(self.stderr_location,
+                                                       True),
                               'w')
                 stderr_fileno = stderr.fileno()
                 os.dup2(stderr_fileno, 2)

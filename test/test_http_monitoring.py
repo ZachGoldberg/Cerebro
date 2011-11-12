@@ -21,7 +21,7 @@ class HTTPMonitoringTests(unittest.TestCase):
         time.sleep(.1)
         try:
             data = urllib2.urlopen(
-                'http://localhost:%s/stats?format=%s' % (port,
+                'http://localhost:%s/stats?format=%s&nohtml=1' % (port,
                                                          output_format)).read()
         except:
             pass
@@ -51,7 +51,6 @@ class HTTPMonitoringTests(unittest.TestCase):
         data = self.run_check(['--cpu=.2',
                                '--command', 'sleep .2; ./test/spin.sh'],
                               output_format="flat")
-        print data
 
         self.assertTrue("child_pid" in data)
         self.assertTrue(data["process_start_time"] is not None)

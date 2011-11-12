@@ -1,6 +1,7 @@
 """
 Reads data from a stats collector and exposes it via HTTP
 """
+import os
 import simplejson
 import threading
 import urlparse
@@ -16,38 +17,64 @@ class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         self.handlers = {
             "/stats": self._get_stats,
             "/logs": self._get_logs,
+            "/logfile": self._get_logfile,
             }
 
         BaseHTTPServer.BaseHTTPRequestHandler.__init__(self, *args, **kwargs)
 
-    def _usage(self, args):
-        output = """
-<html>
-<body>
-Invalid Path Requests.  Options:<br>
-<ul>
-"""
+    def _usage(self, _):
+        output = """Invalid Path Requests.  Options:<br><ul>"""
 
         for handler in self.handlers.keys():
             output += "<li><a href='%s'>%s</a></li>" % (handler, handler)
         output += "</ul></body></html>"
         return output
 
+    def _get_logfile(self, args):
+        # @TODO This is a bit of a security problem...
+        try:
+            return open(args['name']).read()
+        except IOError:
+            return "File not found"
+
     def _get_logs(self, args):
-        pass
+        logfiles = self.monitor.get_logs()
+        for k, v in logfiles.items():
+            size = 0
+            try:
+                size = float(os.stat(v).st_size) / 1024
+            except:
+                pass
+
+            logfiles[k] = "<a href='/logfile?name=%s'>%s (%s kB)</a>" % (v,
+                                                                         v,
+                                                                         size)
+
+        return self._format_dict(logfiles, args)
 
     def _get_stats(self, args):
         stats = self.monitor.get_stats()
-        output = ""
+        return self._format_dict(stats, args)
 
+    def _format_dict(self, data, args):
+        """
+        Convert a dictionary of data into an appropriate
+        output format based on the query string args
+        """
+
+        output = ""
         if "format" in args and args["format"] != "flat":
             if args['format'] == "json":
-                output = simplejson.dumps(stats)
+                output = simplejson.dumps(data)
             else:
                 output = "Invalid Format"
         else:
-            for key, value in stats.items():
-                output += "%s=%s\n" % (key, value)
+            seperator = "<br>"
+            if "nohtml" in args:
+                seperator = "\n"
+
+            for key, value in data.items():
+                output += "%s=%s%s" % (key, value, seperator)
 
         return output
 
@@ -56,11 +83,18 @@ Invalid Path Requests.  Options:<br>
         array_args = urlparse.parse_qs(urldata.query)
         args = dict([(k, v[0]) for k, v in array_args.items()])
 
+        if not "nohtml" in args:
+            self.wfile.write("<html><body>")
+
         if not urldata.path in self.handlers:
             self.wfile.write(self._usage(args))
             return
 
         self.wfile.write(self.handlers[urldata.path](args))
+
+        if not "nohtml" in args:
+            self.wfile.write("</body></html>")
+
         return
 
 
@@ -71,6 +105,13 @@ class HTTPMonitor(object):
         self.httpd = None
         self.stopped = False
         self.run_thread = None
+
+    def get_logs(self):
+        """
+        Pull a list of logfiles for all of the tasks
+        that this tasksitter has created.
+        """
+        return self.stats.get_logfile_names()
 
     def get_stats(self):
         """
