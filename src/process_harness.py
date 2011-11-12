@@ -26,7 +26,7 @@ class ProcessHarness(object):
         self.child_running = True
         self.poll_interval = poll_interval
 
-        #Statistics
+        # Statistics
         self.task_start = datetime.datetime.now()
         self.process_start = None
 
@@ -67,7 +67,7 @@ class ProcessHarness(object):
                         self.start_process()
                         restarted = True
 
-            if not restarted and not self.child_proc.is_alive():
+            if not self.child_proc.is_alive():
                 # The child proc could have died inbetween checking
                 # constraints and now.  If there is a LivingConstraint
                 # then fire it
@@ -78,9 +78,11 @@ class ProcessHarness(object):
                             self.start_process()
                             restarted = True
 
-                # There is no living constraint and child is dead,
-                # so set running to false
+                # If we restarted the child proc we don't want to set
+                # child_running to False because... its True =P
                 if not restarted:
+                    # There is no living constraint and child is dead,
+                    # so set running to false
                     self.child_running = False
                     return
 
