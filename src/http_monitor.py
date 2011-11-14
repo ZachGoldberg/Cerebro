@@ -40,7 +40,7 @@ class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def _get_logs(self, args):
         logfiles = self.monitor.get_logs()
         for k, v in logfiles.items():
-            if args['nohtml']:
+            if 'nohtml' in args:
                 logfiles[k] = v
             else:
                 size = 0
@@ -123,8 +123,9 @@ class HTTPMonitor(object):
         """
         Return metadata and running stats for the process
         """
-        metadata = self.stats.get_metadata()
-        return metadata
+        data = self.stats.get_metadata()
+        data.update(self.stats.get_live_data())
+        return data
 
     def start(self):
         """

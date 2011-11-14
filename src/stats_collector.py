@@ -26,14 +26,26 @@ class StatsCollector(object):
         """
         pass
 
+    def get_live_data(self):
+        """
+        Return live statistics about the harness and child process
+        """
+        data = {
+            'process_start_time': str(self.harness.process_start),
+            'num_task_starts': self.harness.start_count,
+            }
+
+        for constraint, count in self.harness.violations.items():
+            data['violated_%s' % constraint] = count
+
+        return data
+
     def get_metadata(self):
         """
-        Return metadata about the child process
+        Return fixed metadata about the child process
         """
         data = {'child_pid': self.harness.child_proc.pid,
                 'task_start_time': str(self.harness.task_start),
-                'process_start_time': str(self.harness.process_start),
-                'num_task_starts': self.harness.start_count,
                 'max_restarts': self.harness.max_restarts,
                 'command': self.harness.command,
                 'restart': self.harness.restart,

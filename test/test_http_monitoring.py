@@ -77,6 +77,7 @@ class HTTPMonitoringTests(unittest.TestCase):
         self.assertEquals(data["num_task_starts"], '1')
         self.assertTrue("spin.sh" in data["command"])
         self.assertTrue("sleep" in data["command"])
+        self.assertTrue("violated_CPU Constraint (0.2)" in data)
 
     def test_basic_monitoring_json(self):
         data = self.run_check(['--cpu=.2',
@@ -90,6 +91,7 @@ class HTTPMonitoringTests(unittest.TestCase):
         self.assertEquals(data["num_task_starts"], 1)
         self.assertTrue("spin.sh" in data["command"])
         self.assertTrue("sleep" in data["command"])
+        self.assertTrue("violated_CPU Constraint (0.2)" in data)
 
     def test_logs_list_json(self):
         data = self.run_check(['--cpu=.2', "--ensure-alive",

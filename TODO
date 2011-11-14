@@ -1,5 +1,4 @@
 CPU Usage should be calculated taking into account IDLE jiffies?
-Keep a list of vioated constraints and expose via HTTP
 Fixed expiration or task timeout
 Set CPU Core Affinity
 Have constraints output a % instead of a bool so we can do warnings at

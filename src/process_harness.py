@@ -34,6 +34,9 @@ class ProcessHarness(object):
         # Statistics
         self.task_start = datetime.datetime.now()
         self.process_start = None
+        self.violations = {}
+        for constraint in self.constraints:
+            self.violations[str(constraint)] = 0
 
         # Start the child process
         self.start_process()
@@ -114,6 +117,8 @@ class ProcessHarness(object):
         print "Violated Constraint %s" % str(violated_constraint)
         if violated_constraint.kill_on_violation:
             self.child_proc.force_exit()
+
+        self.violations[str(violated_constraint)] += 1
 
         if self.restart:
             if (self.max_restarts == -1 or
