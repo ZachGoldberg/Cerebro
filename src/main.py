@@ -57,6 +57,9 @@ def parse_args(args):
                         help='The amount of memory in MB that this '
                         'task can use')
 
+    parser.add_argument('--time-limit', dest='time_limit', type=float,
+                        help='Maximum time the child can run for in seconds')
+
     parser.add_argument('--restart', dest='restart',
                         action='store_true',
                         default=False,
@@ -127,6 +130,9 @@ def build_constraints(args):
 
     if args.mem:
         proc_constraints.append(constraints.MemoryConstraint(args.mem))
+
+    if args.time_limit:
+        proc_constraints.append(constraints.TimeConstraint(args.time_limit))
 
     return proc_constraints
 

@@ -97,6 +97,12 @@ class BasicTests(unittest.TestCase):
         self.run_check(["--cpu=.5", "--mem=10",
                         "--command", "ls >/dev/null; sleep .31"])
 
+    def test_time_constraint(self):
+        self.run_check(["--time-limit=.1", "--command", "sleep .2"], 9)
+
+    def test_time_constraint_inverse(self):
+        self.run_check(["--time-limit=.2", "--command", "sleep .1"])
+
     def test_cpu_constraint(self):
         self.run_check(["--cpu=.5", "--command", "./test/spin.sh"], 9)
 

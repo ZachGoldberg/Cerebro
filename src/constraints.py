@@ -1,6 +1,7 @@
 """
 Define a class which represents a constraint on the sub task
 """
+import datetime
 
 
 class Constraint(object):
@@ -39,6 +40,26 @@ class LivingConstraint(Constraint):
 
     def __str__(self):
         return "LivingConstraint"
+
+
+class TimeConstraint(Constraint):
+    """
+    Only allow a child process to live so long
+    """
+    def __init__(self, time_limit):
+        super(TimeConstraint, self).__init__("Time Limit Constraint",
+                                               datetime.timedelta(
+                seconds=time_limit))
+
+    def check_violation(self, child_proc):
+        """
+        Check how long a child has been alive.
+        """
+        now = datetime.datetime.now()
+        return now - child_proc.start_time > self.value
+
+    def __str__(self):
+        return "TimeConstraint (%ss)" % self.value.seconds
 
 
 class CPUConstraint(Constraint):

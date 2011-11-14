@@ -1,6 +1,7 @@
 """
 A class to encapsulate data about a process
 """
+import datetime
 import os
 import resource
 import signal
@@ -23,6 +24,7 @@ class Process(object):
         self.cpu_usage = 0
         self.mem_usage = None
         self.proc_stats = []
+        self.start_time = datetime.datetime.now()
 
     def is_alive(self):
         """

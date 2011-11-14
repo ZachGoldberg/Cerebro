@@ -31,7 +31,7 @@ class StatsCollector(object):
         Return live statistics about the harness and child process
         """
         data = {
-            'process_start_time': str(self.harness.process_start),
+            'process_start_time': str(self.harness.child_proc.start_time),
             'num_task_starts': self.harness.start_count,
             }
 

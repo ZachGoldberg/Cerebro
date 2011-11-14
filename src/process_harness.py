@@ -33,7 +33,6 @@ class ProcessHarness(object):
 
         # Statistics
         self.task_start = datetime.datetime.now()
-        self.process_start = None
         self.violations = {}
         for constraint in self.constraints:
             self.violations[str(constraint)] = 0
@@ -45,8 +44,6 @@ class ProcessHarness(object):
         """
         Start a new instance of the child task
         """
-        self.process_start = datetime.datetime.now()
-
         pid = os.fork()
         if pid == 0:
             # We're the child, we'll exec
