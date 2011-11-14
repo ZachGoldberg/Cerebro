@@ -18,7 +18,7 @@ class ProcessHarness(object):
     """
     def __init__(self, command, constraints, restart=False,
                  max_restarts=-1, poll_interval=.1,
-                 stdout_location='-', stderr_location='-'):
+                 logmanager=None):
         self.child_proc = None
         self.child_running = True
         self.command = command
@@ -27,8 +27,8 @@ class ProcessHarness(object):
         self.poll_interval = poll_interval
         self.restart = restart
         self.start_count = 0
-        self.stderr_location = stderr_location
-        self.stdout_location = stdout_location
+        self.logmanager = logmanager
+        self.logmanager.set_harness(self)
 
         # Statistics
         self.task_start = datetime.datetime.now()
@@ -36,23 +36,6 @@ class ProcessHarness(object):
 
         # Start the child process
         self.start_process()
-
-    def _calculate_filename(self, directory, stderr=False,
-                            number=None):
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-
-        filenum = number
-        if not number:
-            filenum = self.start_count
-
-        payload = self.command
-        if stderr:
-            payload += "err"
-
-        return "%s/%s.%s" % (directory,
-                             md5.md5(payload).hexdigest(),
-                             filenum)
 
     def start_process(self):
         """
@@ -67,19 +50,8 @@ class ProcessHarness(object):
             os.setpgrp()
 
             # Configure STDOUT and STDERR
-            if self.stdout_location != '-':
-                print "Configuring STDOUT to %s" % self.stdout_location
-                stdout = open(self._calculate_filename(self.stdout_location),
-                              'w')
-                stdout_fileno = stdout.fileno()
-                os.dup2(stdout_fileno, 1)
-
-            if self.stderr_location != '-':
-                stderr = open(self._calculate_filename(self.stderr_location,
-                                                       True),
-                              'w')
-                stderr_fileno = stderr.fileno()
-                os.dup2(stderr_fileno, 2)
+            self.logmanager.setup_stdout()
+            self.logmanager.setup_stderr()
 
             # parse the command
             cmd = '/bin/bash'

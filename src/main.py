@@ -15,6 +15,7 @@ import sys
 
 import constraints
 import http_monitor
+import logmanager
 import process_harness
 import stats_collector
 
@@ -32,12 +33,14 @@ def run_command_with_harness(command, args, constraints_list):
       and all the current constraints
     """
 
+    logs = logmanager.LogManager(args.stdout_location,
+                                 args.stderr_location)
+
     return process_harness.ProcessHarness(command, constraints_list,
                                           restart=args.restart,
                                           max_restarts=args.max_restarts,
                                           poll_interval=args.poll_interval,
-                                          stdout_location=args.stdout_location,
-                                          stderr_location=args.stderr_location)
+                                          logmanager=logs)
 
 
 def parse_args(args):
@@ -141,7 +144,8 @@ def main(sys_args=None, wait_for_child=True):
     httpd = None
 
     if args.http_monitoring:
-        httpd = http_monitor.HTTPMonitor(stats, args.http_monitoring_port)
+        httpd = http_monitor.HTTPMonitor(stats, harness, 
+                                         args.http_monitoring_port)
         httpd.start()
 
     if wait_for_child:

@@ -99,9 +99,11 @@ class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
 
 class HTTPMonitor(object):
-    def __init__(self, stats, port):
+    def __init__(self, stats, harness, port):
         self.port = int(port)
         self.stats = stats
+        self.harness = harness
+        self.logmanager = harness.logmanager
         self.httpd = None
         self.stopped = False
         self.run_thread = None
@@ -111,7 +113,7 @@ class HTTPMonitor(object):
         Pull a list of logfiles for all of the tasks
         that this tasksitter has created.
         """
-        return self.stats.get_logfile_names()
+        return self.logmanager.get_logfile_names()
 
     def get_stats(self):
         """

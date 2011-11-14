@@ -26,23 +26,6 @@ class StatsCollector(object):
         """
         pass
 
-    def get_logfile_names(self):
-        filenames = {}
-        for i in range(self.harness.start_count):
-            if self.harness.stdout_location != "-":
-                filenames["stdout.%d" % i] = self.harness._calculate_filename(
-                    self.harness.stdout_location,
-                    False,
-                    str(i))
-
-            if self.harness.stderr_location != "-":
-                filenames["stderr.%d" % i] = self.harness._calculate_filename(
-                    self.harness.stderr_location,
-                    True,
-                    str(i))
-
-        return filenames
-
     def get_metadata(self):
         """
         Return metadata about the child process
