@@ -40,15 +40,19 @@ class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def _get_logs(self, args):
         logfiles = self.monitor.get_logs()
         for k, v in logfiles.items():
-            size = 0
-            try:
-                size = float(os.stat(v).st_size) / 1024
-            except:
-                pass
+            if args['nohtml']:
+                logfiles[k] = v
+            else:
+                size = 0
+                try:
+                    size = float(os.stat(v).st_size) / 1024
+                except:
+                    pass
 
-            logfiles[k] = "<a href='/logfile?name=%s'>%s (%s kB)</a>" % (v,
-                                                                         v,
-                                                                         size)
+                logfiles[k] = "<a href='/logfile?name=%s'>%s (%s kB)</a>" % (
+                    v,
+                    v,
+                    size)
 
         return self._format_dict(logfiles, args)
 

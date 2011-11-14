@@ -8,28 +8,45 @@ import urllib2
 
 
 class HTTPMonitoringTests(unittest.TestCase):
-    def run_check(self, args, output_format='json'):
-        port = 1024 + int(10000 * random.random())
-        print "Port %s Chosen" % port
+
+    def start_http_server(self, args):
+        self.port = 1024 + int(10000 * random.random())
+        print "Port %s Chosen" % self.port
         args.append("--http-monitoring")
-        args.append("--http-monitoring-port=%s" % port)
-        stats, httpd, harness = main.main(args, wait_for_child=False)
-        data = None
+        args.append("--http-monitoring-port=%s" % self.port)
+        self.stats, self.httpd, self.harness = main.main(
+            args, wait_for_child=False)
 
         # stop execution of this thread to give the HTTP thread time to
         # boot up
         time.sleep(.1)
+
+    def stop_http_server(self):
+        self.httpd.stop()
+        self.harness.terminate_child()
+
+    def make_call(self, url):
+        data = None
         try:
-            data = urllib2.urlopen(
-                'http://localhost:%s/stats?format=%s&nohtml=1' % (port,
-                                                         output_format)).read()
+            data = urllib2.urlopen(url).read()
         except:
-            pass
+            import traceback
+            traceback.print_exc()
+            self.fail()
 
-        httpd.stop()
-        harness.terminate_child()
+        return data
 
-        print data
+    def run_check(self, args, path, output_format='json',
+                  stop_server=True):
+        self.start_http_server(args)
+        data = self.make_call('http://localhost:%s/%s?format=%s&nohtml=1' % (
+                self.port,
+                path,
+                output_format))
+
+        if stop_server:
+            self.stop_http_server()
+
         if not data:
             return {}
 
@@ -42,7 +59,7 @@ class HTTPMonitoringTests(unittest.TestCase):
                 if not row:
                     continue
 
-                k, v = row.split('=')
+                k, v = row.split('=', 1)
                 return_data[k] = v
 
             return return_data
@@ -50,6 +67,7 @@ class HTTPMonitoringTests(unittest.TestCase):
     def test_basic_monitoring_flat(self):
         data = self.run_check(['--cpu=.2',
                                '--command', 'sleep .2; ./test/spin.sh'],
+                              path="stats",
                               output_format="flat")
 
         self.assertTrue("child_pid" in data)
@@ -62,8 +80,8 @@ class HTTPMonitoringTests(unittest.TestCase):
 
     def test_basic_monitoring_json(self):
         data = self.run_check(['--cpu=.2',
-                               '--command', 'sleep .2; ./test/spin.sh'])
-        print data
+                               '--command', 'sleep .2; ./test/spin.sh'],
+                              path="stats")
 
         self.assertTrue("child_pid" in data)
         self.assertTrue(data["process_start_time"] is not None)
@@ -72,3 +90,45 @@ class HTTPMonitoringTests(unittest.TestCase):
         self.assertEquals(data["num_task_starts"], 1)
         self.assertTrue("spin.sh" in data["command"])
         self.assertTrue("sleep" in data["command"])
+
+    def test_logs_list_json(self):
+        data = self.run_check(['--cpu=.2', "--ensure-alive",
+                               '--command', 'id',
+                               '--stdout-location', '/tmp/',
+                               '--stderr-location', '/tmp/'],
+                              path="logs",
+                              output_format='json')
+
+        self.assertTrue("stdout.0" in data)
+        self.assertTrue("stderr.0" in data)
+        self.assertTrue(len(data["stdout.0"]) > 0)
+        self.assertTrue(len(data["stderr.0"]) > 0)
+
+    def test_logs_list_flat(self):
+        data = self.run_check(['--cpu=.2', "--ensure-alive",
+                               '--command', 'id',
+                               '--stdout-location', '/tmp/',
+                               '--stderr-location', '/tmp/'],
+                              path="logs",
+                              output_format="flat")
+
+        self.assertTrue("stdout.0" in data)
+        self.assertTrue("stderr.0" in data)
+        self.assertTrue(len(data["stdout.0"]) > 0)
+        self.assertTrue(len(data["stderr.0"]) > 0)
+
+    def test_download_log_file(self):
+        data = self.run_check(['--cpu=.2', "--ensure-alive",
+                               '--command', 'echo -n "hello"; sleep 10',
+                               '--stdout-location', '/tmp/'],
+                              path="logs",
+                              output_format="flat",
+                              stop_server=False)
+
+        filename = data["stdout.0"]
+        log_data = self.make_call(
+            'http://localhost:%s/logfile?name=%s&nohtml=1' % (
+                self.port, filename))
+        self.stop_http_server()
+
+        self.assertEquals(log_data, "hello")
