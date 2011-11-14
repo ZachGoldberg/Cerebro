@@ -40,7 +40,8 @@ def run_command_with_harness(command, args, constraints_list):
                                           restart=args.restart,
                                           max_restarts=args.max_restarts,
                                           poll_interval=args.poll_interval,
-                                          logmanager=logs)
+                                          logmanager=logs,
+                                          uid=args.uid)
 
 
 def parse_args(args):
@@ -94,14 +95,18 @@ def parse_args(args):
                         '(default=0.1 seconds)')
 
     parser.add_argument('--stdout-location', dest='stdout_location',
-                        default='-',
+                        default='-', type=str,
                         help='Directory where stdout logs should be placed '
                         'default is to print to caller\'s STDOUT')
 
     parser.add_argument('--stderr-location', dest='stderr_location',
-                        default='-',
+                        default='-', type=str,
                         help='Directory where stdout logs should be placed '
                         'default is to print to caller\'s STDERR')
+
+    parser.add_argument('--uid', dest='uid', type=int,
+                        help='Change to UID before executing child process'
+                        'requires root priviledges')
 
     # explicitly offer args the param incase we're parsing not from
     # sys.argv
@@ -144,7 +149,7 @@ def main(sys_args=None, wait_for_child=True):
     httpd = None
 
     if args.http_monitoring:
-        httpd = http_monitor.HTTPMonitor(stats, harness, 
+        httpd = http_monitor.HTTPMonitor(stats, harness,
                                          args.http_monitoring_port)
         httpd.start()
 

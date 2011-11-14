@@ -1,10 +1,6 @@
-fix the type= parameter for python 2.6 compatibility
 CPU Usage should be calculated taking into account IDLE jiffies?
 Keep a list of vioated constraints and expose via HTTP
-Run as a different user
 Fixed expiration or task timeout
-Add unit tests for HTTP log exposure
-Expose task-sitter logs, too!
 Set CPU Core Affinity
 Have constraints output a % instead of a bool so we can do warnings at
 thresholds.
@@ -13,3 +9,5 @@ Implement Alerting in HTTP Interface
 Implement 'flexible' limits, aka how long a process can be in
    violation before its killed
 Add Logging instead of printing inside task sitter
+  Expose task-sitter logs, too!
+fix the type= parameter for python 2.6 compatibility

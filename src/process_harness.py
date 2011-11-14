@@ -3,8 +3,8 @@ A class which encapsulates a process and a set of constraints
 and ensures that they are constantly fulfilled.
 """
 import datetime
-import md5
 import os
+import sys
 import threading
 import time
 
@@ -18,17 +18,18 @@ class ProcessHarness(object):
     """
     def __init__(self, command, constraints, restart=False,
                  max_restarts=-1, poll_interval=.1,
-                 logmanager=None):
+                 logmanager=None, uid=None):
         self.child_proc = None
         self.child_running = True
         self.command = command
         self.constraints = constraints
+        self.logmanager = logmanager
+        self.logmanager.set_harness(self)
         self.max_restarts = max_restarts
         self.poll_interval = poll_interval
         self.restart = restart
         self.start_count = 0
-        self.logmanager = logmanager
-        self.logmanager.set_harness(self)
+        self.uid = uid
 
         # Statistics
         self.task_start = datetime.datetime.now()
@@ -48,6 +49,13 @@ class ProcessHarness(object):
             # We're the child, we'll exec
             # Put ourselves into our own pgrp, for sanity
             os.setpgrp()
+
+            if self.uid:
+                try:
+                    os.setuid(self.uid)
+                except OSError:  # no permission
+                    sys.stderr.write("Must be root to set UID!")
+                    os._exit(1)
 
             # Configure STDOUT and STDERR
             self.logmanager.setup_stdout()
