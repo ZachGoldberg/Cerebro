@@ -1,0 +1,31 @@
+Task Sitter -- A harness to manage an arbitrary task or process.
+
+Goal: Instead of thinking about how many machines you need to run a process on
+the task sitter's goal is to force the admin to think instead in terms of CPU
+and RAM, an to plan how much of each resource a process should use ahead of time.
+
+The Task Sitter's job is to enforce the limits that the admin thinks a process
+should obey.  It can handle the cases where a process disobeys these limits.
+
+Together with a machine sitter a machine can be completely managed to run
+various tasks efficiently within the resource constraints of the machine.
+
+With a cluster sitter an admin can define how many CPUs and how much RAM a particular
+task can use and it can go to machines, look for available CPU and RAM where
+the process fits and slot it in there.
+
+Task Sitter Details:
+  -- Define constraints:
+    - Should always be alive? (--ensure-alive)
+    - Fixed % of a CPU (--cpu)
+    - Fixed MB of RAM (--mem)
+    - Fixed lifetime (--time-limit)
+
+ -- Define runtime metadata
+    - User ID (--uid)
+    - Should the proc be restarted on violation? (--restart)
+    - Maximum # of reboots (--max-restarts)
+    - stdout / stderr directories (--std**-location)
+
+ -- Monitoring
+    - HTTP Based Monitor (--http-monitoring, --http-monitoring-port)
