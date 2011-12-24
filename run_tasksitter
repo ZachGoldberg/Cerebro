@@ -1,0 +1,3 @@
+#!/usr/bin/python
+from tasksitter.main import main
+main()
