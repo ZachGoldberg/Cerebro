@@ -14,6 +14,18 @@ class MachineStats(StatsCollector):
                     self.hostname,
                     self.harness.http_monitor.port,
                     task.id)
+            else:
+                data["%s-stop" % task.id] = \
+                    "<a href='http://%s:%s/stop_task?task_id=%s'>stop</a>" % (
+                    self.hostname,
+                    self.harness.http_monitor.port,
+                    task.id)
+                location = "http://%s:%s" % (
+                    self.hostname,
+                    task.http_monitoring_port)
+                data["%s-monitoring" % task.id] = "<a href='%s'>%s</a>" % (location,
+                                                                           location)
+
         return data
 
     def get_metadata(self):
@@ -22,11 +34,6 @@ class MachineStats(StatsCollector):
         data['starting_port'] = self.harness.starting_port
         data['task_definition_file'] = self.harness.task_definition_file
         for task_id, task in self.harness.tasks.items():
-            location = "http://%s:%s" % (
-                self.hostname,
-                task.http_monitoring_port)
-            data["%s-monitoring" % task.id] = "<a href='%s'>%s</a>" % (location,
-                                                      location)
             data["%s-name" % task.id] = task.name
             data["%s-command" % task.id] = task.command
 

@@ -199,7 +199,7 @@ def reload_data():
     MACHINE_DATA.reload()
 
 
-def main():
+def run():
     global SCR, MENUFACTORY
     SCR = curses.initscr()
 
@@ -230,7 +230,7 @@ def find_sitter_url():
     return "http://localhost:%s" % port
 
 
-def run():
+def main():
     global MACHINESITTER_URL
     try:
         MACHINESITTER_URL = find_sitter_url()
@@ -238,11 +238,11 @@ def run():
             print "Couldn't find a running machine sitter!"
             return
 
-        main()
+        run()
     except:
         curses.endwin()
         import traceback
         traceback.print_exc()
 
 if __name__ == '__main__':
-    run()
+    main()
