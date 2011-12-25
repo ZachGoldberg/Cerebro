@@ -1,4 +1,4 @@
-import main
+import tasksitter.main as main
 import md5
 import os
 import subprocess

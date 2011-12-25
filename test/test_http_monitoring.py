@@ -1,4 +1,4 @@
-import main
+import tasksitter.main as main
 import os
 import random
 import simplejson

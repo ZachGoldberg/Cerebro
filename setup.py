@@ -6,7 +6,9 @@ setup(name='TaskSitter',
       author='Zach Goldberg',
       author_email='zach@zachgoldberg.com',
       url='zachgoldberg.com/',
-      packages=['tasksitter'],
-      package_dir={'tasksitter': 'src/'},
+      packages=['tasksitter', 'machinesitter', 'sittercommon'],
+      package_dir={'tasksitter': 'src/tasksitter',
+                   'machinesitter': 'src/machinesitter',
+                   'sittercommon': 'src/sittercommon'},
       scripts=['run_tasksitter']
      )
