@@ -1,6 +1,7 @@
 import random
 import simplejson
 import subprocess
+import time
 
 
 class TaskManager(object):
@@ -46,6 +47,7 @@ class TaskManager(object):
 
     def get_old_logfilenames(self):
         stdout = open(self.sitter_stdout).readlines()
+        print stdout
         return simplejson.loads(stdout[-1])
 
     def is_running(self):
@@ -56,6 +58,13 @@ class TaskManager(object):
 
     def get_last_pid(self):
         return self.used_pids[-1]
+
+    def stop(self):
+        print "Stopping %s" % self.id
+        self.was_started = False
+        self.process.terminate()
+        while self.is_running():
+            time.sleep(.1)
 
     def start(self):
         args = ["run_tasksitter"]

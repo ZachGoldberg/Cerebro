@@ -5,6 +5,7 @@ import datetime
 import os
 import resource
 import signal
+import sys
 import time
 
 
@@ -35,6 +36,9 @@ class Process(object):
             return True
         except OSError:
             return False
+        except KeyboardInterrupt:
+            print "WAA" * 100
+            self.force_exit()
 
     def force_exit(self):
         """

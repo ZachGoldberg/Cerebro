@@ -4,6 +4,8 @@ and ensures that they are constantly fulfilled.
 """
 import datetime
 import os
+import signal
+import simplejson
 import sys
 import threading
 import time
@@ -31,6 +33,7 @@ class ProcessHarness(object):
         self.parent_pid = os.getpid()
         self.logmanager = logmanager
         self.logmanager.set_harness(self)
+        self.stop_running = False
 
         # Statistics
         self.task_start = datetime.datetime.now()
@@ -38,8 +41,18 @@ class ProcessHarness(object):
         for constraint in self.constraints:
             self.violations[str(constraint)] = 0
 
+        signal.signal(signal.SIGTERM, self.exit_now)
+        signal.signal(signal.SIGINT, self.exit_now)
+
         # Start the child process
         self.start_process()
+
+    def exit_now(self, signum, stack):
+        self.stop_running = True
+        self.child_running = False
+        self.terminate_child()
+        print simplejson.dumps(self.logmanager.get_logfile_names())
+        os._exit(0)
 
     def start_process(self):
         """
@@ -75,6 +88,9 @@ class ProcessHarness(object):
         Begin monitoring the child process
         """
         while True:
+            if self.stop_running:
+                return
+
             restarted = False
 
             for constraint in self.constraints:

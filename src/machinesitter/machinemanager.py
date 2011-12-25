@@ -30,6 +30,22 @@ class MachineManager(object):
                                                      self.next_port())
 
         self.http_monitor.add_handler('/start_task', self.remote_start_task)
+        self.http_monitor.add_handler('/stop_task', self.remote_stop_task)
+
+    def remote_stop_task(self, args):
+        if not 'task_id' in args:
+            return "Error"
+
+        if not args['task_id'] in self.tasks:
+            return "Error"
+
+        task = self.tasks[args['task_id']]
+        if not task.was_started:
+            return "Already stopped"
+
+        task.stop()
+        self.collect_old_task_logs(task)
+        return "Stopped"
 
     def remote_start_task(self, args):
         if not 'task_id' in args:
@@ -77,12 +93,7 @@ class MachineManager(object):
     def stop(self):
         self.should_stop = True
 
-    def restart_task(self, task_id):
-        task = self.tasks[task_id]
-        print "Task %s died" % task_id
-        logs = task.stdall()
-        print "Task Stdout:\n %s" % logs[0]
-        print "Task Stderr:\n %s" % logs[1]
+    def collect_old_task_logs(self, task):
         for filename, fileloc in task.get_old_logfilenames().items():
             self.logmanager.add_logfile("Terminated %s (%s @ %s) %s" % (
                     task.name,
@@ -90,6 +101,14 @@ class MachineManager(object):
                     task.get_last_pid(),
                     filename
                     ), fileloc)
+
+    def restart_task(self, task_id):
+        task = self.tasks[task_id]
+        print "Task %s died" % task_id
+        logs = task.stdall()
+        print "Task Stdout:\n %s" % logs[0]
+        print "Task Stderr:\n %s" % logs[1]
+        self.collect_old_task_logs(task)
         task.set_port(self.next_port())
         task.start()
 
@@ -102,27 +121,23 @@ class MachineManager(object):
             self.logmanager.stdout_location)
         stderr_loc = self.logmanager._calculate_filename(
             self.logmanager.stderr_location, True)
-        self.logmanager.add_logfile("machinemanager stdout", stdout_loc)
-        self.logmanager.add_logfile("machinemanager stderr", stderr_loc)
+        self.logmanager.add_logfile("machinemanager-stdout", stdout_loc)
+        self.logmanager.add_logfile("machinemanager-stderr", stderr_loc)
 
         print "Redirecting machine sitter output to %s, stderr: %s" % (
             stdout_loc, stderr_loc)
 
-        self.logmanager.setup_stdout()
-        self.logmanager.setup_stderr()
+        #self.logmanager.setup_stdout()
+        #self.logmanager.setup_stderr()
 
         for task in self.tasks.values():
             print "Initializing %s" % task.id
             task.initialize()
             self.logmanager.add_logfile(
-                "TaskManager stdout for %s (%s)" % (
-                    task.name,
-                    task.id), task.sitter_stdout)
+                "%s-stdout" % task.id, task.sitter_stdout)
 
             self.logmanager.add_logfile(
-                "TaskManager stderr for %s (%s)" % (
-                    task.name,
-                    task.id), task.sitter_stderr)
+                "%s-stderr" % task.id, task.sitter_stderr)
 
         while True:
             for task in self.tasks.values():
