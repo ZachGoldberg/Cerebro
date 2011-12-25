@@ -14,9 +14,13 @@ class LogManager(object):
         self.stdout_location = stdout_location
         self.stderr_location = stderr_location
         self.harness = None
+        self.extra_logfiles = {}
 
     def set_harness(self, harness):
         self.harness = harness
+
+    def add_logfile(self, name, filename):
+        self.extra_logfiles[name] = filename
 
     def setup_stdout(self):
         if self.stdout_location != '-':
@@ -48,6 +52,7 @@ class LogManager(object):
                     True,
                     str(i))
 
+        filenames.update(self.extra_logfiles)
         return filenames
 
     def _calculate_filename(self, directory, stderr=False,

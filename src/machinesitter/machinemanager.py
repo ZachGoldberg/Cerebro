@@ -18,6 +18,7 @@ class MachineManager(object):
         self.starting_port = starting_port
         self.log_location = log_location
         self.start_count = 0
+        self.command = "machinemanager"
         self.logmanager = logmanager.LogManager(stdout_location=log_location,
                                                 stderr_location=log_location)
         self.logmanager.set_harness(self)
@@ -82,7 +83,13 @@ class MachineManager(object):
         logs = task.stdall()
         print "Task Stdout:\n %s" % logs[0]
         print "Task Stderr:\n %s" % logs[1]
-
+        for filename, fileloc in task.get_old_logfilenames().items():
+            self.logmanager.add_logfile("Terminated %s (%s @ %s) %s" % (
+                    task.name,
+                    task.command,
+                    task.get_last_pid(),
+                    filename
+                    ), fileloc)
         task.set_port(self.next_port())
         task.start()
 
@@ -91,9 +98,31 @@ class MachineManager(object):
         print "Machine Sitter Monitor started at " + \
             "http://localhost:%s" % self.http_monitor.port
 
+        stdout_loc = self.logmanager._calculate_filename(
+            self.logmanager.stdout_location)
+        stderr_loc = self.logmanager._calculate_filename(
+            self.logmanager.stderr_location, True)
+        self.logmanager.add_logfile("machinemanager stdout", stdout_loc)
+        self.logmanager.add_logfile("machinemanager stderr", stderr_loc)
+
+        print "Redirecting machine sitter output to %s, stderr: %s" % (
+            stdout_loc, stderr_loc)
+
+        self.logmanager.setup_stdout()
+        self.logmanager.setup_stderr()
+
         for task in self.tasks.values():
             print "Initializing %s" % task.id
             task.initialize()
+            self.logmanager.add_logfile(
+                "TaskManager stdout for %s (%s)" % (
+                    task.name,
+                    task.id), task.sitter_stdout)
+
+            self.logmanager.add_logfile(
+                "TaskManager stderr for %s (%s)" % (
+                    task.name,
+                    task.id), task.sitter_stderr)
 
         while True:
             for task in self.tasks.values():

@@ -9,10 +9,10 @@ the job.
 If a job is 'flapping' or being rebooted too often it knows how to trigger
 an alert.
 """
-
-import sittercommon.arg_parser as argparse
+import simplejson
 import sys
 
+import sittercommon.arg_parser as argparse
 import sittercommon.http_monitor as http_monitor
 import sittercommon.logmanager as logmanager
 import constraints
@@ -166,6 +166,9 @@ def main(sys_args=None, wait_for_child=True):
 
     if wait_for_child:
         exit_code = harness.wait_for_child_to_finish()
+
+        print simplejson.dumps(harness.logmanager.get_logfile_names())
+
         if httpd and not args.keep_http_running:
             httpd.stop()
 

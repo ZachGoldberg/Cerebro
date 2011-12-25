@@ -1,4 +1,5 @@
 import random
+import simplejson
 import subprocess
 
 
@@ -29,6 +30,7 @@ class TaskManager(object):
         self.sitter_stderr = "%s/%s.stderr" % (log_location, self.id)
 
         self.process = None
+        self.used_pids = []
 
     def set_port(self, port):
         self.http_monitoring_port = port
@@ -42,11 +44,18 @@ class TaskManager(object):
         stderr = open(self.sitter_stderr).read()
         return stdout, stderr
 
+    def get_old_logfilenames(self):
+        stdout = open(self.sitter_stdout).readlines()
+        return simplejson.loads(stdout[-1])
+
     def is_running(self):
         if not self.process:
             return False
 
         return self.process.poll() == None
+
+    def get_last_pid(self):
+        return self.used_pids[-1]
 
     def start(self):
         args = ["run_tasksitter"]
@@ -88,10 +97,11 @@ class TaskManager(object):
 
         self.process = subprocess.Popen(
             args,
-            stdout=open(self.sitter_stdout, 'w'),
-            stderr=open(self.sitter_stderr, 'w'))
+            stdout=open(self.sitter_stdout, 'a'),
+            stderr=open(self.sitter_stderr, 'a'))
 
         self.was_started = True
+        self.used_pids.append(self.process.pid)
 
         print "Task '%s' Started.  Task Monitoring At: http://localhost:%s" % (
             self.command,
