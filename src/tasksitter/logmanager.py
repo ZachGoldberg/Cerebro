@@ -68,6 +68,8 @@ class LogManager(object):
         if stderr:
             payload += "err"
 
+        payload += str(os.getpid())
+
         return "%s/%s.%s" % (directory,
                              md5.md5(payload).hexdigest(),
                              filenum)

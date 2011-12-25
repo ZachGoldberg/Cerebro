@@ -10,5 +10,6 @@ setup(name='TaskSitter',
       package_dir={'tasksitter': 'src/tasksitter',
                    'machinesitter': 'src/machinesitter',
                    'sittercommon': 'src/sittercommon'},
-      scripts=['run_tasksitter']
+      scripts=['run_tasksitter', 'run_machinesitter'],
+      requires=['psi'],
      )

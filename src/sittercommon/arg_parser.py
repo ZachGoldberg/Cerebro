@@ -31,7 +31,17 @@ class OptParserWrapper(optparse.OptionParser):
         (options, args) = optparse.OptionParser.parse_args(self, args)
         return options
 
+
+class CustomArgParser(argparse.ArgumentParser):
+    def __init__(self, *args, **kwargs):
+        argparse.ArgumentParser.__init__(
+            self,
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+            *args,
+            **kwargs)
+
+
 if PARSER == "argparse":
-    ArgumentParser = argparse.ArgumentParser
+    ArgumentParser = CustomArgParser
 else:
     ArgumentParser = OptParserWrapper

@@ -99,6 +99,8 @@ class ProcessHarness(object):
                 if not restarted:
                     # There is no living constraint and child is dead,
                     # so set running to false
+                    print "Child exited on its own, not asked to " + \
+                        "restart it, exiting"
                     self.child_running = False
                     return
 
