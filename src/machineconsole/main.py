@@ -21,6 +21,13 @@ def add_line(msg):
     SCR.addstr(YPOS, 0, msg)
     YPOS += 1
 
+def remove_line():
+    global YPOS
+    SCR.clrtoeol()
+    y, x = SCR.getyx()
+    SCR.move(y - 1, x)
+    YPOS -= 1
+
 
 def refresh():
     global YPOS
@@ -49,10 +56,13 @@ def mainmenu():
     menu.add_option_vals("Add a new task",
                     action=lambda: change_menu('addtask'))
 
+    menu.add_option_vals("Show task definitions",
+                    action=lambda: change_menu('show_task_definitions'))
+
     menu.add_option_vals("Show machine sitter logs",
                     action=lambda: change_menu('show_machinesitter_logs'))
 
-    menu.render(SCR, add_line)
+    menu.render()
 
 
 def show_machinesitter_logs():
@@ -79,7 +89,7 @@ def show_logs(logs, title):
         menu.add_option_vals("%s (%s)" % (logname, logfile),
                          action=MenuChanger(tail_file, logfile))
 
-    menu.render(SCR, add_line)
+    menu.render()
 
 
 def tail_file(filename):
@@ -102,6 +112,7 @@ def start_task(task):
 
 def stop_task(task):
     MACHINE_DATA.stop_task(task)
+
 
 def show_task():
     name, task = AUX
@@ -130,7 +141,7 @@ def show_task():
     menu.add_option_vals("Show historic task log files",
                          action=lambda: change_menu('show_task_logs', task))
 
-    menu.render(SCR, add_line)
+    menu.render()
 
 
 def basic_tasks():
@@ -143,7 +154,7 @@ def basic_tasks():
     running_lines = []
     not_running = []
     not_running_lines = []
-    MENUFACTORY = MenuFactory()
+    MENUFACTORY = MenuFactory(SCR, add_line, remove_line)
 
     for name, task in MACHINE_DATA.tasks.items():
         if task['running'] == "True":
