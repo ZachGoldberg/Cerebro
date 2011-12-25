@@ -1,5 +1,9 @@
+import sittercommon.http_monitor as http_monitor
+import sittercommon.logmanager as logmanager
+import machinestats
 import taskmanager
 
+import os
 import threading
 import time
 import socket
@@ -13,21 +17,47 @@ class MachineManager(object):
         self.should_stop = False
         self.starting_port = starting_port
         self.log_location = log_location
+        self.start_count = 0
+        self.logmanager = logmanager.LogManager(stdout_location=log_location,
+                                                stderr_location=log_location)
+        self.logmanager.set_harness(self)
+
+        self.parent_pid = os.getpid()
+        self.stats = machinestats.MachineStats(self)
+        self.http_monitor = http_monitor.HTTPMonitor(self.stats,
+                                                     self,
+                                                     self.next_port())
+
+        self.http_monitor.add_handler('/start_task', self.remote_start_task)
+
+    def remote_start_task(self, args):
+        if not 'task_id' in args:
+            return "Error"
+
+        if not args['task_id'] in self.tasks:
+            return "Error"
+
+        if not self.tasks[args['task_id']].is_running():
+            self.tasks[args['task_id']].start()
+            return "%s started" % args['task_id']
+        else:
+            return "Already running"
 
     def next_port(self):
-        bound = False
-        while not bound:
+        works = None
+        while not works:
             try:
                 sok = socket.socket(socket.AF_INET)
                 sok.bind(("0.0.0.0", self.starting_port))
                 sok.close()
-                bound = True
+                works = self.starting_port
+                self.starting_port += 1
             except:
                 self.starting_port += 1
                 if self.starting_port > 50000:
                     self.starting_port = 40000
 
-        return self.starting_port
+        return works
 
     def add_new_task(self, task_definition):
         task = taskmanager.TaskManager(task_definition,
@@ -57,6 +87,10 @@ class MachineManager(object):
         task.start()
 
     def _run(self):
+        self.http_monitor.start()
+        print "Machine Sitter Monitor started at " + \
+            "http://localhost:%s" % self.http_monitor.port
+
         for task in self.tasks.values():
             print "Initializing %s" % task.id
             task.initialize()

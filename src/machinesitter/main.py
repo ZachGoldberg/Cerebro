@@ -42,7 +42,8 @@ def main(sys_args=None):
     except:
         pass
 
-    manager = machinemanager.MachineManager(config['log_location'])
+    manager = machinemanager.MachineManager(config['log_location'],
+                                            starting_port=40000)
 
     task_definitions = config['task_definitions']
 

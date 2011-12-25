@@ -14,8 +14,8 @@ import sittercommon.arg_parser as argparse
 import sys
 
 import sittercommon.http_monitor as http_monitor
+import sittercommon.logmanager as logmanager
 import constraints
-import logmanager
 import process_harness
 import stats_collector
 
@@ -86,6 +86,11 @@ def parse_args(args):
     parser.add_argument('--http-monitoring-port', dest='http_monitoring_port',
                         default=8080, type=int,
                         help='Port to do HTTP Monitoring (Default: 80)')
+
+    parser.add_argument('--keep-http-running', dest='keep_http_running',
+                        default=False,
+                        action='store_true',
+                        help='Keep http server up after children die')
 
     parser.add_argument('--command', dest='command',
                         required=True,
@@ -161,10 +166,11 @@ def main(sys_args=None, wait_for_child=True):
 
     if wait_for_child:
         exit_code = harness.wait_for_child_to_finish()
-        if httpd:
+        if httpd and not args.keep_http_running:
             httpd.stop()
 
-        sys.exit(exit_code)
+        if not args.keep_http_running:
+            sys.exit(exit_code)
 
     else:
         return stats, httpd, harness

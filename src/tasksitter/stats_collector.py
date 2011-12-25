@@ -2,6 +2,7 @@
 A class which knows how to pull information out of a process harness
 and process.  Exposes a simple interface to get all this information.
 """
+import socket
 import threading
 
 
@@ -10,6 +11,7 @@ class StatsCollector(object):
     Collect various kinds of statistics about running the child process.
     """
     def __init__(self, harness):
+        self.hostname = socket.gethostname()
         self.harness = harness
         self.thread = None
 

@@ -1,4 +1,3 @@
-import psi.process
 import random
 import subprocess
 
@@ -16,6 +15,7 @@ class TaskManager(object):
         self.time_limit = task_definition.get('time_limit')
         self.uid = task_definition.get('uid')
         self.command = task_definition['command']
+        self.name = task_definition['name']
 
         self.http_monitoring = True
         self.http_monitoring_port = None
@@ -43,7 +43,10 @@ class TaskManager(object):
         return stdout, stderr
 
     def is_running(self):
-        return not bool(self.process.poll())
+        if not self.process:
+            return False
+
+        return self.process.poll() == None
 
     def start(self):
         args = ["run_tasksitter"]
@@ -90,6 +93,6 @@ class TaskManager(object):
 
         self.was_started = True
 
-        print "%s Started.  HTTP Monitoring: http://localhost:%s" % (
+        print "Task '%s' Started.  Task Monitoring At: http://localhost:%s" % (
             self.command,
             self.http_monitoring_port)

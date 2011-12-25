@@ -11,7 +11,7 @@ import BaseHTTPServer
 
 class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
-    def __init__(self, monitor, *args, **kwargs):
+    def __init__(self, monitor, new_handlers, *args, **kwargs):
         self.monitor = monitor
 
         self.handlers = {
@@ -19,6 +19,8 @@ class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             "/logs": self._get_logs,
             "/logfile": self._get_logfile,
             }
+
+        self.handlers.update(new_handlers)
 
         BaseHTTPServer.BaseHTTPRequestHandler.__init__(self, *args, **kwargs)
 
@@ -29,6 +31,9 @@ class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             output += "<li><a href='%s'>%s</a></li>" % (handler, handler)
         output += "</ul></body></html>"
         return output
+
+    def add_handler(self, path, callback):
+        self.handlers[path] = callback
 
     def _get_logfile(self, args):
         # @TODO This is a bit of a security problem...
@@ -111,6 +116,10 @@ class HTTPMonitor(object):
         self.httpd = None
         self.stopped = False
         self.run_thread = None
+        self.new_handlers = {}
+
+    def add_handler(self, path, callback):
+        self.new_handlers[path] = callback
 
     def get_logs(self):
         """
@@ -150,6 +159,8 @@ class HTTPMonitor(object):
         """
         Internal method to start the server.
         """
-        handler = lambda x, y, z: HTTPMonitorHandler(self, x, y, z)
+        handler = lambda x, y, z: HTTPMonitorHandler(
+            self,
+            self.new_handlers, x, y, z)
         self.httpd = SocketServer.TCPServer(('', self.port), handler)
         self.httpd.serve_forever(poll_interval=0.1)

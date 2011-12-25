@@ -1,1 +1,1 @@
-{"task_definitions": [{"command": "top", "auto_start": true}], "log_location": "/mnt/data"}
+{"task_definitions": [{"name": "basictest", "command": "top", "auto_start": false}], "log_location": "/mnt/data"}
