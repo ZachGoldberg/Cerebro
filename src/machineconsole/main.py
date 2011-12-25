@@ -57,11 +57,25 @@ def mainmenu():
 
 def show_machinesitter_logs():
     logs = MACHINE_DATA.get_sitter_logs()
-    menu = MENUFACTORY.new_menu("Machine Sitter Logs")
+    show_logs(logs, "Machine Sitter Logs")
+
+
+def show_task_logs():
+    task = AUX
+    logs = MACHINE_DATA.get_task_logs(task)
+    show_logs(logs, "%s Logs" % task['name'])
+
+
+def show_logs(logs, title):
+    menu = MENUFACTORY.new_menu(title)
     menu.add_option_vals("Main Menu",
                     action=lambda: change_menu('mainmenu'), hotkey="*")
 
-    for logname, logfile in logs.items():
+    lognames = logs.keys()
+    lognames.sort()
+
+    for logname in lognames:
+        logfile = logs[logname]
         menu.add_option_vals("%s (%s)" % (logname, logfile),
                          action=MenuChanger(tail_file, logfile))
 
@@ -89,7 +103,6 @@ def start_task(task):
 def stop_task(task):
     MACHINE_DATA.stop_task(task)
 
-
 def show_task():
     name, task = AUX
     reload_data()
@@ -115,7 +128,7 @@ def show_task():
                              action=lambda: show_log(task, True))
 
     menu.add_option_vals("Show historic task log files",
-                         action=lambda: change_menu('showrecords', task))
+                         action=lambda: change_menu('show_task_logs', task))
 
     menu.render(SCR, add_line)
 
@@ -127,34 +140,52 @@ def basic_tasks():
     reload_data()
 
     running = []
+    running_lines = []
     not_running = []
+    not_running_lines = []
     MENUFACTORY = MenuFactory()
 
     for name, task in MACHINE_DATA.tasks.items():
-        line = ""
+        if task['running'] == "True":
+            running.append((name, task))
+        else:
+            not_running.append((name, task))
+
+    hotkey = 1
+    for name, task in running:
         line = "%s (%s)" % (task['name'],
                             task['command'])
-
-        if task['running'] == "True":
-            running.append(line)
-        else:
-            not_running.append(line)
-
+        running_lines.append(line)
         option = MenuOption(
                 task['name'],
                 action=MenuChanger(change_menu, "show_task",
                                    (name, task)),
-                hotkey=str(len(running) + len(not_running)),
+                hotkey=str(hotkey),
                 hidden=True)
 
         MENUFACTORY.add_default_option(option)
+        hotkey += 1
+
+    for name, task in not_running:
+        line = "%s (%s)" % (task['name'],
+                            task['command'])
+        not_running_lines.append(line)
+        option = MenuOption(
+                task['name'],
+                action=MenuChanger(change_menu, "show_task",
+                                   (name, task)),
+                hotkey=str(hotkey),
+                hidden=True)
+
+        MENUFACTORY.add_default_option(option)
+        hotkey += 1
 
     add_line("Running Tasks:")
-    for num, l in enumerate(running):
+    for num, l in enumerate(running_lines):
         add_line("%s. %s" % ((num + 1), l))
 
     add_line("Stopped Tasks:")
-    for num, l in enumerate(not_running):
+    for num, l in enumerate(not_running_lines):
         add_line("%s. %s" % ((len(running) + num + 1), l))
 
     add_line("-" * 80)

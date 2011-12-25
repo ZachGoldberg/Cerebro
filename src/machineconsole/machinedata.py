@@ -67,6 +67,18 @@ class MachineData(object):
     def get_sitter_logs(self):
         return self.load_generic_page(self.url, "logs")
 
+    def get_task_logs(self, task):
+        sitter_logs = self.get_sitter_logs()
+        logs = {}
+        for logname, logfile in sitter_logs.items():
+            if task['name'] in logname:
+                logs[logname] = logfile
+
+        url = self.strip_html(task['monitoring'])
+        logs.update(self.load_generic_page(url, 'logs'))
+
+        return logs
+
     def get_logfile(self, task, stderr=False):
         url = self.strip_html(task['monitoring'])
         data = self.load_generic_page(url,
@@ -85,4 +97,5 @@ if __name__ == '__main__':
     import subprocess
     d = MachineData("http://localhost:40000")
     d.reload()
-    print d.stop_task(d.tasks['REX (Remote Extractor)'])
+    task = d.tasks['REX (Remote Extractor)']
+    print d.get_task_logs(task)

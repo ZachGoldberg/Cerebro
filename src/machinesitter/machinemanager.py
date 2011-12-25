@@ -11,8 +11,10 @@ import socket
 
 class MachineManager(object):
 
-    def __init__(self, log_location, starting_port=40000):
+    def __init__(self, task_definition_file, log_location,
+                 starting_port=40000):
         self.tasks = {}
+        self.task_definition_file = task_definition_file
         self.thread = None
         self.should_stop = False
         self.starting_port = starting_port
@@ -54,8 +56,10 @@ class MachineManager(object):
         if not args['task_id'] in self.tasks:
             return "Error"
 
-        if not self.tasks[args['task_id']].is_running():
-            self.tasks[args['task_id']].start()
+        task = self.tasks[args['task_id']]
+        if not task.is_running():
+            task.set_port(self.next_port())
+            task.start()
             return "%s started" % args['task_id']
         else:
             return "Already running"

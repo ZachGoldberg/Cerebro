@@ -18,7 +18,9 @@ class MachineStats(StatsCollector):
 
     def get_metadata(self):
         data = {}
-
+        data['log_location'] = self.harness.log_location
+        data['starting_port'] = self.harness.starting_port
+        data['task_definition_file'] = self.harness.task_definition_file
         for task_id, task in self.harness.tasks.items():
             location = "http://%s:%s" % (
                 self.hostname,
