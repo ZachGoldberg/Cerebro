@@ -20,7 +20,6 @@ class LogManager(object):
 
     def setup_stdout(self):
         if self.stdout_location != '-':
-            print "Configuring STDOUT to %s" % self.stdout_location
             stdout = open(self._calculate_filename(self.stdout_location),
                           'w')
             stdout_fileno = stdout.fileno()
@@ -60,16 +59,20 @@ class LogManager(object):
         if not number and self.harness:
             filenum = self.harness.start_count
 
+        parent_pid = os.getpid()
+
         if self.harness:
             payload = self.harness.command
+            parent_pid = self.harness.parent_pid
         else:
             payload = str(random.random())
+
+        payload += str(parent_pid)
 
         if stderr:
             payload += "err"
 
-        payload += str(os.getpid())
-
-        return "%s/%s.%s" % (directory,
+        name = "%s/%s.%s" % (directory,
                              md5.md5(payload).hexdigest(),
                              filenum)
+        return name

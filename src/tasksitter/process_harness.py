@@ -23,13 +23,14 @@ class ProcessHarness(object):
         self.child_running = True
         self.command = command
         self.constraints = constraints
-        self.logmanager = logmanager
-        self.logmanager.set_harness(self)
         self.max_restarts = max_restarts
         self.poll_interval = poll_interval
         self.restart = restart
         self.start_count = 0
         self.uid = uid
+        self.parent_pid = os.getpid()
+        self.logmanager = logmanager
+        self.logmanager.set_harness(self)
 
         # Statistics
         self.task_start = datetime.datetime.now()

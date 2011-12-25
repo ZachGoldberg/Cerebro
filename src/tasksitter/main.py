@@ -13,8 +13,8 @@ an alert.
 import sittercommon.arg_parser as argparse
 import sys
 
+import sittercommon.http_monitor as http_monitor
 import constraints
-import http_monitor
 import logmanager
 import process_harness
 import stats_collector

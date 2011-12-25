@@ -38,9 +38,10 @@ class BasicTests(unittest.TestCase):
                         "--stdout-location=%s" % dirname])
         data = []
         for i in range(0, 3):
-            filename = "%s/%s.%s" % (dirname,
-                                     md5.md5(command).hexdigest(),
-                                     i)
+            filename = "%s/%s.%s" % (
+                dirname,
+                md5.md5(command + str(os.getpid())).hexdigest(),
+                i)
 
             data.append(open(filename).read())
             os.unlink(filename)
@@ -61,9 +62,10 @@ class BasicTests(unittest.TestCase):
 
         data = []
         for i in range(0, 3):
-            filename = "%s/%s.%s" % (dirname,
-                                     md5.md5(command + "err").hexdigest(),
-                                     i)
+            filename = "%s/%s.%s" % (
+                dirname,
+                md5.md5(command + str(os.getpid()) + "err").hexdigest(),
+                i)
 
             data.append(open(filename).read())
             os.unlink(filename)
@@ -136,7 +138,6 @@ class BasicTests(unittest.TestCase):
                         "echo '1' >> %s ; ./test/spin.sh" % filename], 9)
 
         lines = open(filename).readlines()
-        print lines
         os.unlink(filename)
         self.assertEqual(3, len(lines))
 
@@ -147,7 +148,6 @@ class BasicTests(unittest.TestCase):
                         "echo '1' >> %s" % filename])
 
         lines = open(filename).readlines()
-        print lines
         os.unlink(filename)
         self.assertEqual(3, len(lines))
 
@@ -169,6 +169,5 @@ class BasicTests(unittest.TestCase):
         sys.setrecursionlimit(500)
 
         lines = open(filename).readlines()
-        print len(lines)
         os.unlink(filename)
         self.assertEqual(72, len(lines))
