@@ -93,18 +93,22 @@ def show_logs(logs, title):
     menu.render()
 
 
-def tail_file(filename):
+def tail_file(filenames):
     curses.endwin()
     os.system("clear")
-    subprocess.call(["echo", filename])
+    subprocess.call(["echo", ' '.join(filenames)])
     try:
-        subprocess.call(["tail", "-n", "100", "-f", filename])
+        args = ["tail", "-n", "100", "-f"]
+        args.extend(filenames)
+        subprocess.call(args)
     except:
         pass
 
 
-def show_log(task, stderr=False):
-    tail_file(MACHINE_DATA.get_logfile(task, stderr))
+def show_log(task):
+    tail_file([
+            MACHINE_DATA.get_logfile(task),
+            MACHINE_DATA.get_logfile(task, True)])
 
 
 def start_task(task):
@@ -133,11 +137,8 @@ def show_task():
         menu.add_option_vals("Stop Task",
                              action=lambda: stop_task(task))
 
-        menu.add_option_vals("Show stdout",
-                         action=lambda: show_log(task, False))
-
-        menu.add_option_vals("Show stderr",
-                             action=lambda: show_log(task, True))
+        menu.add_option_vals("Show stdout/stderr",
+                         action=lambda: show_log(task))
 
     menu.add_option_vals("Show historic task log files",
                          action=lambda: change_menu('show_task_logs', task))
