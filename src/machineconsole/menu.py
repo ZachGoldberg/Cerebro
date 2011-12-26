@@ -74,6 +74,8 @@ class Menu(object):
         shown_options = (len(self.options) - hidden_count)
         max_per_page = (self.items_per_page - hidden_count) or 1
         pages = int(shown_options / max_per_page) + 1
+
+        # Add a page count to the title of necessary
         if pages == 1:
             self.write(" " * 20 + self.title)
         else:

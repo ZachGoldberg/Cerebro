@@ -106,13 +106,14 @@ class MachineManager(object):
                     filename
                     ), fileloc)
 
-    def restart_task(self, task_name):
-        task = self.tasks[task_name]
-        print "Task %s died" % task_name
+    def task_finished(self, task):
+        print "Task %s finished" % task.name
         logs = task.stdall()
         print "Task Stdout:\n %s" % logs[0]
         print "Task Stderr:\n %s" % logs[1]
         self.collect_old_task_logs(task)
+
+    def restart_task(self, task):
         task.set_port(self.next_port())
         task.start()
 
@@ -146,5 +147,10 @@ class MachineManager(object):
         while True:
             for task in self.tasks.values():
                 if task.was_started and not task.is_running():
-                    self.restart_task(task.name)
+                    self.task_finished(task)
+                    if not task.allow_exit:
+                        self.restart_task(task)
+                    else:
+                        task.was_started = False
+
             time.sleep(1)

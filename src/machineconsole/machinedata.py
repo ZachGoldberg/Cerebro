@@ -15,7 +15,6 @@ class MachineData(object):
         task_data = {}
         self.tasks = {}
 
-
         for item in data:
             try:
                 key, value = item.split('=', 1)
@@ -73,9 +72,11 @@ class MachineData(object):
         for logname, logfile in sitter_logs.items():
             if task['name'] in logname:
                 logs[logname] = logfile
-
-        url = self.strip_html(task['monitoring'])
-        logs.update(self.load_generic_page(url, 'logs'))
+        try:
+            url = self.strip_html(task['monitoring'])
+            logs.update(self.load_generic_page(url, 'logs'))
+        except:
+            pass
 
         return logs
 

@@ -12,6 +12,7 @@ class TaskManager(object):
         self.max_restarts = task_definition.get('max_restarts', -1)
         self.ensure_alive = task_definition.get('ensure_alive', False)
         self.poll_interval = task_definition.get('poll_interval', 0.1)
+        self.allow_exit = task_definition.get('allow_exit', False)
         self.cpu = task_definition.get('cpu')
         self.mem = task_definition.get('mem')
         self.time_limit = task_definition.get('time_limit')
