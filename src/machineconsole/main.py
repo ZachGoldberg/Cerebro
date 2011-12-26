@@ -38,7 +38,7 @@ def refresh():
 
 
 def header():
-    add_line("#" * 80)
+    add_line("#" * SCR.getyx()[1])
     add_line(
         "MachineSitter at %s - Curses UI %s" % (
             MACHINESITTER_URL, datetime.now()))

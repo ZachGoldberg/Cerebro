@@ -6,15 +6,17 @@ import taskmanager
 import os
 import threading
 import time
+import signal
 import socket
 
 
 class MachineManager(object):
 
     def __init__(self, task_definition_file, log_location,
-                 starting_port=40000):
+                 starting_port=40000, daemon=False):
         self.tasks = {}
         self.task_definition_file = task_definition_file
+        self.daemon = daemon
         self.thread = None
         self.should_stop = False
         self.starting_port = starting_port
@@ -33,6 +35,18 @@ class MachineManager(object):
 
         self.http_monitor.add_handler('/start_task', self.remote_start_task)
         self.http_monitor.add_handler('/stop_task', self.remote_stop_task)
+
+        print "Adding signals"
+        signal.signal(signal.SIGTERM, self.exit_now)
+        signal.signal(signal.SIGINT, self.exit_now)
+
+    def exit_now(self, *_):
+        print "Caught Control-C, killing children and exiting"
+        for task in self.tasks.values():
+            if task.is_running():
+                task.stop()
+
+        os._exit(0)
 
     def remote_stop_task(self, args):
         if not 'task_name' in args:
@@ -129,11 +143,12 @@ class MachineManager(object):
         self.logmanager.add_logfile("machinemanager-stdout", stdout_loc)
         self.logmanager.add_logfile("machinemanager-stderr", stderr_loc)
 
-        print "Redirecting machine sitter output to %s, stderr: %s" % (
-            stdout_loc, stderr_loc)
+        if self.daemon:
+            print "Redirecting machine sitter output to %s, stderr: %s" % (
+                stdout_loc, stderr_loc)
 
-        #self.logmanager.setup_stdout()
-        #self.logmanager.setup_stderr()
+            self.logmanager.setup_stdout()
+            self.logmanager.setup_stderr()
 
         for task in self.tasks.values():
             print "Initializing %s" % task.name

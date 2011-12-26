@@ -62,7 +62,9 @@ class TaskManager(object):
     def stop(self):
         print "Stopping %s" % self.name
         self.was_started = False
-        self.process.terminate()
+        if self.process:
+            self.process.terminate()
+
         while self.is_running():
             time.sleep(.1)
 

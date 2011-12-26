@@ -47,7 +47,7 @@ class ProcessHarness(object):
         # Start the child process
         self.start_process()
 
-    def exit_now(self, signum, stack):
+    def exit_now(self, *_):
         self.stop_running = True
         self.child_running = False
         self.terminate_child()

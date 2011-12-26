@@ -9,8 +9,10 @@ the job.
 If a job is 'flapping' or being rebooted too often it knows how to trigger
 an alert.
 """
+import os
 import simplejson
 import sys
+
 
 import sittercommon.arg_parser as argparse
 import sittercommon.http_monitor as http_monitor
@@ -152,6 +154,9 @@ def main(sys_args=None, wait_for_child=True):
 
     args = parse_args(sys_args)
     constraints_list = build_constraints(args)
+
+    # Set outselves to our own pgrp to separate from machine sitter
+    os.setpgrp()
 
     harness = run_command_with_harness(args.command, args, constraints_list)
     harness.begin_monitoring()

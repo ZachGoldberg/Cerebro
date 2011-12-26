@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python -u
 """
 This is the main file of the machinesitter application.
 
@@ -25,7 +25,27 @@ def parse_args(args):
                         required=True,
                         help='The location of the task definition file')
 
+    parser.add_argument("--daemon", dest="daemon",
+                        default=False,
+                        action="store_true",
+                        help='Daemonize and split from launching shell')
+
     return parser.parse_args(args=args)
+
+
+def daemonize():
+    pid = os.fork()
+    if pid > 0:
+        sys.exit(0)
+
+    os.setsid()
+    os.umask(0)
+
+    pid = os.fork()
+    if pid > 0:
+        sys.exit(0)
+
+    print "Sitter PID: %s" % os.getpid()
 
 
 def main(sys_args=None):
@@ -42,9 +62,13 @@ def main(sys_args=None):
     except:
         pass
 
+    if args.daemon:
+        daemonize()
+
     manager = machinemanager.MachineManager(args.taskfile,
                                             config['log_location'],
-                                            starting_port=40000)
+                                            starting_port=40000,
+                                            daemon=args.daemon)
 
     task_definitions = config['task_definitions']
 
@@ -52,3 +76,8 @@ def main(sys_args=None):
         manager.add_new_task(task)
 
     manager.start()
+
+    # wait forever
+    import time
+    while True:
+        time.sleep(1)
