@@ -38,11 +38,11 @@ def refresh():
 
 
 def header():
-    add_line("#" * SCR.getyx()[1])
+    add_line("#" * SCR.getmaxyx()[1])
     add_line(
         "MachineSitter at %s - Curses UI %s" % (
             MACHINESITTER_URL, datetime.now()))
-    add_line("#" * 80)
+    add_line("#" * SCR.getmaxyx()[1])
 
 
 def change_menu(newmenu, aux=None):
@@ -147,7 +147,7 @@ def show_task():
 
 def basic_tasks():
     global MENUFACTORY
-    add_line("-" * 80)
+    add_line("-" * SCR.getmaxyx()[1])
 
     reload_data()
 
@@ -200,7 +200,7 @@ def basic_tasks():
     for num, l in enumerate(not_running_lines):
         add_line("%s. %s" % ((len(running) + num + 1), l))
 
-    add_line("-" * 80)
+    add_line("-" * SCR.getmaxyx()[1])
 
 
 def reload_data():
