@@ -21,6 +21,7 @@ def add_line(msg):
     SCR.addstr(YPOS, 0, msg)
     YPOS += 1
 
+
 def remove_line():
     global YPOS
     SCR.clrtoeol()

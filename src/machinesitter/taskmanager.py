@@ -26,9 +26,8 @@ class TaskManager(object):
 
         self.was_started = False
 
-        self.id = "%s (%s)" % (self.command, int(10000 * random.random()))
-        self.sitter_stdout = "%s/%s.stdout" % (log_location, self.id)
-        self.sitter_stderr = "%s/%s.stderr" % (log_location, self.id)
+        self.sitter_stdout = "%s/%s.stdout" % (log_location, self.name)
+        self.sitter_stderr = "%s/%s.stderr" % (log_location, self.name)
 
         self.process = None
         self.used_pids = []
@@ -60,7 +59,7 @@ class TaskManager(object):
         return self.used_pids[-1]
 
     def stop(self):
-        print "Stopping %s" % self.id
+        print "Stopping %s" % self.name
         self.was_started = False
         self.process.terminate()
         while self.is_running():
@@ -94,7 +93,7 @@ class TaskManager(object):
             args.append("--uid=%s" % self.uid)
 
         args.append("--command")
-        args.append("\"%s\"" % self.command)
+        args.append(self.command)
 
         args.append("--http-monitoring")
         args.append("--http-monitoring-port=%s" % self.http_monitoring_port)

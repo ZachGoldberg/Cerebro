@@ -35,13 +35,13 @@ class MachineManager(object):
         self.http_monitor.add_handler('/stop_task', self.remote_stop_task)
 
     def remote_stop_task(self, args):
-        if not 'task_id' in args:
+        if not 'task_name' in args:
             return "Error"
 
-        if not args['task_id'] in self.tasks:
+        if not args['task_name'] in self.tasks:
             return "Error"
 
-        task = self.tasks[args['task_id']]
+        task = self.tasks[args['task_name']]
         if not task.was_started:
             return "Already stopped"
 
@@ -50,17 +50,17 @@ class MachineManager(object):
         return "Stopped"
 
     def remote_start_task(self, args):
-        if not 'task_id' in args:
+        if not 'task_name' in args:
             return "Error"
 
-        if not args['task_id'] in self.tasks:
+        if not args['task_name'] in self.tasks:
             return "Error"
 
-        task = self.tasks[args['task_id']]
+        task = self.tasks[args['task_name']]
         if not task.is_running():
             task.set_port(self.next_port())
             task.start()
-            return "%s started" % args['task_id']
+            return "%s started" % args['task_name']
         else:
             return "Already running"
 
@@ -85,10 +85,10 @@ class MachineManager(object):
                                        self.log_location)
         task.set_port(self.next_port())
 
-        self.tasks[task.id] = task
+        self.tasks[task.name] = task
 
-    def start_task(self, task_id):
-        self.tasks[task_id].start()
+    def start_task(self, task_name):
+        self.tasks[task_name].start()
 
     def start(self):
         self.thread = threading.Thread(target=self._run)
@@ -106,9 +106,9 @@ class MachineManager(object):
                     filename
                     ), fileloc)
 
-    def restart_task(self, task_id):
-        task = self.tasks[task_id]
-        print "Task %s died" % task_id
+    def restart_task(self, task_name):
+        task = self.tasks[task_name]
+        print "Task %s died" % task_name
         logs = task.stdall()
         print "Task Stdout:\n %s" % logs[0]
         print "Task Stderr:\n %s" % logs[1]
@@ -135,16 +135,16 @@ class MachineManager(object):
         #self.logmanager.setup_stderr()
 
         for task in self.tasks.values():
-            print "Initializing %s" % task.id
+            print "Initializing %s" % task.name
             task.initialize()
             self.logmanager.add_logfile(
-                "%s-stdout" % task.id, task.sitter_stdout)
+                "%s-stdout" % task.name, task.sitter_stdout)
 
             self.logmanager.add_logfile(
-                "%s-stderr" % task.id, task.sitter_stderr)
+                "%s-stderr" % task.name, task.sitter_stderr)
 
         while True:
             for task in self.tasks.values():
                 if task.was_started and not task.is_running():
-                    self.restart_task(task.id)
+                    self.restart_task(task.name)
             time.sleep(1)

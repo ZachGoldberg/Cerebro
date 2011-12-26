@@ -15,24 +15,24 @@ class MachineData(object):
         task_data = {}
         self.tasks = {}
 
+
         for item in data:
             try:
                 key, value = item.split('=', 1)
             except:
                 continue
             try:
-                task_id, metric = key.split('-')
+                task_name, metric = key.split('-')
             except:
                 self.metadata[key] = value
                 continue
 
-            if not task_id in task_data:
-                task_data[task_id] = {}
-            task_data[task_id][metric] = value
+            if not task_name in task_data:
+                task_data[task_name] = {}
+            task_data[task_name][metric] = value
 
-        for task_id in task_data.keys():
-            task_dict = task_data[task_id]
-            task_dict['id'] = task_id
+        for task_name in task_data.keys():
+            task_dict = task_data[task_name]
             self.tasks[task_dict['name']] = task_dict
 
         return self.tasks
@@ -52,13 +52,13 @@ class MachineData(object):
         return data
 
     def start_task(self, task):
-        tid = urllib.quote(task['id'])
-        url = "%s/start_task?task_id=%s" % (self.url, tid)
+        tid = urllib.quote(task['name'])
+        url = "%s/start_task?task_name=%s" % (self.url, tid)
         requests.get(url)
 
     def stop_task(self, task):
-        tid = urllib.quote(task['id'])
-        url = "%s/stop_task?task_id=%s" % (self.url, tid)
+        tid = urllib.quote(task['name'])
+        url = "%s/stop_task?task_name=%s" % (self.url, tid)
         print requests.get(url).content
 
     def strip_html(self, val):
@@ -97,5 +97,6 @@ if __name__ == '__main__':
     import subprocess
     d = MachineData("http://localhost:40000")
     d.reload()
+    print d.tasks
     task = d.tasks['REX (Remote Extractor)']
     print d.get_task_logs(task)

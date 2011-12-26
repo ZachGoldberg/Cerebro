@@ -23,7 +23,7 @@ class Menu(object):
         self.title = title
         self.options = []
         self.page = 0
-        self.items_per_page = 10
+        self.items_per_page = screen.getmaxyx()[0] - 11
         self.screen = screen
         self.writer = writer
         self.remover = remover
@@ -56,29 +56,48 @@ class Menu(object):
         self.written_lines += 1
 
     def render(self):
-        self.write(" " * 20 + self.title)
         hotkeys = ['q', 'w', 'e', 'r', 't', 'y', 'a', 's', 'd', 'f',
                    'g', 'z', 'x', 'c', 'v', 'b', 'y', 'u', 'i', 'o',
                    'h', 'j', 'k', 'l']
         hotkeys.reverse()
         option_list = [o for o in self.options]
-        for index, option in enumerate(option_list):
-            if (index > (self.page * self.items_per_page) and
-                index < ((self.page + 1) * self.items_per_page)):
 
-                if not option.hotkey:
-                    option.hotkey = hotkeys.pop()
+        # Count how many are hidden so we know how many
+        # we actually can display
+        hidden_count = 0
+        for option in option_list:
+            if option.hidden:
+                hidden_count += 1
 
-                if not option.hidden:
+            if not option.hotkey:
+                option.hotkey = hotkeys.pop()
+        shown_options = (len(self.options) - hidden_count)
+        max_per_page = (self.items_per_page - hidden_count) or 1
+        pages = int(shown_options / max_per_page) + 1
+        if pages == 1:
+            self.write(" " * 20 + self.title)
+        else:
+            self.write(" " * 20 + self.title + " (%s/%s)" % (
+                    self.page + 1, pages))
+
+        index = 0
+        for option in option_list:
+            if not option.hidden:
+                if (index >= (self.page * max_per_page) and
+                    index < ((self.page + 1) * max_per_page)):
+
                     self.write(str(option))
 
-        if len(self.options) > self.items_per_page:
-            pages = int(len(self.options) / self.items_per_page) + 1
+                index += 1
+
+        # Add the next/prev buttons
+        if shown_options > max_per_page:
             if self.page != (pages - 1):
                 opt = MenuOption('Next Page',
                                  self.next_page, 'n')
                 option_list.append(opt)
                 self.write(str(opt))
+
             if self.page != 0:
                 opt = MenuOption('Prev. Page', self.prev_page, 'p')
                 option_list.append(opt)

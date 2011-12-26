@@ -5,25 +5,25 @@ class MachineStats(StatsCollector):
 
     def get_live_data(self):
         data = {}
-        for task_id, task in self.harness.tasks.items():
+        for task_name, task in self.harness.tasks.items():
             running = bool(task.is_running())
-            data["%s-running" % task.id] = running
+            data["%s-running" % task.name] = running
             if not running:
-                data["%s-start" % task.id] = \
-                    "<a href='http://%s:%s/start_task?task_id=%s'>start</a>" % (
+                data["%s-start" % task.name] = \
+                    "<a href='http://%s:%s/start_task?task_name=%s'>start</a>" % (
                     self.hostname,
                     self.harness.http_monitor.port,
-                    task.id)
+                    task.name)
             else:
-                data["%s-stop" % task.id] = \
-                    "<a href='http://%s:%s/stop_task?task_id=%s'>stop</a>" % (
+                data["%s-stop" % task.name] = \
+                    "<a href='http://%s:%s/stop_task?task_name=%s'>stop</a>" % (
                     self.hostname,
                     self.harness.http_monitor.port,
-                    task.id)
+                    task.name)
                 location = "http://%s:%s" % (
                     self.hostname,
                     task.http_monitoring_port)
-                data["%s-monitoring" % task.id] = "<a href='%s'>%s</a>" % (location,
+                data["%s-monitoring" % task.name] = "<a href='%s'>%s</a>" % (location,
                                                                            location)
 
         return data
@@ -33,8 +33,8 @@ class MachineStats(StatsCollector):
         data['log_location'] = self.harness.log_location
         data['starting_port'] = self.harness.starting_port
         data['task_definition_file'] = self.harness.task_definition_file
-        for task_id, task in self.harness.tasks.items():
-            data["%s-name" % task.id] = task.name
-            data["%s-command" % task.id] = task.command
+        for task_name, task in self.harness.tasks.items():
+            data["%s-name" % task.name] = task.name
+            data["%s-command" % task.name] = task.command
 
         return data
