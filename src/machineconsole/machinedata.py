@@ -1,5 +1,6 @@
 import re
 import requests
+import time
 import urllib
 
 
@@ -8,6 +9,20 @@ class MachineData(object):
         self.url = url
         self.tasks = {}
         self.metadata = {}
+
+    def load_generic_page(self, host, page):
+        response = requests.get("%s/%s?nohtml=1" % (host, page))
+        lines = response.content.split('\n')
+        data = {}
+        for item in lines:
+            try:
+                key, value = item.split('=', 1)
+            except:
+                continue
+
+            data[key] = value
+
+        return data
 
     def reload(self):
         response = requests.get("%s/stats?nohtml=1" % self.url)
@@ -33,22 +48,25 @@ class MachineData(object):
         for task_name in task_data.keys():
             task_dict = task_data[task_name]
             self.tasks[task_dict['name']] = task_dict
+            if task_dict['running'] == "True":
+                updated = False
+                tries = 0
+                while not updated and tries < 10:
+                    tries += 1
+                    try:
+                        self.update_task_data(task_dict['name'])
+                        updated = True
+                    except:
+                        # Http server might not be up yet
+                        time.sleep(0.01)
 
         return self.tasks
 
-    def load_generic_page(self, host, page):
-        response = requests.get("%s/%s?nohtml=1" % (host, page))
-        lines = response.content.split('\n')
-        data = {}
-        for item in lines:
-            try:
-                key, value = item.split('=', 1)
-            except:
-                continue
-
-            data[key] = value
-
-        return data
+    def update_task_data(self, task_name):
+        self.tasks[task_name].update(
+            self.load_generic_page(
+                self.strip_html(self.tasks[task_name]['monitoring']),
+                'stats'))
 
     def start_task(self, task):
         tid = urllib.quote(task['name'])

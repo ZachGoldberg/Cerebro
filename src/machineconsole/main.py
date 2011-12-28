@@ -175,8 +175,21 @@ def basic_tasks():
 
     hotkey = 1
     for name, task in running:
-        line = "%s (%s)" % (task['name'],
-                            task['command'])
+        runtime = '?'
+        if task.get('process_start_time'):
+            runtime = str(
+                datetime.now() - datetime.strptime(
+                    task['process_start_time'],
+                    '%Y-%m-%d %H:%M:%S.%f')
+                )
+
+            # strip useconds
+            runtime = runtime[:runtime.find('.')]
+        line = "%s (Starts: %s, Runtime: %s)" % (
+            task['name'],
+            task.get('num_task_starts', '?'),
+            runtime
+            )
         running_lines.append(line)
         option = MenuOption(
                 task['name'],
@@ -189,8 +202,7 @@ def basic_tasks():
         hotkey += 1
 
     for name, task in not_running:
-        line = "%s (%s)" % (task['name'],
-                            task['command'])
+        line = task['name']
         not_running_lines.append(line)
         option = MenuOption(
                 task['name'],
