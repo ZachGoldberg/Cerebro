@@ -88,7 +88,7 @@ def show_logs(logs, title):
     for logname in lognames:
         logfile = logs[logname]
         menu.add_option_vals("%s (%s)" % (logname, logfile),
-                         action=MenuChanger(tail_file, logfile))
+                         action=MenuChanger(tail_file, [logfile]))
 
     menu.render()
 

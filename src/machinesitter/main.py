@@ -40,10 +40,15 @@ def daemonize():
 
     os.setsid()
     os.umask(0)
+    os.chdir("/")
 
     pid = os.fork()
     if pid > 0:
         sys.exit(0)
+
+    sys.stdout.flush()
+    sys.stderr.flush()
+    sys.stdin.close()
 
     print "Sitter PID: %s" % os.getpid()
 

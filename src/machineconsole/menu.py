@@ -59,6 +59,7 @@ class Menu(object):
         hotkeys = ['q', 'w', 'e', 'r', 't', 'y', 'a', 's', 'd', 'f',
                    'g', 'z', 'x', 'c', 'v', 'b', 'y', 'u', 'i', 'o',
                    'h', 'j', 'k', 'l']
+        hotkeys *= 30
         hotkeys.reverse()
         option_list = [o for o in self.options]
 
