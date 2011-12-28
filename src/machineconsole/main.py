@@ -5,7 +5,7 @@ import subprocess
 import sys
 
 from datetime import datetime
-from menu import MenuFactory, MenuOption, MenuChanger
+from menu import MenuFactory, MenuOption, MenuChanger, Table
 from machinedata import MachineData
 
 MACHINE_DATA = None
@@ -162,7 +162,6 @@ def basic_tasks():
     reload_data()
 
     running = []
-    running_lines = []
     not_running = []
     not_running_lines = []
     MENUFACTORY = MenuFactory(SCR, add_line, remove_line)
@@ -174,8 +173,15 @@ def basic_tasks():
             not_running.append((name, task))
 
     hotkey = 1
+
+    table = Table(SCR.getmaxyx()[1],
+                  ["Running Task Name", "Restarts",
+                   "Runtime", "Stdout", "Stderr"])
+
     for name, task in running:
         runtime = '?'
+        stdout_kb = -1.0
+        stderr_kb = -1.0
         if task.get('process_start_time'):
             runtime = str(
                 datetime.now() - datetime.strptime(
@@ -185,12 +191,21 @@ def basic_tasks():
 
             # strip useconds
             runtime = runtime[:runtime.find('.')]
-        line = "%s (Starts: %s, Runtime: %s)" % (
-            task['name'],
-            task.get('num_task_starts', '?'),
-            runtime
-            )
-        running_lines.append(line)
+            try:
+                stdout = MACHINE_DATA.get_logfile(task)
+                stderr = MACHINE_DATA.get_logfile(task, True)
+
+                stdout_kb = os.stat(stdout).st_size / 1024
+                stderr_kb = os.stat(stderr).st_size / 1024
+            except:
+                pass
+
+        table.add_row([task['name'],
+                       task.get('num_task_starts', '?'),
+                       runtime,
+                       "%.0f kB" % stdout_kb,
+                       "%.0f kB" % stderr_kb])
+
         option = MenuOption(
                 task['name'],
                 action=MenuChanger(change_menu, "show_task",
@@ -214,8 +229,10 @@ def basic_tasks():
         MENUFACTORY.add_default_option(option)
         hotkey += 1
 
-    add_line("Running Tasks:")
-    for num, l in enumerate(running_lines):
+    show_table = str(table).split('\n')
+    add_line("   %s" % show_table[0])
+
+    for num, l in enumerate(show_table[1:]):
         add_line("%s. %s" % ((num + 1), l))
 
     add_line("Stopped Tasks:")

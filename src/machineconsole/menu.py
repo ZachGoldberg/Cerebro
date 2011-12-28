@@ -1,3 +1,46 @@
+class Table(object):
+    def __init__(self, max_width, headers):
+        self.headers = headers
+        self.rows = []
+        self.column_widths = []
+        self.max_width = max_width
+
+    def add_row(self, items):
+        if len(items) != len(self.headers):
+            raise Exception("Invalid number of items in this row!")
+        self.rows.append(items)
+
+    def render_cell(self, columnnum, column):
+        col_len = len(str(column))
+        padding = int((self.column_widths[columnnum] - col_len))
+        return "%s%s" % (column, " " * padding)
+
+    def __str__(self):
+        self.column_widths = [0] * len(self.headers)
+        self.rows = [self.headers] + self.rows
+        for column in range(len(self.headers)):
+            for row in self.rows:
+                if len(str(row[column])) > self.column_widths[column]:
+                    self.column_widths[column] = len(str(row[column]))
+
+        spacer = '|  '
+        # Don't forget to account for the bars!
+        total_width = sum(self.column_widths) + (
+            len(spacer) * len(self.column_widths))
+
+        if total_width < self.max_width:
+            for i in range(len(self.column_widths)):
+                self.column_widths[i] += (
+                    (self.max_width - total_width) / len(self.column_widths))
+
+        lines = []
+        for row in self.rows:
+            line = spacer.join(
+                [self.render_cell(i, cell) for i, cell in enumerate(row)])
+            lines.append(line)
+        return '\n'.join(lines)
+
+
 class MenuOption(object):
     def __init__(self, value, action, hotkey=None, hidden=False):
         self.value = value
