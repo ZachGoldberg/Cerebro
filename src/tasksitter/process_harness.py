@@ -34,6 +34,7 @@ class ProcessHarness(object):
         self.logmanager = logmanager
         self.logmanager.set_harness(self)
         self.stop_running = False
+        self.last_start = datetime.datetime.min
 
         # Statistics
         self.task_start = datetime.datetime.now()
@@ -58,6 +59,14 @@ class ProcessHarness(object):
         """
         Start a new instance of the child task
         """
+        # Avoid spam-restarts, only allow restarting
+        # once per second
+        now = datetime.datetime.now()
+        if now - self.last_start < datetime.timedelta(seconds=1):
+            time.sleep(1)
+
+        self.last_start = datetime.datetime.now()
+
         pid = os.fork()
         if pid == 0:
             # We're the child, we'll exec

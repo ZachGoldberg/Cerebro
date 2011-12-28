@@ -2,6 +2,7 @@ import curses
 import os
 import socket
 import subprocess
+import sys
 
 from datetime import datetime
 from menu import MenuFactory, MenuOption, MenuChanger
@@ -51,6 +52,11 @@ def change_menu(newmenu, aux=None):
     AUX = aux
 
 
+def stop_sitter():
+    os.kill(int(MACHINE_DATA.metadata['machinesitter_pid']), 15)
+    sys.exit(0)
+
+
 def mainmenu():
     menu = MENUFACTORY.new_menu("Main Menu")
     menu.add_option_vals("Refresh Window", action=dir, hotkey="*")
@@ -62,6 +68,9 @@ def mainmenu():
 
     menu.add_option_vals("Show machine sitter logs",
                     action=lambda: change_menu('show_machinesitter_logs'))
+
+    menu.add_option_vals("Stop machine sitter",
+                         action=stop_sitter)
 
     menu.render()
 

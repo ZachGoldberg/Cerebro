@@ -1,3 +1,5 @@
+import os
+
 from tasksitter.stats_collector import StatsCollector
 
 
@@ -30,6 +32,7 @@ class MachineStats(StatsCollector):
 
     def get_metadata(self):
         data = {}
+        data['machinesitter_pid'] = os.getpid()
         data['log_location'] = self.harness.log_location
         data['starting_port'] = self.harness.starting_port
         data['task_definition_file'] = self.harness.task_definition_file
