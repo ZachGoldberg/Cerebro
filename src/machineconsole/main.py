@@ -133,8 +133,11 @@ def show_task():
     reload_data()
     task = MACHINE_DATA.tasks[name]
 
-    menu = MENUFACTORY.new_menu("%s (%s)" % (name,
-                                             task['command']))
+    menu = MENUFACTORY.new_menu("%s (%s) (%s)" % (
+            name,
+            task['command'],
+            MACHINE_DATA.strip_html(task.get('monitoring', 'Not Running'))
+            ))
 
     menu.add_option_vals("Main Menu",
                     action=lambda: change_menu('mainmenu'), hotkey="*")
