@@ -13,6 +13,7 @@ import machinemanager
 import os
 import simplejson
 import sys
+import time
 
 
 def parse_args(args):
@@ -83,6 +84,5 @@ def main(sys_args=None):
     manager.start()
 
     # wait forever
-    import time
     while True:
         time.sleep(1)
