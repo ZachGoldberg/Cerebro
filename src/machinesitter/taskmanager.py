@@ -1,3 +1,4 @@
+import json
 import random
 import simplejson
 import subprocess
@@ -5,6 +6,18 @@ import time
 
 
 class TaskManager(object):
+    required_fields = ['name', 'command']
+    optional_fields = [
+        'auto_start',
+        'restart',
+        'max_restarts',
+        'ensure_alive',
+        'poll_interval',
+        'allow_exit',
+        'cpu',
+        'mem',
+        'time_limit',
+        'uid']
 
     def __init__(self, task_definition, log_location):
         self.auto_start = task_definition.get('auto_start', False)
@@ -32,6 +45,21 @@ class TaskManager(object):
 
         self.process = None
         self.used_pids = []
+
+    def __repr__(self):
+        return json.dumps(self.to_dict())
+
+    def to_dict(self):
+        data = {}
+        for opt in self.required_fields:
+            data[opt] = getattr(self, opt)
+
+        for opt in self.optional_fields:
+            val = getattr(self, opt)
+            if val != None:
+                data[opt] = val
+
+        return data
 
     def set_port(self, port):
         self.http_monitoring_port = port

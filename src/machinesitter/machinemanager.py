@@ -3,11 +3,12 @@ import sittercommon.logmanager as logmanager
 import machinestats
 import taskmanager
 
+import json
 import os
-import threading
-import time
 import signal
 import socket
+import threading
+import time
 
 
 class MachineManager(object):
@@ -35,6 +36,7 @@ class MachineManager(object):
 
         self.http_monitor.add_handler('/start_task', self.remote_start_task)
         self.http_monitor.add_handler('/stop_task', self.remote_stop_task)
+        self.http_monitor.add_handler('/add_task', self.remote_add_task)
 
         print "Adding signals"
         signal.signal(signal.SIGTERM, self.exit_now)
@@ -47,6 +49,29 @@ class MachineManager(object):
                 task.stop()
 
         os._exit(0)
+
+    def remote_add_task(self, args):
+        definition = {}
+        for opt in taskmanager.TaskManager.required_fields:
+            definition[opt] = args.get(opt)
+            if not definition[opt]:
+                return "Required argument %s missing" % opt
+        for opt in taskmanager.TaskManager.optional_fields:
+            if opt in args:
+                definition[opt] = args[opt]
+
+        for k, v in definition.items():
+            if v.lower() == 'true':
+                definition[k] = True
+            if v.lower() == 'false':
+                definition[k] = False
+
+        task = self.add_new_task(definition)
+        task.initialize()
+
+        config = self.write_out_task_definitions()
+
+        return "OK | %s" % json.dumps(config)
 
     def remote_stop_task(self, args):
         if not 'task_name' in args:
@@ -78,6 +103,20 @@ class MachineManager(object):
         else:
             return "Already running"
 
+    def write_out_task_definitions(self):
+        config = {'log_location': self.log_location}
+        task_definitions = []
+        for task in self.tasks:
+            task_definitions.append(self.tasks[task].to_dict())
+
+        config['task_definitions'] = task_definitions
+
+        file = open(self.task_definition_file, 'w')
+        file.write(json.dumps(config))
+        file.close()
+
+        return config
+
     def next_port(self):
         works = None
         while not works:
@@ -100,6 +139,7 @@ class MachineManager(object):
         task.set_port(self.next_port())
 
         self.tasks[task.name] = task
+        return task
 
     def start_task(self, task_name):
         self.tasks[task_name].start()
