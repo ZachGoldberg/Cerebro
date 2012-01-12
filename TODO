@@ -2,7 +2,7 @@ Flesh out the stats collector, show CPU usage and history etc.
 Set CPU Core Affinity
  -- (requires a subpackage 'affinity')
 Have constraints output a % instead of a bool so we can do warnings at
-thresholds.
+thresholds
 Implement HTTP Watcher
 Implement Alerting in HTTP Interface
 Implement 'flexible' limits, aka how long a process can be in
