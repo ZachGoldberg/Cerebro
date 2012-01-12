@@ -181,8 +181,9 @@ class Process(object):
         proc_sys_time_diff = (self.usage[2] -
                               self.last_usage[2])
 
-        system_sys_time_diff = (self.system_usage[2] -
-                                self.last_system_usage[2]) or 1
+        # Include system time and idle time
+        system_sys_time_diff = (sum(self.system_usage[2:3]) -
+                                sum(self.last_system_usage[2:3])) or 1
 
         #print "system:", system_sys_time_diff, system_user_time_diff
         #print "proc:", proc_sys_time_diff, proc_user_time_diff
