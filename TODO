@@ -1,5 +1,4 @@
 Flesh out the stats collector, show CPU usage and history etc.
-CPU Usage should be calculated taking into account IDLE jiffies?
 Set CPU Core Affinity
  -- (requires a subpackage 'affinity')
 Have constraints output a % instead of a bool so we can do warnings at
