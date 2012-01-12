@@ -20,7 +20,7 @@ class ProcessHarness(object):
     """
     def __init__(self, command, constraints, restart=False,
                  max_restarts=-1, poll_interval=.1,
-                 logmanager=None, uid=None):
+                 logmanager=None, uid=None, allow_spam=False):
         self.child_proc = None
         self.child_running = True
         self.command = command
@@ -35,7 +35,7 @@ class ProcessHarness(object):
         self.logmanager.set_harness(self)
         self.stop_running = False
         self.last_start = datetime.datetime.min
-
+        self.allow_spam = allow_spam
         # Statistics
         self.task_start = datetime.datetime.now()
         self.violations = {}
@@ -62,7 +62,8 @@ class ProcessHarness(object):
         # Avoid spam-restarts, only allow restarting
         # once per second
         now = datetime.datetime.now()
-        if now - self.last_start < datetime.timedelta(seconds=1):
+        if not self.allow_spam and \
+                now - self.last_start < datetime.timedelta(seconds=1):
             time.sleep(1)
 
         self.last_start = datetime.datetime.now()

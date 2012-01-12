@@ -144,7 +144,7 @@ def build_constraints(args):
     return proc_constraints
 
 
-def main(sys_args=None, wait_for_child=True):
+def main(sys_args=None, wait_for_child=True, allow_spam=False):
     """Run the task sitter."""
 
     if not sys_args:
@@ -159,6 +159,7 @@ def main(sys_args=None, wait_for_child=True):
     os.setpgrp()
 
     harness = run_command_with_harness(args.command, args, constraints_list)
+    harness.allow_spam = allow_spam
     harness.begin_monitoring()
 
     stats = stats_collector.StatsCollector(harness)

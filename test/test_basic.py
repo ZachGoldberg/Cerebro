@@ -23,7 +23,7 @@ class BasicTests(unittest.TestCase):
 
     def run_check(self, args, retval=0):
         try:
-            main.main(args)
+            main.main(args, allow_spam=True)
         except SystemExit, e:
             self.assertEqual(e.code, retval)
 
