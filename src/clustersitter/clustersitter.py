@@ -4,6 +4,7 @@ import socket
 import threading
 import time
 import requests
+from datetime import datetime
 
 from sittercommon.machinedata import MachineData
 
@@ -11,10 +12,14 @@ from sittercommon.machinedata import MachineData
 class ClusterSitter(object):
     def __init__(self):
         self.worker_thread_count = 1
+
         # list of tuples (MachineMonitor, ThreadObj)
         self.monitors = []
         self.machines = {}
         self.zones = []
+
+        # In seconds
+        self.stats_poll_interval = 5
 
     def add_machines(self, machines):
         monitored_machines = [MonitoredMachine(m) for m in machines]
@@ -277,10 +282,12 @@ class MachineMonitor:
         self.initialize_machines(self.monitored_machines)
 
         while True:
+            start_time = datetime.now()
             logging.info("Beggining machine monitoring poll for %s" % (
                     [str(a) for a in self.monitored_machines]))
             for machine in self.monitored_machines:
                 if machine.is_initialized():
                     machine._api_get_stats()
-            time.sleep(1)
 
+            time.sleep(self.clustersitter.stats_poll_interval - (
+                    datetime.now() - start_time).seconds)
