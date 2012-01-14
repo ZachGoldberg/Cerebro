@@ -1,17 +1,52 @@
 import re
 import requests
+import socket
 import time
 import urllib
 
 
 class MachineData(object):
-    def __init__(self, url):
-        self.url = url
+    def __init__(self, hostname, starting_port):
+        self.hostname = hostname
+        self.portnum = None
+        self.starting_port = starting_port
+        self.url = ""
+        self._find_portnum()
         self.tasks = {}
         self.metadata = {}
 
+    def _find_portnum(self):
+        found = False
+        port = self.starting_port
+        while not found:
+            try:
+                sock = socket.socket(socket.AF_INET)
+                sock.connect((self.hostname, port))
+                sock.close()
+                found = True
+                self.portnum = port
+            except:
+                port += 1
+                if port > self.starting_port + 1000:
+                    return
+
+        self.url = "http://%s:%s" % (self.hostname,
+                                     self.portnum)
+        return self.url
+
+    def _make_request(self, function, *args):
+        val = None
+        try:
+            val = function(*args)
+        except:
+            self._find_portnum()
+            val = function(*args)
+
+        return val
+
     def load_generic_page(self, host, page):
-        response = requests.get("%s/%s?nohtml=1" % (host, page))
+        response = self._make_request(requests.get,
+                                      "%s/%s?nohtml=1" % (host, page))
         lines = response.content.split('\n')
         data = {}
         for item in lines:
@@ -25,7 +60,8 @@ class MachineData(object):
         return data
 
     def reload(self):
-        response = requests.get("%s/stats?nohtml=1" % self.url)
+        response = self._make_request(requests.get,
+                                      "%s/stats?nohtml=1" % self.url)
         data = response.content.split('\n')
 
         task_data = {}
@@ -72,12 +108,12 @@ class MachineData(object):
     def start_task(self, task):
         tid = urllib.quote(task['name'])
         url = "%s/start_task?task_name=%s" % (self.url, tid)
-        requests.get(url)
+        self._make_request(requests.get, url)
 
     def stop_task(self, task):
         tid = urllib.quote(task['name'])
         url = "%s/stop_task?task_name=%s" % (self.url, tid)
-        print requests.get(url).content
+        print self._make_request(requests.get, url).content
 
     def strip_html(self, val):
         return re.sub('<[^<]+?>', '', val)
@@ -115,7 +151,7 @@ class MachineData(object):
 
 if __name__ == '__main__':
     import subprocess
-    d = MachineData("http://localhost:40000")
+    d = MachineData("localhost", 40000)
     d.reload()
     print d.tasks
     task = d.tasks['REX (Remote Extractor)']

@@ -13,13 +13,13 @@ import os
 import sys
 import time
 
-import sittercommon.arg_parser as argparse
-
-import clustersitter
+from clustersitter import ClusterSitter
+from clustersitter import MachineConfig
+from sittercommon import arg_parser
 
 
 def parse_args(args):
-    parser = argparse.ArgumentParser(
+    parser = arg_parser.ArgumentParser(
         description="Start the cluster sitter daemon")
 
     parser.add_argument("--daemon", dest="daemon",
@@ -62,11 +62,15 @@ def main(sys_args=None):
 
     logging.getLogger().setLevel(logging.INFO)
 
-    sitter = clustersitter.ClusterSitter(daemon=args.daemon,
-                                         log_location="/mnt/data")
+    sitter = ClusterSitter(daemon=args.daemon,
+                           log_location="/mnt/data")
     sitter.start()
 
-    sitter.add_machines(["localhost"])
+    localhost = MachineConfig("localhost",
+                              "zg-workstation",
+                              6, 16000)
+
+    sitter.add_machines([localhost])
 
     # wait forever
     while True:

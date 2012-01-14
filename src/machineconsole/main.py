@@ -14,7 +14,6 @@ SCR = None
 YPOS = 0
 CURRENT_LOC = "mainmenu"
 AUX = None
-MACHINESITTER_URL = None
 
 
 def add_line(msg):
@@ -42,7 +41,7 @@ def header():
     add_line("#" * SCR.getmaxyx()[1])
     add_line(
         "MachineSitter at %s - Curses UI %s" % (
-            MACHINESITTER_URL, datetime.now()))
+            MACHINE_DATA.url, datetime.now()))
     add_line("#" * SCR.getmaxyx()[1])
 
 
@@ -247,9 +246,6 @@ def basic_tasks():
 
 def reload_data():
     global MACHINE_DATA
-    if not MACHINE_DATA:
-        MACHINE_DATA = MachineData(MACHINESITTER_URL)
-
     MACHINE_DATA.reload()
 
 
@@ -267,28 +263,13 @@ def run():
         globals()[CURRENT_LOC]()
 
 
-def find_sitter_url():
-    port = 40000
-    found = False
-    while not found:
-        try:
-            sock = socket.socket(socket.AF_INET)
-            sock.connect(("localhost", port))
-            sock.close()
-            found = True
-        except:
-            port += 1
-            if port > 41000:
-                return None
-
-    return "http://localhost:%s" % port
-
-
 def main():
-    global MACHINESITTER_URL
+    global MACHINE_DATA
+    if not MACHINE_DATA:
+        MACHINE_DATA = MachineData("localhost", 40000)
     try:
-        MACHINESITTER_URL = find_sitter_url()
-        if not MACHINESITTER_URL:
+
+        if not MACHINE_DATA.url:
             print "Couldn't find a running machine sitter!"
             return
 

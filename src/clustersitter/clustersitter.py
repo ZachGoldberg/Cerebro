@@ -7,9 +7,31 @@ import time
 import requests
 from datetime import datetime
 
+from monitoredmachine import MonitoredMachine
+from machinemonitor import MachineMonitor
 from sittercommon import http_monitor
 from sittercommon import logmanager
 from sittercommon.machinedata import MachineData
+
+"""
+We have 3 kinds of data
+1) Historical Performance Data
+ -- This is monstrous, and timeseries based.  It makes sense
+   to put this in some kind of RRDTool
+
+2) Cluster Metadata -- what tasks go where
+ -- Super critical,  pretty small.  Store in config and memory
+
+3) Event level data -- what happpened
+  -- Store in Django (SQL or Mongo)
+"""
+class MachineConfig(object):
+    def __init__(self, hostname, shared_fate_zone,
+                 cpus, ram):
+        self.hostname = hostname
+        self.cpus = cpus
+        self.ram = ram
+        self.shared_fate_zone = shared_fate_zone
 
 
 class ClusterSitter(object):
@@ -19,7 +41,7 @@ class ClusterSitter(object):
 
         # list of tuples (MachineMonitor, ThreadObj)
         self.monitors = []
-        self.machines = {}
+        self.machines_by_zone = {}
         self.zones = []
 
         self.orig_starting_port = starting_port
@@ -53,8 +75,23 @@ class ClusterSitter(object):
                     self.next_port = self.orig_starting_port
         return works
 
+
+    def _add_zone(self, zonename):
+        if not zonename in self.zones:
+            self.machines_by_zone[zonename] = []
+            self.zones.append(zonename)
+
+
     def add_machines(self, machines):
-        monitored_machines = [MonitoredMachine(m) for m in machines]
+        """
+        """
+        monitored_machines = []
+
+        for m in machines:
+            mm = MonitoredMachine(m)
+            self._add_zone(m.shared_fate_zone)
+            self.machines_by_zone[m.shared_fate_zone].append(mm)
+            monitored_machines.append(mm)
 
         # Spread them out evenly across threads
         threads_to_use = self.worker_thread_count
@@ -70,12 +107,11 @@ class ClusterSitter(object):
 
     def start(self):
         self.http_monitor.start()
-        print "Cluster Sitter Monitor started at " + \
-            "http://localhost:%s" % self.http_monitor.port
+        logging.info("Cluster Sitter Monitor started at " + \
+            "http://localhost:%s" % self.http_monitor.port)
 
         if self.daemon:
             self.logmanager.setup_all()
-
 
         logging.info("Spinning up %s monitoring threads" % (
                 self.worker_thread_count))
@@ -90,10 +126,6 @@ class ClusterSitter(object):
 
         self.calculator = threading.Thread(target=self._calculator)
         self.calculator.start()
-
-    def _calculator(self):
-        self.calculate_idle_machines()
-        time.sleep(500)
 
     def add_job(self, job):
         # Step 1: Ensure we have enough machines in each SFZ
@@ -150,16 +182,23 @@ class ClusterSitter(object):
         # and return objects representing the machiens on their way up.
         pass
 
+    def _calculator(self):
+        while True:
+            self.calculate_idle_machines()
+            time.sleep(self.stats_poll_interval)
+
     def get_idle_machines_in_zone(self, zone):
         return self.idle_machines[zone]
 
     def calculate_idle_machines(self):
         idle_machines = {}
+
         for zone in self.zones:
             idle_machines[zone] = []
-            for machine in self.machines[zone]:
+            for machine in self.machines_by_zone[zone]:
                 tasks = machine.get_running_tasks()
-                if not tasks:
+
+                if not tasks and machine.is_initialized():
                     idle_machines[zone].append(machine)
 
         # The DICT swap must be atomic, or else another
@@ -198,149 +237,4 @@ class ProductionJob(object):
 
     def get_name(self):
         return self.task_configuration['name']
-
-
-class HasMachineSitter(object):
-    """
-    Everything is asynchronous -- always returns a request
-    object that can be run later.
-    """
-    def __init__(self):
-        self.machinesitter_port = None
-        self.hostname = None
-        self.datamanager = None
-        self.historic_data = []
-
-    def _api_start_task(self, name):
-        pass
-
-    def _api_identify_sitter(self, port):
-        logging.info("Attempting to find a machinesitter at %s:%s" % (
-                self.hostname, port))
-        try:
-            sock = socket.socket(socket.AF_INET)
-            sock.connect(("localhost", port))
-            sock.close()
-            logging.info("Connected successfully to %s:%s" % (
-                    self.hostname, port))
-
-            self.machinesitter_port = port
-            self.datamanager = MachineData("http://%s:%s" % (self.hostname,
-                                                      port))
-            return True
-        except:
-            logging.info("Connection failed to %s:%s" % (self.hostname, port))
-            return False
-
-    def _api_run_request(self, request):
-        """
-        Explicitly run the async object
-        """
-        #result = async.map(request)
-
-    def _api_get_endpoint(self, path):
-        return "http://%s:%s/%s" % (self.hostname,
-                                    self.machinesitter_port,
-                                    path)
-
-    def _api_get_stats(self):
-        self.datamanager.reload()
-        # Now what?
-
-    def _get_machinename(self):
-        return "%s:%s" % (self.hostname,
-                          self.machinesitter_port)
-
-class MonitoredMachine(HasMachineSitter):
-    """
-    An interface for a single
-    machine to monitor.  Some functions
-    Should be implemented per cloud provider.
-    Note: It it assumed that the MachineMonitor
-    keeps all MonitoredMachines up to date, and that
-    with the exception of functions explicitly about
-    downloading data, all calls are accessing LOCAL
-    CACHED data and NOT making network calls.
-    """
-    def __init__(self, hostname, machine_number=0, *args, **kwargs):
-        super(MonitoredMachine, self).__init__(*args, **kwargs)
-        self.hostname = hostname
-        self.running_tasks = []
-        self.machine_number = machine_number
-
-    def get_running_tasks(self):
-        """
-        Return cached data about running task status
-        """
-        pass
-
-    def start_task(self, job):
-        # If the machine is up and initalized, make the API call
-        # Otherwise, spawn a thread to wait for the machine to be up
-        # and then make the call
-        if self.is_initialized():
-            self._api_run_request(self._api_start_task(job.get_name()))
-
-    def begin_initialization(self):
-        # Start an async request to find the
-        # machinesitter port number
-        # and load basic configuration
-        pass
-
-    def is_initialized(self):
-        return self.machinesitter_port != None
-
-    def __str__(self):
-        return "%s:%s" % (self.hostname, self.machinesitter_port)
-
-
-class MachineMonitor:
-    def __init__(self, parent, number, monitored_machines=[]):
-        self.clustersitter = parent
-        self.number = number
-        self.monitored_machines = monitored_machines
-        logging.info("Initialized a machine monitor for %s" % (
-                str(self.monitored_machines)))
-
-    def add_machines(self, monitored_machines):
-        self.initialize_machines(monitored_machines)
-        self.monitored_machines.extend(monitored_machines)
-        logging.info("Queued %s for inclusion in next stats run" % (
-                [str(a) for a in monitored_machines]))
-
-    def initialize_machines(self, monitored_machines):
-        # Find the sitter port for each machine, since it
-        # is assigned in an incremental fashion depending
-        # on what ports are available / how many sitters
-        # on the machine etc.
-        remaining_machines = [m for m in monitored_machines]
-        next_port = 40000
-        while remaining_machines != []:
-            for machine in remaining_machines:
-                found = machine._api_identify_sitter(next_port)
-                if found:
-                    remaining_machines.remove(machine)
-
-            next_port += 1
-
-    def start(self):
-        self.initialize_machines(self.monitored_machines)
-
-        while True:
-            start_time = datetime.now()
-            logging.info("Beggining machine monitoring poll for %s" % (
-                    [str(a) for a in self.monitored_machines]))
-            for machine in self.monitored_machines:
-                if machine.is_initialized():
-                    machine._api_get_stats()
-
-            time_spent = datetime.now() - start_time
-            sleep_time = self.clustersitter.stats_poll_interval - \
-                time_spent.seconds
-            logging.info("Finished poll run for %s.  Time_spent: %s, sleep_time: %s" % (
-                    [str(a) for a in self.monitored_machines],
-                    time_spent,
-                    sleep_time))
-            time.sleep(sleep_time)
-
 
