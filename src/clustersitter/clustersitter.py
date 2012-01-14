@@ -244,6 +244,16 @@ class ClusterSitter(object):
         pass
 
     def _register_machine_failure(self, monitored_machine):
+        """
+        NOTE: We should do some SERIOUS rate limiting here.
+        If we just have a 10 minute network hiccup we *should*
+        try and replace those machines, but we should continue
+        to check for the old ones for *A LONG TIME*
+        to see if they come back.  After that formally decomission
+        them.  If they do come back after we've moved their jobs around
+        then simply remove the jobs from the machine and add them
+        to the idle resources pool.
+        """
         # Find which jobs this was running
         jobs = self.jobcatalog['bymachine'][monitored_machine]
         for job in jobs:
@@ -258,6 +268,11 @@ class ClusterSitter(object):
             time.sleep(self.stats_poll_interval)
 
     def get_idle_machines_in_zone(self, zone):
+        """
+        @ TODO Do some sort of calculation -- if we have too many idle
+        machines we should decomission them.  Define a configurable
+        threshold somewhere.
+        """
         return self.idle_machines[zone]
 
     def calculate_idle_machines(self):
