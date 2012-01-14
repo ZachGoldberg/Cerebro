@@ -28,7 +28,6 @@ class MachineMonitor:
             if not m._api_identify_sitter():
                 self.pull_failures[m] += 1
 
-
     def start(self):
         self.initialize_machines(self.monitored_machines)
 
@@ -48,6 +47,8 @@ class MachineMonitor:
                 if machine.is_initialized():
                     if not machine._api_get_stats():
                         self.pull_failures[machine] += 1
+                    else:
+                        self.pull_failures[machine] = 0
                 else:
                     self.initialize_machines([machine])
 
@@ -61,12 +62,8 @@ class MachineMonitor:
                     del self.pull_failures[machine]
                     logging.warn(
                         "Removing %s because it no longer exists! " % (
-                            machine.hostname) +
-                        "Will try and respin it up now!")
-                    # @ TODO Tell the clustersitter that this machine
-                    # is gone, and that it needs to ensure
-                    # no jobs are out of capacity.  Also do alerting
-                    # as appropriate etc.
+                            machine.hostname))
+                    self.clustersitter._register_machine_failure(machine)
 
             time_spent = datetime.now() - start_time
             sleep_time = self.clustersitter.stats_poll_interval - \
@@ -76,7 +73,6 @@ class MachineMonitor:
                     [str(a) for a in self.monitored_machines],
                     time_spent,
                     sleep_time))
-
 
             if sleep_time > 0:
                 time.sleep(sleep_time)

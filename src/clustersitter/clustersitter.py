@@ -25,6 +25,17 @@ We have 3 kinds of data
 3) Event level data -- what happpened
   -- Store in Django (SQL or Mongo)
 """
+
+"""
+In an ideal world this is written such that we always speak
+in terms of CPUs and RAM requirements for each job.  This allows
+us to put multiple jobs on a machine whilst keeping track
+of total theoretical machine utilization.  However, for simplicities
+sake we're cutting some corners (FOR NOW) and assuming one job
+per machine.  These sections are noted with the comment
+#!MACHINEASSUMPTION!
+"""
+
 class MachineConfig(object):
     def __init__(self, hostname, shared_fate_zone,
                  cpus, ram):
@@ -45,9 +56,16 @@ class ProductionJob(object):
         self.deployment_layout = deployment_layout
 
     def get_required_machines_in_zone(self, zone):
+        """
+        Note: this is not the TOTAL machines needed in this zone,
+        just the total REMAINING machines in the zone.
+        For the total machines in the zone do:
+        job.deployment_layout[zonename]['num_machines']
+        """
+        #!MACHINEASSUMPTION!
         zoneinfo = self.deployment_layout[zone]
         profiles = []
-        for _ in range(zoneinfo[0]):
+        for _ in range(zoneinfo['num_machines']):
             profiles.append(MachineProfile(cpu=zoneinfo[1],
                                            mem=zoneinfo[2]))
 
@@ -67,7 +85,8 @@ class ClusterSitter(object):
         self.monitors = []
         self.machines_by_zone = {}
         self.zones = []
-        self.jobcatalog = {"byjob": [], "bymachine": {}}
+        self.jobcatalog = {"byjob": {}, "bymachine": {}}
+        self.jobs = []
 
         self.orig_starting_port = starting_port
         self.next_port = starting_port
@@ -153,6 +172,11 @@ class ClusterSitter(object):
         self.calculator.start()
 
     def add_job(self, job):
+        self.jobs.append(job)
+        job.refill_job()
+
+    def refill_job(self, job):
+        #!MACHINEASSUMPTION!
         # Step 1: Ensure we have enough machines in each SFZ
         # Step 1a: Check for idle machines and reserve as we find them
         new_machines = []
@@ -160,6 +184,7 @@ class ClusterSitter(object):
         for zone in job.get_shared_fate_zones():
             idle_available = self.get_idle_machines_in_zone(zone)
             idle_required = job.get_required_machines_in_zone(zone)
+            # !MACHINEASSUMPTION! Ideally we're counting resources here not machines
             required_new_machine_count = (len(idle_required) -
                                           len(idle_available))
             usable_machines = []
@@ -199,9 +224,15 @@ class ClusterSitter(object):
             time.sleep(5)
 
         # Step 3: Add this job and the associated machines to the catalog
-        self.jobcatalog['byjob'].append((job, reserved_machines))
+        # !MACHINEASSUMPTION! Should just allocate RESOURCES to the job,
+        # in the catalog, not the whole machines
+        job.set_monitored_machines(reserved_machines)
+        self.jobcatalog['byjob'][job] = reserved_machines
         for machine in reserved_machines:
-            self.jobcatalog['bymachine'][machine] = job
+            if not self.jobcatalog['bymachine'][machine]:
+                self.jobcatalog['bymachine'][machine] = []
+
+            self.jobcatalog['bymachine'][machine].append(job)
 
         # Done!
         return reserved_machines
@@ -211,6 +242,15 @@ class ClusterSitter(object):
         # to bring up the machines, ASYNCHRONOUSLY (in a new thread?)
         # and return objects representing the machiens on their way up.
         pass
+
+    def _register_machine_failure(self, monitored_machine):
+        # Find which jobs this was running
+        jobs = self.jobcatalog['bymachine'][monitored_machine]
+        for job in jobs:
+            job.remove_monitored_machine(monitored_machine)
+            if job.needs_machines():
+                self.refill_job(job)
+
 
     def _calculator(self):
         while True:
