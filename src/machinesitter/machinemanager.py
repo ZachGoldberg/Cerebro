@@ -146,7 +146,6 @@ class MachineManager(object):
                 if starting_port > orig_port + 10000:
                     starting_port = orig_port
 
-
         if use_machine_port:
             self.machine_sitter_starting_port = starting_port
         else:

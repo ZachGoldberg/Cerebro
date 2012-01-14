@@ -11,7 +11,6 @@ from sittercommon import http_monitor
 from sittercommon import logmanager
 from sittercommon.machinedata import MachineData
 
-import settings
 
 class ClusterSitter(object):
     def __init__(self, log_location, daemon, starting_port=30000):
@@ -33,7 +32,7 @@ class ClusterSitter(object):
         self.logmanager.set_harness(self)
 
         # In seconds
-        self.stats_poll_interval = 5
+        self.stats_poll_interval = 2
         self.stats = None
         self.http_monitor = http_monitor.HTTPMonitor(self.stats,
                                                      self,
@@ -245,9 +244,12 @@ class HasMachineSitter(object):
                                     path)
 
     def _api_get_stats(self):
-        print self.datamanager.reload().keys()
-        self.historic_data.append(self.datamanager.tasks.copy())
+        self.datamanager.reload()
+        # Now what?
 
+    def _get_machinename(self):
+        return "%s:%s" % (self.hostname,
+                          self.machinesitter_port)
 
 class MonitoredMachine(HasMachineSitter):
     """
@@ -332,5 +334,13 @@ class MachineMonitor:
                 if machine.is_initialized():
                     machine._api_get_stats()
 
-            time.sleep(self.clustersitter.stats_poll_interval - (
-                    datetime.now() - start_time).seconds)
+            time_spent = datetime.now() - start_time
+            sleep_time = self.clustersitter.stats_poll_interval - \
+                time_spent.seconds
+            logging.info("Finished poll run for %s.  Time_spent: %s, sleep_time: %s" % (
+                    [str(a) for a in self.monitored_machines],
+                    time_spent,
+                    sleep_time))
+            time.sleep(sleep_time)
+
+

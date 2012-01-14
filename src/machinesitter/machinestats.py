@@ -39,7 +39,8 @@ class MachineStats(StatsCollector):
         data = {}
         data['machinesitter_pid'] = os.getpid()
         data['log_location'] = self.harness.log_location
-        data['starting_port'] = self.harness.starting_port
+        data['task_sitter_starting_port'] = self.harness.task_sitter_starting_port
+        data['machine_sitter_starting_port'] = self.harness.machine_sitter_starting_port
         data['task_definition_file'] = self.harness.task_definition_file
         for task_name, task in self.harness.tasks.items():
             data["%s-name" % task.name] = task.name

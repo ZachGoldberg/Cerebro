@@ -13,5 +13,10 @@ setup(name='TaskSitter',
                    'clustersitter': 'src/clustersitter',
                    'machineconsole': 'src/machineconsole'},
       scripts=['run_tasksitter', 'run_machinesitter', 'run_machineconsole'],
-      requires=['psi', 'requests'],
+      install_requires=[
+        'psi',
+        'requests',
+        'django-mongodb-engine',
+        'djangotoolbox',
+        ],
      )

@@ -40,7 +40,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django_mongodb_engine',
         # Or path to database file if using sqlite
-        'NAME': 'wifastportal',
+        'NAME': 'clustersitter',
         'USER': '',                      # Not used with sqlite3.
         'PASSWORD': '',                  # Not used with sqlite3.
         # Set to empty string for localhost. Not used with sqlite3.

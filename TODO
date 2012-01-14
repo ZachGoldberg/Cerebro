@@ -5,6 +5,7 @@
  - prettier web UI for starting/stopping tasks
 
 -- cluster sitter ideas
+   - Reconnect to a machine sitter if it disappears (changes port)
    - Have .cfg per task which specifies all options (like borg)
    - Daemon which monitors all known machines
    - local database (or cloud hosted somehow to avoid downtime?) of
