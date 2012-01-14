@@ -198,12 +198,13 @@ class ClusterSitter(object):
             for machine in self.machines_by_zone[zone]:
                 tasks = machine.get_running_tasks()
 
-                if not tasks and machine.is_initialized():
+                if not tasks and machine.has_loaded_data():
                     idle_machines[zone].append(machine)
 
         # The DICT swap must be atomic, or else another
         # thread could get a bad value during calculation.
         self.idle_machines = idle_machines
+        logging.info("Calculated idle machines: %s" % str(self.idle_machines))
 
     def _run_monitor(self, monitor):
         # Assume we're in our own thread here

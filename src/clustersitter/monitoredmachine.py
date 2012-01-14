@@ -19,7 +19,11 @@ class HasMachineSitter(object):
     def _api_identify_sitter(self):
         logging.info("Attempting to find a machinesitter at %s" % (
                 self.hostname))
-        self.datamanager = MachineData(self.hostname, 40000)
+        if not self.datamanager:
+            self.datamanager = MachineData(self.hostname, 40000)
+        else:
+            self.datamanager._find_portnum()
+
         if self.datamanager.url:
             logging.info("Found sitter at %s" % self.datamanager.url)
         else:
@@ -38,6 +42,7 @@ class HasMachineSitter(object):
                                     path)
 
     def _api_get_stats(self):
+        logging.info("Get stats for %s" % str(self))
         self.datamanager.reload()
         self.loaded = True
         # Now what?
@@ -96,7 +101,10 @@ class MonitoredMachine(HasMachineSitter):
         if not self.datamanager:
             return False
 
-        return self.datamanager.url != "" and self.loaded
+        return self.datamanager.url != ""
+
+    def has_loaded_data(self):
+        return self.is_initialized() and self.loaded
 
     def __str__(self):
         return self._get_machinename()

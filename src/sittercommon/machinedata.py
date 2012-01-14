@@ -1,3 +1,4 @@
+import logging
 import re
 import requests
 import socket
@@ -20,33 +21,54 @@ class MachineData(object):
         port = self.starting_port
         while not found:
             try:
+                logging.info("Attempting to connect to %s" % (
+                        "%s:%s" % (self.hostname, port)))
                 sock = socket.socket(socket.AF_INET)
                 sock.connect((self.hostname, port))
                 sock.close()
                 found = True
                 self.portnum = port
+                logging.info("Successfully connected")
             except:
                 port += 1
                 if port > self.starting_port + 1000:
+                    self.url = ""
+                    self.portnum = None
                     return
 
         self.url = "http://%s:%s" % (self.hostname,
                                      self.portnum)
         return self.url
 
-    def _make_request(self, function, *args):
+    def _make_request(self, function, path, host=None):
         val = None
+        hostname = host
+        if not hostname:
+            hostname = self.url
+
         try:
-            val = function(*args)
+            val = function("%s/%s" % (hostname, path))
         except:
             self._find_portnum()
-            val = function(*args)
+            hostname = host
+            if not hostname:
+                hostname = self.url
+            try:
+                val = function("%s/%s" % (hostname, path))
+            except:
+                logging.warn("Couldn't execute %s/%s!" % (
+                        hostname, path))
+                return None
 
         return val
 
     def load_generic_page(self, host, page):
         response = self._make_request(requests.get,
-                                      "%s/%s?nohtml=1" % (host, page))
+                                      path="%s?nohtml=1" % page,
+                                      host=host)
+        if not response:
+            return {}
+
         lines = response.content.split('\n')
         data = {}
         for item in lines:
@@ -61,7 +83,10 @@ class MachineData(object):
 
     def reload(self):
         response = self._make_request(requests.get,
-                                      "%s/stats?nohtml=1" % self.url)
+                                      path="stats?nohtml=1")
+        if not response:
+            return
+
         data = response.content.split('\n')
 
         task_data = {}
@@ -107,13 +132,15 @@ class MachineData(object):
 
     def start_task(self, task):
         tid = urllib.quote(task['name'])
-        url = "%s/start_task?task_name=%s" % (self.url, tid)
-        self._make_request(requests.get, url)
+        self._make_request(requests.get,
+                           path="start_task?task_name=%s" % tid)
 
     def stop_task(self, task):
         tid = urllib.quote(task['name'])
         url = "%s/stop_task?task_name=%s" % (self.url, tid)
-        print self._make_request(requests.get, url).content
+        print self._make_request(
+            requests.get,
+            path="stop_task?task_name=%s" % tid).content
 
     def strip_html(self, val):
         return re.sub('<[^<]+?>', '', val)
