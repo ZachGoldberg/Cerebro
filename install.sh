@@ -1,2 +1,3 @@
-sudo rm -rf build
-sudo python setup.py install
+sudo apt-get install -y build-essential
+python bootstrap.py
+./bin/buildout

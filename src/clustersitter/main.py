@@ -8,12 +8,14 @@ the cluster and monitors everything, and exposes several semantic
 interfaces (all via HTTP).  There are NAGIOS type monitoring
 endpoints as well as an API for interactions via a command line tool.
 """
-
-import sittercommon.arg_parser as argparse
-
+import logging
 import os
 import sys
 import time
+
+import sittercommon.arg_parser as argparse
+
+import clustersitter
 
 
 def parse_args(args):
@@ -58,9 +60,17 @@ def main(sys_args=None):
     if args.daemon:
         daemonize()
 
+    logging.getLogger().setLevel(logging.INFO)
+
     sitter = clustersitter.ClusterSitter()
     sitter.start()
 
+    sitter.add_machines(["localhost"])
+
     # wait forever
     while True:
-        time.sleep(1)
+        try:
+            time.sleep(1)
+        except KeyboardInterrupt:
+            print "Caught Control-C, exiting"
+            os._exit(0)

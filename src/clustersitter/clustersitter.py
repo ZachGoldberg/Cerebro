@@ -1,22 +1,43 @@
+import logging
+import random
+import socket
 import threading
 import time
-from requests import async
+import requests
 
 
-class ClusterSitter:
+class ClusterSitter(object):
     def __init__(self):
         self.worker_thread_count = 1
+        # list of tuples (MachineMonitor, ThreadObj)
         self.monitors = []
         self.machines = {}
         self.zones = []
 
+    def add_machines(self, machines):
+        monitored_machines = [MonitoredMachine(m) for m in machines]
+
+        # Spread them out evenly across threads
+        threads_to_use = self.worker_thread_count
+        machines_per_thread = int(len(machines) / threads_to_use) or 1
+
+        if machines_per_thread * self.worker_thread_count > len(machines):
+            threads_to_use = random.sample(self.monitors, len(machines))
+
+        for index, monitor in enumerate(self.monitors[:threads_to_use]):
+            monitor[0].add_machines(
+                monitored_machines[index * machines_per_thread:(index + 1): \
+                             machines_per_thread])
+
     def start(self):
+        logging.info("Spinning up %s monitoring threads" % (
+                self.worker_thread_count))
         # Spin up all the monitoring threads
         for threadnum in range(self.worker_thread_count):
             machinemonitor = MachineMonitor(parent=self,
                                             number=threadnum)
             thread = threading.Thread(target=self._run_monitor,
-                                      args=(machinemonitor))
+                                      args=(machinemonitor, ))
             thread.start()
             self.monitors.append((machinemonitor, thread))
 
@@ -32,7 +53,7 @@ class ClusterSitter:
         # Step 1a: Check for idle machines and reserve as we find them
         new_machines = []
         reserved_machines = []
-        for zone in self.job.get_shared_fate_zones():
+        for zone in job.get_shared_fate_zones():
             idle_available = self.get_idle_machines_in_zone(zone)
             idle_required = job.get_required_machines_in_zone(zone)
             required_new_machine_count = (len(idle_required) -
@@ -76,7 +97,7 @@ class ClusterSitter:
         # Done!
         return reserved_machines
 
-    def begin_adding_machines(zone, count):
+    def begin_adding_machines(self, zone, count):
         # This should run some kind of modular procedure
         # to bring up the machines, ASYNCHRONOUSLY (in a new thread?)
         # and return objects representing the machiens on their way up.
@@ -131,6 +152,7 @@ class ProductionJob(object):
     def get_name(self):
         return self.task_configuration['name']
 
+
 class HasMachineSitter(object):
     """
     Everything is asynchronous -- always returns a request
@@ -144,13 +166,24 @@ class HasMachineSitter(object):
         pass
 
     def _api_identify_sitter(self, port):
-        pass
+        logging.info("Attempting to find a machinesitter at %s:%s" % (
+                self.hostname, port))
+        try:
+            sock = socket.socket(socket.AF_INET)
+            sock.connect(("localhost", port))
+            sock.close()
+            logging.info("Connected successfully to %s:%s" % (
+                    self.hostname, port))
+            return True
+        except:
+            logging.info("Connection failed to %s:%s" % (self.hostname, port))
+            return False
 
     def _api_run_request(self, request):
         """
-        Explicitly run the async object    
+        Explicitly run the async object
         """
-        result = async.map(request)
+        #result = async.map(request)
 
     def _api_set_port(self, port):
         self.machinesitter_port = port
@@ -159,6 +192,10 @@ class HasMachineSitter(object):
         return "http://%s:%s/%s" % (self.hostname,
                                     self.machinesitter_port,
                                     path)
+
+    def _api_get_stats(self):
+        pass
+
 
 class MonitoredMachine(HasMachineSitter):
     """
@@ -171,7 +208,8 @@ class MonitoredMachine(HasMachineSitter):
     downloading data, all calls are accessing LOCAL
     CACHED data and NOT making network calls.
     """
-    def __init__(self, hostname, machine_number):
+    def __init__(self, hostname, machine_number=0, *args, **kwargs):
+        super(MonitoredMachine, self).__init__(*args, **kwargs)
         self.hostname = hostname
         self.running_tasks = []
         self.machine_number = machine_number
@@ -187,58 +225,57 @@ class MonitoredMachine(HasMachineSitter):
         # Otherwise, spawn a thread to wait for the machine to be up
         # and then make the call
         if self.is_initialized():
-            self._api_run_request(self._api_start_task(job.get_name())))
+            self._api_run_request(self._api_start_task(job.get_name()))
 
     def begin_initialization(self):
-        # Start an async request to find the 
+        # Start an async request to find the
         # machinesitter port number
         # and load basic configuration
         pass
 
-    def is_initalized(self):
+    def is_initialized(self):
         return self.machinesitter_port != None
+
+    def __str__(self):
+        return "%s:%s" % (self.hostname, self.machinesitter_port)
+
 
 class MachineMonitor:
     def __init__(self, parent, number, monitored_machines=[]):
         self.clustersitter = parent
         self.number = number
-        self.monitored_machines = []
+        self.monitored_machines = monitored_machines
+        logging.info("Initialized a machine monitor for %s" % (
+                str(self.monitored_machines)))
 
     def add_machines(self, monitored_machines):
+        self.initialize_machines(monitored_machines)
         self.monitored_machines.extend(monitored_machines)
 
-    def start(self):
+    def initialize_machines(self, monitored_machines):
         # Find the sitter port for each machine
-        remaining_machines = [m for m in self.monitored_machines]
+        remaining_machines = [m for m in monitored_machines]
+        next_port = 40000
         while remaining_machines != []:
-            next_port = 40000
-            requests = []
             for machine in remaining_machines:
-                requests.append(machine._api_identify_sitter(next_port))
-
-            async.map(requests)
-
-            validated_machines = []
-            for index, req in requests:
-                if req.status_code == 200:
-                    validated_machines.append(index)
-
-            # Pop in reverse order so as not to screw up the
-            # indexes (largest -> smallest doesn't cause any cascading index
-            # changes for elements we care about)
-            validated_machines.reverse()
-            for i in validated_machines:
-                machine = remaining_machines.pop(i)
-                machine._api_set_port(next_port)
+                found = machine._api_identify_sitter(next_port)
+                if found:
+                    remaining_machines.remove(machine)
+                else:
+                    machine._api_set_port(next_port + 1)
 
             next_port += 1
 
+    def start(self):
+        self.initialize_machines(self.monitored_machines)
+
         while True:
-            requests = []
-            for machine in machines:
-                if machine.is_initalized():
-                    requests.append(machine._api_get_stats())
-            time.sleep(.1)
+            logging.info("Beggining machine monitoring poll for %s" % (
+                    ', '.join([str(a) for a in self.monitored_machines])))
+            for machine in self.monitored_machines:
+                if machine.is_initialized():
+                    machine._api_get_stats()
+            time.sleep(1)
 
         # Run all requests with a time limit
-        
+

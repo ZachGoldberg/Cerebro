@@ -12,5 +12,5 @@ setup(name='TaskSitter',
                    'sittercommon': 'src/sittercommon',
                    'machineconsole': 'src/machineconsole'},
       scripts=['run_tasksitter', 'run_machinesitter', 'run_machineconsole'],
-      requires=['psi', 'requests', 'gevent'],
+      requires=['psi', 'requests'],
      )

@@ -14,7 +14,7 @@ import time
 class MachineManager(object):
 
     def __init__(self, task_definition_file, log_location,
-                 starting_port=40000, daemon=False):
+                 starting_port=50000, daemon=False):
         self.tasks = {}
         self.task_definition_file = task_definition_file
         self.daemon = daemon
@@ -128,8 +128,8 @@ class MachineManager(object):
                 self.starting_port += 1
             except:
                 self.starting_port += 1
-                if self.starting_port > 50000:
-                    self.starting_port = 40000
+                if self.starting_port > 60000:
+                    self.starting_port = 50000
 
         return works
 
