@@ -28,6 +28,11 @@ class MachineStats(StatsCollector):
                 data["%s-monitoring" % task.name] = "<a href='%s'>%s</a>" % (location,
                                                                            location)
 
+        load = os.getloadavg()
+        data['load_one_min'] = load[0]
+        data['load_five_min'] = load[1]
+        data['load_fifteen_min'] = load[2]
+
         return data
 
     def get_metadata(self):
