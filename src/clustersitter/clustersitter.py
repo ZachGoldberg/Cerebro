@@ -262,6 +262,8 @@ class MachineMonitor:
     def add_machines(self, monitored_machines):
         self.initialize_machines(monitored_machines)
         self.monitored_machines.extend(monitored_machines)
+        logging.info("Queued %s for inclusion in next stats run" % (
+                [str(a) for a in monitored_machines]))
 
     def initialize_machines(self, monitored_machines):
         # Find the sitter port for each machine, since it

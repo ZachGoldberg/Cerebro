@@ -208,8 +208,8 @@ class Process(object):
         now = time.time()
         if now - self.last_usage_update > 0.1:
             self.previous_update_time = self.last_usage_update
-            self.last_usage_update = now
             self.last_usage = self.usage
+
             try:
                 self.proc_stats = self.get_proc_stats()
                 self.usage = self.get_proc_cpu_usage(deep)
@@ -221,7 +221,7 @@ class Process(object):
                 return
 
             self.calculate_cpu_usage()
-
+            self.last_usage_update = time.time()
             return True
 
         return False
