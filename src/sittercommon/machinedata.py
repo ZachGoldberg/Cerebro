@@ -27,6 +27,7 @@ class MachineData(object):
     def reload(self):
         response = requests.get("%s/stats?nohtml=1" % self.url)
         data = response.content.split('\n')
+
         task_data = {}
         self.tasks = {}
 

@@ -5,6 +5,8 @@ import threading
 import time
 import requests
 
+from sittercommon.machinedata import MachineData
+
 
 class ClusterSitter(object):
     def __init__(self):
@@ -161,6 +163,8 @@ class HasMachineSitter(object):
     def __init__(self):
         self.machinesitter_port = None
         self.hostname = None
+        self.datamanager = None
+        self.historic_data = []
 
     def _api_start_task(self, name):
         pass
@@ -174,6 +178,10 @@ class HasMachineSitter(object):
             sock.close()
             logging.info("Connected successfully to %s:%s" % (
                     self.hostname, port))
+
+            self.machinesitter_port = port
+            self.datamanager = MachineData("http://%s:%s" % (self.hostname,
+                                                      port))
             return True
         except:
             logging.info("Connection failed to %s:%s" % (self.hostname, port))
@@ -185,16 +193,14 @@ class HasMachineSitter(object):
         """
         #result = async.map(request)
 
-    def _api_set_port(self, port):
-        self.machinesitter_port = port
-
     def _api_get_endpoint(self, path):
         return "http://%s:%s/%s" % (self.hostname,
                                     self.machinesitter_port,
                                     path)
 
     def _api_get_stats(self):
-        pass
+        print self.datamanager.reload().keys()
+        self.historic_data.append(self.datamanager.tasks.copy())
 
 
 class MonitoredMachine(HasMachineSitter):
@@ -253,7 +259,10 @@ class MachineMonitor:
         self.monitored_machines.extend(monitored_machines)
 
     def initialize_machines(self, monitored_machines):
-        # Find the sitter port for each machine
+        # Find the sitter port for each machine, since it
+        # is assigned in an incremental fashion depending
+        # on what ports are available / how many sitters
+        # on the machine etc.
         remaining_machines = [m for m in monitored_machines]
         next_port = 40000
         while remaining_machines != []:
@@ -261,8 +270,6 @@ class MachineMonitor:
                 found = machine._api_identify_sitter(next_port)
                 if found:
                     remaining_machines.remove(machine)
-                else:
-                    machine._api_set_port(next_port + 1)
 
             next_port += 1
 
@@ -271,11 +278,9 @@ class MachineMonitor:
 
         while True:
             logging.info("Beggining machine monitoring poll for %s" % (
-                    ', '.join([str(a) for a in self.monitored_machines])))
+                    [str(a) for a in self.monitored_machines]))
             for machine in self.monitored_machines:
                 if machine.is_initialized():
                     machine._api_get_stats()
             time.sleep(1)
-
-        # Run all requests with a time limit
 

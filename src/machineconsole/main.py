@@ -6,7 +6,7 @@ import sys
 
 from datetime import datetime
 from menu import MenuFactory, MenuOption, MenuChanger, Table
-from machinedata import MachineData
+from sittercommon.machinedata import MachineData
 
 MACHINE_DATA = None
 MENUFACTORY = None

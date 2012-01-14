@@ -42,6 +42,7 @@ def run_command_with_harness(command, args, constraints_list):
                                           restart=args.restart,
                                           max_restarts=args.max_restarts,
                                           poll_interval=args.poll_interval,
+                                          collect_stats=args.collect_stats,
                                           logmanager=logs,
                                           uid=args.uid)
 
@@ -61,6 +62,12 @@ def parse_args(args):
 
     parser.add_argument('--time-limit', dest='time_limit', type=float,
                         help='Maximum time the child can run for in seconds')
+
+    parser.add_argument('--disable_stat_collection', dest='collect_stats',
+                        action='store_false',
+                        default=True,
+                        help='Disable collecting child process stats unless'
+                        'required by a constraint.  Saves some CPU overhead.')
 
     parser.add_argument('--restart', dest='restart',
                         action='store_true',
