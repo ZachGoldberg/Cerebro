@@ -1,4 +1,5 @@
 import logging
+import os
 import random
 import socket
 import threading
@@ -6,20 +7,52 @@ import time
 import requests
 from datetime import datetime
 
+from sittercommon import http_monitor
+from sittercommon import logmanager
 from sittercommon.machinedata import MachineData
 
+import settings
 
 class ClusterSitter(object):
-    def __init__(self):
+    def __init__(self, log_location, daemon, starting_port=30000):
         self.worker_thread_count = 1
+        self.daemon = daemon
 
         # list of tuples (MachineMonitor, ThreadObj)
         self.monitors = []
         self.machines = {}
         self.zones = []
 
+        self.orig_starting_port = starting_port
+        self.next_port = starting_port
+        self.start_count = 1
+        self.command = "clustersitter"
+        self.parent_pid = os.getpid()
+        self.logmanager = logmanager.LogManager(stdout_location=log_location,
+                                                stderr_location=log_location)
+        self.logmanager.set_harness(self)
+
         # In seconds
         self.stats_poll_interval = 5
+        self.stats = None
+        self.http_monitor = http_monitor.HTTPMonitor(self.stats,
+                                                     self,
+                                                     self.get_next_port())
+
+    def get_next_port(self):
+        works = None
+        while not works:
+            try:
+                sok = socket.socket(socket.AF_INET)
+                sok.bind(("0.0.0.0", self.next_port))
+                sok.close()
+                works = self.next_port
+                self.next_port += 1
+            except:
+                self.next_port += 1
+                if self.next_port > self.orig_starting_port + 10000:
+                    self.next_port = self.orig_starting_port
+        return works
 
     def add_machines(self, machines):
         monitored_machines = [MonitoredMachine(m) for m in machines]
@@ -37,6 +70,14 @@ class ClusterSitter(object):
                              machines_per_thread])
 
     def start(self):
+        self.http_monitor.start()
+        print "Cluster Sitter Monitor started at " + \
+            "http://localhost:%s" % self.http_monitor.port
+
+        if self.daemon:
+            self.logmanager.setup_all()
+
+
         logging.info("Spinning up %s monitoring threads" % (
                 self.worker_thread_count))
         # Spin up all the monitoring threads

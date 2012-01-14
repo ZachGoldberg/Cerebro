@@ -73,7 +73,8 @@ def main(sys_args=None):
 
     manager = machinemanager.MachineManager(args.taskfile,
                                             config['log_location'],
-                                            starting_port=40000,
+                                            machine_sitter_starting_port=40000,
+                                            task_sitter_starting_port=50000,
                                             daemon=args.daemon)
 
     task_definitions = config['task_definitions']

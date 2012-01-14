@@ -22,6 +22,20 @@ class LogManager(object):
     def add_logfile(self, name, filename):
         self.extra_logfiles[name] = filename
 
+    def setup_all(self):
+        stdout_loc = self._calculate_filename(
+            self.stdout_location)
+        stderr_loc = self._calculate_filename(
+            self.stderr_location, True)
+        print "Redirecting sitter output to %s, stderr: %s" % (
+            stdout_loc, stderr_loc)
+
+        self.add_logfile("machinemanager-stdout", stdout_loc)
+        self.add_logfile("machinemanager-stderr", stderr_loc)
+
+        self.setup_stdout()
+        self.setup_stderr()
+
     def setup_stdout(self):
         if self.stdout_location != '-':
             stdout = open(self._calculate_filename(self.stdout_location),

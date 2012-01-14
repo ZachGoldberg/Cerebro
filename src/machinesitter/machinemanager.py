@@ -14,13 +14,15 @@ import time
 class MachineManager(object):
 
     def __init__(self, task_definition_file, log_location,
-                 starting_port=50000, daemon=False):
+                 machine_sitter_starting_port=40000,
+                 task_sitter_starting_port=50000,
+                 daemon=False):
         self.tasks = {}
         self.task_definition_file = task_definition_file
         self.daemon = daemon
         self.thread = None
         self.should_stop = False
-        self.starting_port = starting_port
+
         self.log_location = log_location
         self.start_count = 0
         self.command = "machinemanager"
@@ -30,9 +32,15 @@ class MachineManager(object):
 
         self.parent_pid = os.getpid()
         self.stats = machinestats.MachineStats(self)
+
+        self.machine_sitter_starting_port = machine_sitter_starting_port
+        self.task_sitter_starting_port = task_sitter_starting_port
+        self.orig_machine_port = self.machine_sitter_starting_port
+        self.orig_task_port = self.task_sitter_starting_port
+
         self.http_monitor = http_monitor.HTTPMonitor(self.stats,
                                                      self,
-                                                     self.next_port())
+                                                     self.next_port(True))
 
         self.http_monitor.add_handler('/start_task', self.remote_start_task)
         self.http_monitor.add_handler('/stop_task', self.remote_stop_task)
@@ -117,19 +125,32 @@ class MachineManager(object):
 
         return config
 
-    def next_port(self):
+    def next_port(self, use_machine_port=False):
         works = None
+        starting_port = self.task_sitter_starting_port
+        orig_port = self.orig_task_port
+
+        if use_machine_port:
+            starting_port = self.machine_sitter_starting_port
+            orig_port = self.orig_machine_port
+
         while not works:
             try:
                 sok = socket.socket(socket.AF_INET)
-                sok.bind(("0.0.0.0", self.starting_port))
+                sok.bind(("0.0.0.0", starting_port))
                 sok.close()
-                works = self.starting_port
-                self.starting_port += 1
+                works = starting_port
+                starting_port += 1
             except:
-                self.starting_port += 1
-                if self.starting_port > 60000:
-                    self.starting_port = 50000
+                starting_port += 1
+                if starting_port > orig_port + 10000:
+                    starting_port = orig_port
+
+
+        if use_machine_port:
+            self.machine_sitter_starting_port = starting_port
+        else:
+            self.task_sitter_starting_port = starting_port
 
         return works
 
@@ -184,11 +205,7 @@ class MachineManager(object):
         self.logmanager.add_logfile("machinemanager-stderr", stderr_loc)
 
         if self.daemon:
-            print "Redirecting machine sitter output to %s, stderr: %s" % (
-                stdout_loc, stderr_loc)
-
-            self.logmanager.setup_stdout()
-            self.logmanager.setup_stderr()
+            self.logmanager.setup_all()
 
         for task in self.tasks.values():
             print "Initializing %s" % task.name

@@ -62,7 +62,8 @@ def main(sys_args=None):
 
     logging.getLogger().setLevel(logging.INFO)
 
-    sitter = clustersitter.ClusterSitter()
+    sitter = clustersitter.ClusterSitter(daemon=args.daemon,
+                                         log_location="/mnt/data")
     sitter.start()
 
     sitter.add_machines(["localhost"])
