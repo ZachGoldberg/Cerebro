@@ -26,6 +26,9 @@ class MachineData(object):
                 sock = socket.socket(socket.AF_INET)
                 sock.connect((self.hostname, port))
                 sock.close()
+                # @TODO Verify more than a socket is open
+                # Maybe make an HTTP request and verify its
+                # actually a machinesitter?
                 found = True
                 self.portnum = port
                 logging.info("Successfully connected")
@@ -85,7 +88,7 @@ class MachineData(object):
         response = self._make_request(requests.get,
                                       path="stats?nohtml=1")
         if not response:
-            return
+            return None
 
         data = response.content.split('\n')
 

@@ -34,6 +34,30 @@ class MachineConfig(object):
         self.shared_fate_zone = shared_fate_zone
 
 
+class ProductionJob(object):
+    def __init__(self,
+                 task_configuration,
+                 deployment_layout):
+        # The config to pass to a machinesitter / tasksitter
+        self.task_configuration = task_configuration
+
+        # A mapping of SharedFateZoneObj : (# Jobs, CPU, Mem)
+        self.deployment_layout = deployment_layout
+
+    def get_required_machines_in_zone(self, zone):
+        zoneinfo = self.deployment_layout[zone]
+        profiles = []
+        for _ in range(zoneinfo[0]):
+            profiles.append(MachineProfile(cpu=zoneinfo[1],
+                                           mem=zoneinfo[2]))
+
+        return profiles
+
+    def get_name(self):
+        return self.task_configuration['name']
+
+
+
 class ClusterSitter(object):
     def __init__(self, log_location, daemon, starting_port=30000):
         self.worker_thread_count = 1
@@ -43,6 +67,7 @@ class ClusterSitter(object):
         self.monitors = []
         self.machines_by_zone = {}
         self.zones = []
+        self.jobcatalog = {"byjob": [], "bymachine": {}}
 
         self.orig_starting_port = starting_port
         self.next_port = starting_port
@@ -173,6 +198,11 @@ class ClusterSitter(object):
                              not_ready)
             time.sleep(5)
 
+        # Step 3: Add this job and the associated machines to the catalog
+        self.jobcatalog['byjob'].append((job, reserved_machines))
+        for machine in reserved_machines:
+            self.jobcatalog['bymachine'][machine] = job
+
         # Done!
         return reserved_machines
 
@@ -215,27 +245,3 @@ class MachineProfile(object):
     def __init__(self, cpu=None, mem=None):
         self.cpu = cpu
         self.mem = mem
-
-
-class ProductionJob(object):
-    def __init__(self,
-                 task_configuration,
-                 deployment_layout):
-        # The config to pass to a machinesitter / tasksitter
-        self.task_configuration = task_configuration
-
-        # A mapping of SharedFateZoneObj : (# Jobs, CPU, Mem)
-        self.deployment_layout = deployment_layout
-
-    def get_required_machines_in_zone(self, zone):
-        zoneinfo = self.deployment_layout[zone]
-        profiles = []
-        for _ in range(zoneinfo[0]):
-            profiles.append(MachineProfile(cpu=zoneinfo[1],
-                                           mem=zoneinfo[2]))
-
-        return profiles
-
-    def get_name(self):
-        return self.task_configuration['name']
-

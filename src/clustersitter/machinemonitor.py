@@ -9,17 +9,25 @@ class MachineMonitor:
         self.number = number
         self.monitored_machines = monitored_machines
         self.add_queue = []
+        self.pull_failures = {}
+        self.failure_threshold = 15
+
         logging.info("Initialized a machine monitor for %s" % (
                 str(self.monitored_machines)))
 
     def add_machines(self, monitored_machines):
         self.add_queue.extend(monitored_machines)
+        for m in monitored_machines:
+            self.pull_failures[m] = 0
+
         logging.info("Queued %s for inclusion in next stats run" % (
                 [str(a) for a in monitored_machines]))
 
     def initialize_machines(self, monitored_machines):
         for m in monitored_machines:
-            m._api_identify_sitter()
+            if not m._api_identify_sitter():
+                self.pull_failures[m] += 1
+
 
     def start(self):
         self.initialize_machines(self.monitored_machines)
@@ -38,9 +46,27 @@ class MachineMonitor:
 
             for machine in self.monitored_machines:
                 if machine.is_initialized():
-                    machine._api_get_stats()
+                    if not machine._api_get_stats():
+                        self.pull_failures[machine] += 1
                 else:
                     self.initialize_machines([machine])
+
+            logging.info("Pull Failures: %s" % (
+                    [(m.hostname, count) for m, count in \
+                         self.pull_failures.items()]))
+
+            for machine, count in self.pull_failures.items():
+                if count >= self.failure_threshold:
+                    self.monitored_machines.remove(machine)
+                    del self.pull_failures[machine]
+                    logging.warn(
+                        "Removing %s because it no longer exists! " % (
+                            machine.hostname) +
+                        "Will try and respin it up now!")
+                    # @ TODO Tell the clustersitter that this machine
+                    # is gone, and that it needs to ensure
+                    # no jobs are out of capacity.  Also do alerting
+                    # as appropriate etc.
 
             time_spent = datetime.now() - start_time
             sleep_time = self.clustersitter.stats_poll_interval - \
@@ -50,5 +76,7 @@ class MachineMonitor:
                     [str(a) for a in self.monitored_machines],
                     time_spent,
                     sleep_time))
+
+
             if sleep_time > 0:
                 time.sleep(sleep_time)

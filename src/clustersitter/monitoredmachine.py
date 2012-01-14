@@ -43,9 +43,12 @@ class HasMachineSitter(object):
 
     def _api_get_stats(self):
         logging.info("Get stats for %s" % str(self))
-        self.datamanager.reload()
-        self.loaded = True
-        # Now what?
+        if self.datamanager.reload():
+            self.loaded = True
+        else:
+            self.loaded = False
+
+        return self.loaded
 
     def _get_machinename(self):
         if self.datamanager:
