@@ -20,9 +20,11 @@ class ProcessHarness(object):
     """
     def __init__(self, command, constraints, restart=False,
                  max_restarts=-1, poll_interval=.1,
-                 logmanager=None, uid=None, allow_spam=False):
+                 logmanager=None, uid=None, allow_spam=False,
+                 collect_stats=True):
         self.child_proc = None
         self.child_running = True
+        self.collect_stats = collect_stats
         self.command = command
         self.constraints = constraints
         self.max_restarts = max_restarts
@@ -100,6 +102,9 @@ class ProcessHarness(object):
         while True:
             if self.stop_running:
                 return
+
+            if self.collect_stats:
+                self.child_proc.update_usage(deep=True)
 
             restarted = False
 

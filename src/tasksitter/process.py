@@ -152,6 +152,7 @@ class Process(object):
             mem_usage[0] += usage[0]
             mem_usage[1] += usage[1]
 
+        # Returns vmem, res
         return mem_usage
 
     def calculate_cpu_usage(self):

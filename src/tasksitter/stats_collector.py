@@ -40,6 +40,11 @@ class StatsCollector(object):
         for constraint, count in self.harness.violations.items():
             data['violated_%s' % constraint] = count
 
+        data['cpu_usage'] = self.harness.child_proc.cpu_usage
+        data['mem_usage_vmem'] = self.harness.child_proc.mem_usage[0]
+        data['mem_usage_res'] = self.harness.child_proc.mem_usage[1]
+        data['system_usage'] = self.harness.child_proc.system_usage
+
         return data
 
     def get_metadata(self):
