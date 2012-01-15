@@ -1,0 +1,11 @@
+class MachineConfig(object):
+    def __init__(self, hostname, shared_fate_zone,
+                 cpus, mem, bits=64, disk=0):
+        self.hostname = hostname
+        self.cpus = cpus
+        self.mem = mem
+        self.shared_fate_zone = shared_fate_zone
+        self.bits = bits
+        self.disk = disk
+        self.login_name = None
+        self.login_key = None

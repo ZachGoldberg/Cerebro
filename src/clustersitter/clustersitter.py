@@ -98,7 +98,6 @@ class ClusterSitter(object):
         self.monitors = []
         self.machines_by_zone = {}
         self.zones = []
-        self.jobcatalog = {"byjob": {}, "bymachine": {}}
         self.jobs = []
         self.providers = {}
         self.unreachable_machines = []
@@ -286,17 +285,6 @@ class ClusterSitter(object):
                              not_ready)
             time.sleep(5)
 
-        # Step 3: Add this job and the associated machines to the catalog
-        # !MACHINEASSUMPTION! Should just allocate RESOURCES to the job,
-        # in the catalog, not the whole machines
-        job.set_monitored_machines(reserved_machines)
-        self.jobcatalog['byjob'][job] = reserved_machines
-        for machine in reserved_machines:
-            if not self.jobcatalog['bymachine'][machine]:
-                self.jobcatalog['bymachine'][machine] = []
-
-            self.jobcatalog['bymachine'][machine].append(job)
-
         # Done!
         return reserved_machines
 
@@ -338,28 +326,26 @@ class ClusterSitter(object):
                 if val:
                     # We were able to successfully reploy to the machine
                     # so readd it to the monitor
-                    logging.info("Successful redeploy!")
+                    logging.info("Successful redeploy of %s!" % machine)
                     monitor.add_machines([machine])
                 else:
-                    logging.info("Redeploy failed!  Decomission time...")
+                    logging.info("Redeploy failed!  Decomissioning %s" % machine)
                     # Decomission time!
+                    # For now just assume its dead, johnny.
+
+                    # TODO: Write machine decomission logic
                     pass
+
                 self.unreachable_machines.remove((machine, monitor))
-
-        # For now just assume its dead, johnny.
-        # Find which jobs this was running
-        jobs = self.jobcatalog['bymachine'].get(monitored_machine, [])
-        for job in jobs:
-            job.remove_monitored_machine(monitored_machine)
-            if job.needs_machines():
-                self.refill_job(job)
-
 
             sleep(self.stats_poll_interval)
 
     def _calculator(self):
         while True:
             self.calculate_idle_machines()
+            # TODO: Calculate which machines are running which jobs,
+            # Ensure that each job is 'filled'
+
             time.sleep(self.stats_poll_interval)
 
     def get_idle_machines_in_zone(self, zone):
