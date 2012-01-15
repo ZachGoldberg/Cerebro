@@ -5,11 +5,11 @@ from fabric.state import output
 
 
 class DeploymentRecipe(object):
-    def __init__(self, hostname, username, keys):
+    def __init__(self, hostname, username, keys, post_callback):
         self.hostname = hostname
         self.username = username
         self.keys = keys
-
+        self.post_callback = post_callback
     def deploy(self):
         env.host_string = self.hostname
         env.user = self.username
@@ -22,7 +22,9 @@ class DeploymentRecipe(object):
         #for k, v in output.items():
         #    output[k] = False
 
-        return self.run_deploy()
+        retval = self.run_deploy()
+        self.post_callback()
+        return retval
 
 
 class MachineSitterRecipe(DeploymentRecipe):

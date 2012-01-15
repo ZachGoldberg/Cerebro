@@ -12,11 +12,10 @@ from deploymentrecipe import DeploymentRecipe, MachineSitterRecipe
 from machineconfig import MachineConfig
 from machinemonitor import MachineMonitor
 from monitoredmachine import MonitoredMachine
+from productionjob import ProductionJob
 from sittercommon import http_monitor
 from sittercommon import logmanager
 from sittercommon.machinedata import MachineData
-
-
 
 """
 We have 3 kinds of data
@@ -41,48 +40,6 @@ per machine.  These sections are noted with the comment
 #!MACHINEASSUMPTION!
 """
 
-class ProductionJob(object):
-    def __init__(self,
-                 task_configuration,
-                 deployment_layout,
-                 deployment_recipe,
-                 recipe_options={}):
-        # The config to pass to a machinesitter / tasksitter
-        self.task_configuration = task_configuration
-
-        # A mapping of SharedFateZoneObj : {'cpu': #CPU, 'mem': MB_Mem_Per_CPU}
-        self.deployment_layout = deployment_layout
-
-        #!MACHINEASSUMPTION!
-        # Hack to make num_machines == num_cpu, for now.
-        for zone in self.deployment_layout.keys():
-            self.deployment_layout[zone]['num_machines'] = \
-                self.deployment_layout[zone]['cpu']
-
-
-    def get_shared_fate_zones(self):
-        return self.deployment_layout.keys()
-
-    def get_required_machines_in_zone(self, zone):
-        """
-        Note: this is not the TOTAL machines needed in this zone,
-        just the total REMAINING machines in the zone.
-        For the total machines in the zone do:
-        job.deployment_layout[zonename]['num_machines']
-        """
-        #!MACHINEASSUMPTION!
-        zoneinfo = self.deployment_layout[zone]
-        profiles = []
-#        for _ in range(zoneinfo['num_machines']):
-#            profiles.append(MachineProfile(cpu=zoneinfo[1],
-#                                           mem=zoneinfo[2]))
-
-        return profiles
-
-    def get_name(self):
-        return self.task_configuration['name']
-
-
 
 class ClusterSitter(object):
     def __init__(self, log_location, daemon,
@@ -99,8 +56,12 @@ class ClusterSitter(object):
         self.machines_by_zone = {}
         self.zones = []
         self.jobs = []
+        self.job_fill = {}
         self.providers = {}
         self.unreachable_machines = []
+        self.machine_spawn_threads = []
+        self.spawning_machines = {}
+        self.pending_recipes = []
 
         self.orig_starting_port = starting_port
         self.next_port = starting_port
@@ -118,7 +79,7 @@ class ClusterSitter(object):
                                                      self,
                                                      self.get_next_port())
 
-    def build_recipe(self, recipe_class, machine):
+    def build_recipe(self, recipe_class, machine, post_callback):
         username = self.user
         keys = self.keys
         if machine.config.login_name:
@@ -129,7 +90,8 @@ class ClusterSitter(object):
 
         return recipe_class(machine.config.hostname,
                             username,
-                            keys)
+                            keys,
+                            post_callback)
 
     def get_next_port(self):
         works = None
@@ -228,7 +190,9 @@ class ClusterSitter(object):
         self.machine_doctor.start()
 
 
+
     def add_job(self, job):
+        logging.info("Add Job: %s" % job.name)
         for zone in job.get_shared_fate_zones():
             if not zone in self.zones:
                 logging.warn("Tried to add a job with an unknown SFZ %s" % zone)
@@ -238,73 +202,85 @@ class ClusterSitter(object):
         self.refill_job(job)
 
     def refill_job(self, job):
+        while not self.job_fill:
+            # 1) Assume this job has already been added to self.jobs
+            # 2) Want to ensure calculator has run at least once to find out
+            #    if this job already exists throughout the cluster
+            logging.info("Waiting for calculator thread to kick in before "
+                         "filling jobs")
+            time.sleep(0.5)
+
         #!MACHINEASSUMPTION!
         # Step 1: Ensure we have enough machines in each SFZ
         # Step 1a: Check for idle machines and reserve as we find them
-        new_machines = []
-        reserved_machines = []
         for zone in job.get_shared_fate_zones():
             idle_available = self.get_idle_machines_in_zone(zone)
-            idle_required = job.get_required_machines_in_zone(zone)
-            # !MACHINEASSUMPTION! Ideally we're counting resources here not machines
-            required_new_machine_count = (len(idle_required) -
-                                          len(idle_available))
-            usable_machines = []
-            if required_new_machine_count > 0:
-                spawned_machines = self.begin_adding_machines(
-                    zone,
-                    required_new_machine_count)
+            total_required = job.get_num_required_machines_in_zone(zone)
+            idle_required = total_required - self.job_fill[job.name][zone]
+            currently_spawning = self.spawn_machines[job.name][zone]
+            idle_required -= currently_spawning
 
-                # len(spawned) + len(idle_available) = len(idle_required)
-                usable_machines.extend(spawned_machines)
-                usable_machines.extend(idle_available)
-                new_machines.extend(spawned_machines)
-            else:
+            # !MACHINEASSUMPTION! Ideally we're counting resources here not machines
+            required_new_machine_count = (idle_required -
+                                          len(idle_available))
+            logging.info(
+                ("Calculated job requirements for %s in %s: " % (job.name,
+                                                                 zone)) +
+                "Total Required: %s, Total New: %s" % (
+                    idle_required,
+                    required_new_machine_count))
+
+            # For the machines we have idle now, use those immediately
+            # For the others, spinup a thread to launch machines (which takes time)
+            # and do the deployment
+
+            # Now reserve part of the machine for this job
+            usable_machines = []
+            if required_new_machine_count == 0:
                 # idle_available > idle_required, so use just as many
                 # as we need
                 usable_machines = idle_available[:len(idle_required)]
+            else:
+                usable_machines.extend(idle_available)
 
-            # Now reserve part of the machine for this job
-            reserved_machines.extend(usable_machines)
+
             for machine in usable_machines:
-                machine.start_task(job)
+                # Have the recipe deploy the job then set the callback
+                # to be for the monitoredmachine to trigger the machinesitter
+                # to actually start the job
+                recipe = self.build_recipe(job.deployment_layout,
+                                           machine,
+                                           lambda: machine.start_task(job.name))
+                self.pending_recipes.add(recipe)
 
-        # Step 2: Wait for new machines to be available
-        ready = False
-        while not ready:
-            not_ready = 0
-            for machine in new_machines:
-                if not machine.is_available():
-                    not_ready += 1
+            if required_new_machine_count:
+                spawn_thread = Threading.thread(target=self.spawn_machines,
+                                                args=(zone, required_new_machine_count, job))
+                spawn_thread.start()
 
-            if not_ready == 0:
-                ready = True
-                break
+            self.spawning_machines[job.name][zone] = idle_required
 
-            logging.info("Waiting for %s more machines to be available" % \
-                             not_ready)
-            time.sleep(5)
 
-        # Done!
-        return reserved_machines
-
-    def begin_adding_machines(self, zone, count):
+    def spawn_machines(self, zone, count, job):
         # This should run some kind of modular procedure
         # to bring up the machines, ASYNCHRONOUSLY (in a new thread?)
         # and return objects representing the machiens on their way up.
+        print "UNIMPLEMENTED " * 10
+        print zone, count
         pass
 
     def _register_sitter_failure(self, monitored_machine, monitor):
         """
-
-        !! Fabric is not threadsafe.  Do it in the main clustersitter
-        thread !!
+        !! Fabric is not threadsafe.  Do all work in one thread by appending to
+        a queue !!
         """
         logging.info("Registering an unreachable machine %s" % monitored_machine)
         self.unreachable_machines.append((monitored_machine, monitor))
 
     def _machine_doctor(self):
         """
+        !! Note: This is the ONLY place where we can run Fabric !!
+
         Try and SSH into the machine and see whats up.  If we can't
         get to it and reboot a sitter than decomission it.
 
@@ -318,6 +294,7 @@ class ClusterSitter(object):
         to the idle resources pool.
         """
         while True:
+            start_time = datetime.now()
             for machine, monitor in self.unreachable_machines:
                 # This is strange indeed!  Try reinstalling the clustersitter
                 recipe = self.build_recipe(MachineSitterRecipe, machine)
@@ -338,13 +315,33 @@ class ClusterSitter(object):
 
                 self.unreachable_machines.remove((machine, monitor))
 
-            sleep(self.stats_poll_interval)
+            # Now see if we need to add any new machines to any jobs
+            for job in self.jobs:
+                for zone in job.get_shared_fate_zones():
+                    if (self.job_fill[job.name][zone] !=
+                        job.deployment_layout[zone]['num_machines']):
+                        self.refill_job(job)
+
+            # Now do any other fabric type work
+            for recipe in self.pending_recipes:
+                recipe.deploy()
+                self.pending_recipes.remove(recipe)
+
+            time_spent = datetime.now() - start_time
+            sleep_time = self.stats_poll_interval - \
+                time_spent.seconds
+            logging.info(
+                "Finished Machine Doctor run.  Time_spent: %s, sleep_time: %s" % (
+                    time_spent,
+                    sleep_time))
+
+            if sleep_time > 0:
+                time.sleep(sleep_time)
 
     def _calculator(self):
         while True:
             self.calculate_idle_machines()
-            # TODO: Calculate which machines are running which jobs,
-            # Ensure that each job is 'filled'
+            self.calculate_job_fill()
 
             time.sleep(self.stats_poll_interval)
 
@@ -355,6 +352,29 @@ class ClusterSitter(object):
         threshold somewhere.
         """
         return self.idle_machines[zone]
+
+    def calculate_job_fill(self):
+        job_fill = {}
+        #!MACHINEASSUMPTION! Should be cpu_count not machine_count
+        # Fill out a mapping of [job][task] -> machine_count
+        for job in self.jobs:
+            job_fill[job.name] = {}
+            if not job.name in self.spawn_machines:
+                self.spawning_machines[job.name] = {}
+
+            for zone in job.get_shared_fate_zones():
+                job_fill[job.name][zone] = 0
+                if not zone in self.spawning_machines[job.name]:
+                    self.spawning_machines[job.name][zone] = 0
+
+        # Actually do the counting
+        for zone, machines in self.machines_by_zone.items():
+            for machine in machines:
+                for task in machine.get_running_tasks():
+                    job_fill[task['name']][zone] += 1
+
+        self.job_fill = job_fill
+
 
     def calculate_idle_machines(self):
         idle_machines = {}

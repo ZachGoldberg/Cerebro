@@ -86,6 +86,9 @@ class MonitoredMachine(HasMachineSitter):
         self.hostname = self.config.hostname
         self.detected_sitter_failures = 0
 
+    def get_tasks(self):
+        return self.datamanager.tasks
+
     def get_running_tasks(self):
         """
         Return cached data about running task status

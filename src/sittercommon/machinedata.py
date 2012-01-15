@@ -31,7 +31,8 @@ class MachineData(object):
                 # actually a machinesitter?
                 found = True
                 self.portnum = port
-                logging.info("Successfully connected")
+                logging.info("Successfully connected to %s:%s" % (
+                        self.hosntame, self.portnum))
             except:
                 port += 1
                 if port > self.starting_port + 100:

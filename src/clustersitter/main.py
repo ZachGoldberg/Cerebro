@@ -108,7 +108,7 @@ def main(sys_args=None):
         deployment_recipe='NOOPRecipe',
         )
 
-    #sitter.add_job(job)
+    sitter.add_job(job)
 
     # wait forever
     while True:
