@@ -359,9 +359,3 @@ class ClusterSitter(object):
     def _run_monitor(self, monitor):
         # Assume we're in our own thread here
         monitor.start()
-
-
-class MachineProfile(object):
-    def __init__(self, cpu=None, mem=None):
-        self.cpu = cpu
-        self.mem = mem
