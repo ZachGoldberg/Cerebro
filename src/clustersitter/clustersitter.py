@@ -217,7 +217,7 @@ class ClusterSitter(object):
             idle_available = self.get_idle_machines_in_zone(zone)
             total_required = job.get_num_required_machines_in_zone(zone)
             idle_required = total_required - self.job_fill[job.name][zone]
-            currently_spawning = self.spawn_machines[job.name][zone]
+            currently_spawning = self.spawning_machines[job.name][zone]
             idle_required -= currently_spawning
 
             # !MACHINEASSUMPTION! Ideally we're counting resources here not machines
@@ -239,7 +239,7 @@ class ClusterSitter(object):
             if required_new_machine_count == 0:
                 # idle_available > idle_required, so use just as many
                 # as we need
-                usable_machines = idle_available[:len(idle_required)]
+                usable_machines = idle_available[:idle_required]
             else:
                 usable_machines.extend(idle_available)
 
@@ -251,14 +251,18 @@ class ClusterSitter(object):
                 recipe = self.build_recipe(job.deployment_layout,
                                            machine,
                                            lambda: machine.start_task(job.name))
+
+                # TODO - Mark this machine as no longer idle
+                # so another job doesn't pick it up while we're deploying
                 self.pending_recipes.add(recipe)
 
             if required_new_machine_count:
-                spawn_thread = Threading.thread(target=self.spawn_machines,
+                spawn_thread = threading.Thread(target=self.spawn_machines,
                                                 args=(zone, required_new_machine_count, job))
                 spawn_thread.start()
 
-            self.spawning_machines[job.name][zone] = idle_required
+            # TODO -- When does this get decremented?
+            self.spawning_machines[job.name][zone] += idle_required
 
 
     def spawn_machines(self, zone, count, job):
@@ -318,6 +322,11 @@ class ClusterSitter(object):
             # Now see if we need to add any new machines to any jobs
             for job in self.jobs:
                 for zone in job.get_shared_fate_zones():
+                    while job.name not in self.job_fill:
+                        logging.info("Doctor waiting for calculator thread"
+                                     "to kick in before filling jobs")
+                        time.sleep(0.5)
+
                     if (self.job_fill[job.name][zone] !=
                         job.deployment_layout[zone]['num_machines']):
                         self.refill_job(job)
@@ -359,7 +368,7 @@ class ClusterSitter(object):
         # Fill out a mapping of [job][task] -> machine_count
         for job in self.jobs:
             job_fill[job.name] = {}
-            if not job.name in self.spawn_machines:
+            if not job.name in self.spawning_machines:
                 self.spawning_machines[job.name] = {}
 
             for zone in job.get_shared_fate_zones():

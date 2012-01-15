@@ -10,6 +10,7 @@ class DeploymentRecipe(object):
         self.username = username
         self.keys = keys
         self.post_callback = post_callback
+
     def deploy(self):
         env.host_string = self.hostname
         env.user = self.username
