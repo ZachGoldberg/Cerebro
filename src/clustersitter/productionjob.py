@@ -57,7 +57,8 @@ class ProductionJob(object):
             currently_spawning = state.spawning_machines[self.name][zone]
             idle_required -= currently_spawning
 
-            # !MACHINEASSUMPTION! Ideally we're counting resources here not machines
+            # !MACHINEASSUMPTION! Ideally we're counting resources here
+            # not machines
             required_new_machine_count = (idle_required -
                                           len(idle_available))
             logging.info(
@@ -68,8 +69,8 @@ class ProductionJob(object):
                     required_new_machine_count))
 
             # For the machines we have idle now, use those immediately
-            # For the others, spinup a thread to launch machines (which takes time)
-            # and do the deployment
+            # For the others, spinup a thread to launch machines (which
+            # takes time) and do the deployment
 
             # Now reserve part of the machine for this job
             usable_machines = []
@@ -84,10 +85,11 @@ class ProductionJob(object):
                 # Have the recipe deploy the job then set the callback
                 # to be for the monitoredmachine to trigger the machinesitter
                 # to actually start the job
-                recipe = sitter.build_recipe(self.deployment_layout,
-                                             machine,
-                                             lambda: machine.start_task(self.name),
-                                             self.recipe_options)
+                recipe = sitter.build_recipe(
+                    self.deployment_layout,
+                    machine,
+                    lambda: machine.start_task(self.name),
+                    self.recipe_options)
 
                 # TODO - Mark this machine as no longer idle
                 # so another job doesn't pick it up while we're deploying
