@@ -85,9 +85,14 @@ class ProductionJob(object):
 
 
 class ClusterSitter(object):
-    def __init__(self, log_location, daemon, starting_port=30000):
+    def __init__(self, log_location, daemon,
+                 keys=None, user=None,
+                 starting_port=30000):
         self.worker_thread_count = 2
         self.daemon = daemon
+
+        self.keys = keys
+        self.user = user
 
         # list of tuples (MachineMonitor, ThreadObj)
         self.monitors = []
@@ -113,6 +118,19 @@ class ClusterSitter(object):
         self.http_monitor = http_monitor.HTTPMonitor(self.stats,
                                                      self,
                                                      self.get_next_port())
+
+    def build_recipe(self, recipe_class, machine):
+        username = self.user
+        keys = self.keys
+        if machine.config.login_name:
+            username = machine.config.login_name
+
+        if machine.config.login_key:
+            keys.append(machine.config.login_key)
+
+        return recipe_class(machine.config.hostname,
+                            username,
+                            keys)
 
     def get_next_port(self):
         works = None
@@ -143,10 +161,12 @@ class ClusterSitter(object):
             monitored_machines.append(mm)
 
         # Spread them out evenly across threads
-        num_threads_to_use = self.worker_thread_count
+        num_threads_to_use = min(self.worker_thread_count, len(machines)) or 1
         machines_per_thread = int(len(machines) / num_threads_to_use) or 1
+        self.monitors.sort(key=lambda x: x[0].num_monitored_machines())
+        monitors_to_use = self.monitors[:num_threads_to_use]
 
-        for index, monitor in enumerate(self.monitors[:num_threads_to_use]):
+        for index, monitor in enumerate(monitors_to_use):
             start_index = index * machines_per_thread
             end_index = (index + 1) * machines_per_thread
 
@@ -286,13 +306,14 @@ class ClusterSitter(object):
         # and return objects representing the machiens on their way up.
         pass
 
-    def _register_sitter_failure(self, monitored_machine):
+    def _register_sitter_failure(self, monitored_machine, monitor):
         """
 
         !! Fabric is not threadsafe.  Do it in the main clustersitter
         thread !!
         """
-        self.unreachable_machines.append(monitored_machine)
+        logging.info("Registering an unreachable machine %s" % monitored_machine)
+        self.unreachable_machines.append((monitored_machine, monitor))
 
     def _machine_doctor(self):
         """
@@ -309,9 +330,21 @@ class ClusterSitter(object):
         to the idle resources pool.
         """
         while True:
-            for machine in self.unreachable_machines:
+            for machine, monitor in self.unreachable_machines:
                 # This is strange indeed!  Try reinstalling the clustersitter
-                recipe = Machinesitter
+                recipe = self.build_recipe(MachineSitterRecipe, machine)
+                logging.info("Attempting to reploy to %s" % machine)
+                val = recipe.deploy()
+                if val:
+                    # We were able to successfully reploy to the machine
+                    # so readd it to the monitor
+                    logging.info("Successful redeploy!")
+                    monitor.add_machines([machine])
+                else:
+                    logging.info("Redeploy failed!  Decomission time...")
+                    # Decomission time!
+                    pass
+                self.unreachable_machines.remove((machine, monitor))
 
         # For now just assume its dead, johnny.
         # Find which jobs this was running

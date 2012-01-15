@@ -12,18 +12,22 @@ class MachineMonitor:
         self.monitored_machines = [m for m in monitored_machines]
         self.add_queue = []
         self.pull_failures = {}
-        self.failure_threshold = 3
+        self.failure_threshold = 1
 
         logging.info("Initialized a machine monitor for %s" % (
                 str(self.monitored_machines)))
+
+    def num_monitored_machines(self):
+        return len(self.monitored_machines) + len(self.add_queue)
 
     def add_machines(self, monitored_machines):
         self.add_queue.extend(monitored_machines)
         for m in monitored_machines:
             self.pull_failures[m] = 0
 
-        logging.info("Queued %s for inclusion in next stats run" % (
-                [str(a) for a in monitored_machines]))
+        logging.info("Queued %s for inclusion in next stats run in %s" % (
+                [str(a) for a in monitored_machines],
+                self.number))
 
     def initialize_machines(self, monitored_machines):
         for m in monitored_machines:
@@ -38,9 +42,10 @@ class MachineMonitor:
             logging.info("Processing add queue %s at %s" % (self.add_queue,
                                                             self.number))
             while len(self.add_queue) > 0:
-                machine = self.add_queue.pop()
+                machine = self.add_queue[-1]
                 self.initialize_machines([machine])
                 self.monitored_machines.append(machine)
+                self.add_queue.remove(machine)
 
             logging.info("Finished processing add queue")
             logging.info("Beggining machine monitoring poll for %s at %s" % (
@@ -68,7 +73,7 @@ class MachineMonitor:
                     logging.warn(
                         "Removing %s because we can't contact the sitter! " % (
                             machine.hostname))
-                    self.clustersitter._register_sitter_failure(machine)
+                    self.clustersitter._register_sitter_failure(machine, self)
 
             time_spent = datetime.now() - start_time
             sleep_time = self.clustersitter.stats_poll_interval - \

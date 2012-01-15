@@ -43,7 +43,15 @@ class HasMachineSitter(object):
 
     def _api_get_stats(self):
         logging.info("Get stats for %s" % str(self))
-        if self.datamanager.reload():
+        tasks = None
+        try:
+            tasks = self.datamanager.reload()
+        except:
+            self.loaded = False
+            import traceback
+            traceback.print_exc()
+
+        if tasks != None:
             self.loaded = True
         else:
             self.loaded = False

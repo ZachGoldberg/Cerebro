@@ -18,6 +18,8 @@
       to a machine and boot the machinesitter.
    - Web UI to show... everything
 
+-- For all stats sitters, look for a VERSION file and show that if available
+
 Test clustersitter
 Flesh out the stats collector, show CPU usage and history etc.
 Set CPU Core Affinity
