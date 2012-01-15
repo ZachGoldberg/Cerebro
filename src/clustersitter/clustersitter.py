@@ -261,7 +261,8 @@ class ClusterSitter(object):
                                                 args=(zone, required_new_machine_count, job))
                 spawn_thread.start()
 
-            # TODO -- When does this get decremented?
+            # This will get decremented automatically, aka idle_required will
+            # become negative as machines start to come up.
             self.spawning_machines[job.name][zone] += idle_required
 
 
@@ -327,9 +328,21 @@ class ClusterSitter(object):
                                      "to kick in before filling jobs")
                         time.sleep(0.5)
 
-                    if (self.job_fill[job.name][zone] !=
-                        job.deployment_layout[zone]['num_machines']):
-                        self.refill_job(job)
+                    """
+                    Always refill the job -- if we're fill then
+                    this is a noop.  The real reason for this is that inside
+                    refill_job we have a "spawning_machines" tracker.
+                    If we did a comparison here, active_machines == job.machines
+                    then spawning_machines would always have one left,
+                    and would never be zeroe'd out after an initial spawn.
+                    This is because idle_required is what decrements the spawn
+                    count, which only happens if we call refill job when there
+                    are (active_machines + spawning_machines > needed_machines)
+                    If we had a condition here refill IFF active machines < needed_machines
+                    then the above condition would never be met when spawning_machines = 1
+                    and active_machines == needed_machines (aka the last machine came up
+                    """
+                    self.refill_job(job)
 
             # Now do any other fabric type work
             for recipe in self.pending_recipes:
