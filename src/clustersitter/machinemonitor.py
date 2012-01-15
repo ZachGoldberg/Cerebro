@@ -7,7 +7,9 @@ class MachineMonitor:
     def __init__(self, parent, number, monitored_machines=[]):
         self.clustersitter = parent
         self.number = number
-        self.monitored_machines = monitored_machines
+        # Need to copy the array to deref it so its not shareda
+        # amoung threads
+        self.monitored_machines = [m for m in monitored_machines]
         self.add_queue = []
         self.pull_failures = {}
         self.failure_threshold = 15
@@ -33,15 +35,17 @@ class MachineMonitor:
 
         while True:
             start_time = datetime.now()
-            logging.info("Processing add queue")
+            logging.info("Processing add queue %s at %s" % (self.add_queue,
+                                                            self.number))
             while len(self.add_queue) > 0:
                 machine = self.add_queue.pop()
                 self.initialize_machines([machine])
                 self.monitored_machines.append(machine)
 
             logging.info("Finished processing add queue")
-            logging.info("Beggining machine monitoring poll for %s" % (
-                    [str(a) for a in self.monitored_machines]))
+            logging.info("Beggining machine monitoring poll for %s at %s" % (
+                    [str(a) for a in self.monitored_machines],
+                    self.number))
 
             for machine in self.monitored_machines:
                 if machine.is_initialized():

@@ -92,7 +92,7 @@ class ProductionJob(object):
 
 class ClusterSitter(object):
     def __init__(self, log_location, daemon, starting_port=30000):
-        self.worker_thread_count = 1
+        self.worker_thread_count = 2
         self.daemon = daemon
 
         # list of tuples (MachineMonitor, ThreadObj)
@@ -153,16 +153,22 @@ class ClusterSitter(object):
             monitored_machines.append(mm)
 
         # Spread them out evenly across threads
-        threads_to_use = self.worker_thread_count
-        machines_per_thread = int(len(machines) / threads_to_use) or 1
+        num_threads_to_use = self.worker_thread_count
+        machines_per_thread = int(len(machines) / num_threads_to_use) or 1
 
-        if machines_per_thread * self.worker_thread_count > len(machines):
-            threads_to_use = random.sample(self.monitors, len(machines))
+        for index, monitor in enumerate(self.monitors[:num_threads_to_use]):
+            start_index = index * machines_per_thread
+            end_index = (index + 1) * machines_per_thread
 
-        for index, monitor in enumerate(self.monitors[:threads_to_use]):
-            monitor[0].add_machines(
-                monitored_machines[index * machines_per_thread:(index + 1) * \
-                             machines_per_thread])
+            if end_index > len(machines):
+                end_index = len(machines)
+
+            if start_index > len(machines):
+                start_index = end_index
+
+            if start_index != end_index:
+                monitor[0].add_machines(
+                    monitored_machines[start_index:end_index])
 
     def start(self):
         logging.info("Initializing MachineProviders")
@@ -173,6 +179,8 @@ class ClusterSitter(object):
 
         for provider in self.providers.values():
             self.zones.extend(provider.get_all_shared_fate_zones())
+
+        logging.info("Zone List: %s" % self.zones)
 
         self.http_monitor.start()
         logging.info("Cluster Sitter Monitor started at " + \
