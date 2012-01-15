@@ -76,6 +76,7 @@ class MonitoredMachine(HasMachineSitter):
         self.running_tasks = []
         self.machine_number = machine_number
         self.hostname = self.config.hostname
+        self.detected_sitter_failures = 0
 
     def get_running_tasks(self):
         """

@@ -34,7 +34,7 @@ class MachineData(object):
                 logging.info("Successfully connected")
             except:
                 port += 1
-                if port > self.starting_port + 1000:
+                if port > self.starting_port + 100:
                     self.url = ""
                     self.portnum = None
                     return

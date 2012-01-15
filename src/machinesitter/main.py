@@ -23,7 +23,6 @@ def parse_args(args):
         description="Start the machine sitter daemon")
 
     parser.add_argument('--task_definitions', dest='taskfile',
-                        required=True,
                         help='The location of the task definition file')
 
     parser.add_argument("--daemon", dest="daemon",
@@ -61,7 +60,10 @@ def main(sys_args=None):
 
     args = parse_args(sys_args)
 
-    config = simplejson.load(open(args.taskfile))
+    if args.taskfile:
+        config = simplejson.load(open(args.taskfile))
+    else:
+        config = {'log_location': '/tmp/'}
 
     try:
         os.makedirs(config['log_location'])

@@ -80,6 +80,8 @@ def main(sys_args=None):
 
     sitter.add_machines([localhost])
 
+    time.sleep(2)
+
     job = ProductionJob(
         task_configuration={
             "allow_exit": False,
@@ -91,11 +93,11 @@ def main(sys_args=None):
             "restart": True,
             "uid": 0
         },
-        deployment_layout={'AWS_USEast1_A': {'cpu': 4, 'mem': 500}},
+        deployment_layout={'aws-us-east-1a': {'cpu': 4, 'mem': 500}},
         deployment_recipe='NOOPRecipe',
         )
 
-    sitter.add_job(job)
+    #sitter.add_job(job)
 
     # wait forever
     while True:

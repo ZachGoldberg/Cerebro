@@ -9,11 +9,14 @@ from datetime import datetime
 
 from providers.aws import AmazonEC2
 from deploymentrecipe import DeploymentRecipe
-from monitoredmachine import MonitoredMachine
+from machineconfig import MachineConfig
 from machinemonitor import MachineMonitor
+from monitoredmachine import MonitoredMachine
 from sittercommon import http_monitor
 from sittercommon import logmanager
 from sittercommon.machinedata import MachineData
+
+
 
 """
 We have 3 kinds of data
@@ -37,15 +40,6 @@ sake we're cutting some corners (FOR NOW) and assuming one job
 per machine.  These sections are noted with the comment
 #!MACHINEASSUMPTION!
 """
-
-class MachineConfig(object):
-    def __init__(self, hostname, shared_fate_zone,
-                 cpus, ram):
-        self.hostname = hostname
-        self.cpus = cpus
-        self.ram = ram
-        self.shared_fate_zone = shared_fate_zone
-
 
 class ProductionJob(object):
     def __init__(self,
@@ -79,9 +73,9 @@ class ProductionJob(object):
         #!MACHINEASSUMPTION!
         zoneinfo = self.deployment_layout[zone]
         profiles = []
-        for _ in range(zoneinfo['num_machines']):
-            profiles.append(MachineProfile(cpu=zoneinfo[1],
-                                           mem=zoneinfo[2]))
+#        for _ in range(zoneinfo['num_machines']):
+#            profiles.append(MachineProfile(cpu=zoneinfo[1],
+#                                           mem=zoneinfo[2]))
 
         return profiles
 
@@ -134,13 +128,6 @@ class ClusterSitter(object):
                     self.next_port = self.orig_starting_port
         return works
 
-
-    def _add_zone(self, zonename):
-        if not zonename in self.zones:
-            self.machines_by_zone[zonename] = []
-            self.zones.append(zonename)
-
-
     def add_machines(self, machines):
         """
         """
@@ -148,7 +135,9 @@ class ClusterSitter(object):
 
         for m in machines:
             mm = MonitoredMachine(m)
-            self._add_zone(m.shared_fate_zone)
+            if not m.shared_fate_zone in self.machines_by_zone:
+                self.machines_by_zone[m.shared_fate_zone] = []
+
             self.machines_by_zone[m.shared_fate_zone].append(mm)
             monitored_machines.append(mm)
 
@@ -172,6 +161,20 @@ class ClusterSitter(object):
 
     def start(self):
         logging.info("Initializing MachineProviders")
+        # Initialize (non-started) machine monitors first
+        # Then download machine data, populate data structure and monitors
+        # then kickoff everything.
+
+        logging.info("Initializing %s MachineMonitors" % self.worker_thread_count)
+        # Spin up all the monitoring threads
+        for threadnum in range(self.worker_thread_count):
+            machinemonitor = MachineMonitor(parent=self,
+                                            number=threadnum)
+            thread = threading.Thread(target=self._run_monitor,
+                                      args=(machinemonitor, ))
+            self.monitors.append((machinemonitor, thread))
+
+        self.calculator = threading.Thread(target=self._calculator)
 
         aws = AmazonEC2()
         if aws.usable():
@@ -179,9 +182,13 @@ class ClusterSitter(object):
 
         for provider in self.providers.values():
             self.zones.extend(provider.get_all_shared_fate_zones())
+            # Note: add_machines() has to be called AFTER the monitors
+            # are initialized.
+            self.add_machines(provider.get_machine_list())
 
         logging.info("Zone List: %s" % self.zones)
 
+        # Kickoff all the threads at once
         self.http_monitor.start()
         logging.info("Cluster Sitter Monitor started at " + \
             "http://localhost:%s" % self.http_monitor.port)
@@ -191,17 +198,12 @@ class ClusterSitter(object):
 
         logging.info("Spinning up %s monitoring threads" % (
                 self.worker_thread_count))
-        # Spin up all the monitoring threads
-        for threadnum in range(self.worker_thread_count):
-            machinemonitor = MachineMonitor(parent=self,
-                                            number=threadnum)
-            thread = threading.Thread(target=self._run_monitor,
-                                      args=(machinemonitor, ))
-            thread.start()
-            self.monitors.append((machinemonitor, thread))
+        for monitor in self.monitors:
+            monitor[1].start()
 
-        self.calculator = threading.Thread(target=self._calculator)
+        logging.info("Starting metadata calculator")
         self.calculator.start()
+
 
     def add_job(self, job):
         for zone in job.get_shared_fate_zones():
@@ -280,8 +282,17 @@ class ClusterSitter(object):
         # and return objects representing the machiens on their way up.
         pass
 
-    def _register_machine_failure(self, monitored_machine):
+    def _register_sitter_failure(self, monitored_machine):
         """
+        Try and SSH into the machine and see whats up.  If we can't
+        get to it and reboot a sitter than decomission it.
+
+        Maybe do all this in a thread?  SSH etc. could take a while.
+
+        !! Fabric is not threadsafe.  Do it in the main clustersitter
+        thread !!
+
+
         NOTE: We should do some SERIOUS rate limiting here.
         If we just have a 10 minute network hiccup we *should*
         try and replace those machines, but we should continue
@@ -291,8 +302,10 @@ class ClusterSitter(object):
         then simply remove the jobs from the machine and add them
         to the idle resources pool.
         """
+
+        # For now just assume its dead, johnny.
         # Find which jobs this was running
-        jobs = self.jobcatalog['bymachine'][monitored_machine]
+        jobs = self.jobcatalog['bymachine'].get(monitored_machine, [])
         for job in jobs:
             job.remove_monitored_machine(monitored_machine)
             if job.needs_machines():

@@ -12,7 +12,7 @@ class MachineMonitor:
         self.monitored_machines = [m for m in monitored_machines]
         self.add_queue = []
         self.pull_failures = {}
-        self.failure_threshold = 15
+        self.failure_threshold = 3
 
         logging.info("Initialized a machine monitor for %s" % (
                 str(self.monitored_machines)))
@@ -64,10 +64,11 @@ class MachineMonitor:
                 if count >= self.failure_threshold:
                     self.monitored_machines.remove(machine)
                     del self.pull_failures[machine]
+                    machine.detected_sitter_failures += 1
                     logging.warn(
-                        "Removing %s because it no longer exists! " % (
+                        "Removing %s because we can't contact the sitter! " % (
                             machine.hostname))
-                    self.clustersitter._register_machine_failure(machine)
+                    self.clustersitter._register_sitter_failure(machine)
 
             time_spent = datetime.now() - start_time
             sleep_time = self.clustersitter.stats_poll_interval - \
