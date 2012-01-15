@@ -13,7 +13,7 @@ import os
 import sys
 import time
 
-from clustersitter import ClusterSitter
+from clustersitter import ClusterSitter, ProductionJob
 from clustersitter import MachineConfig
 from sittercommon import arg_parser
 
@@ -26,6 +26,10 @@ def parse_args(args):
                         default=False,
                         action="store_true",
                         help='Daemonize and split from launching shell')
+
+    parser.add_argument("--aws-access-key", dest="aws_access_key")
+
+    parser.add_argument("--aws-secret-key", dest="aws_secret_key")
 
     return parser.parse_args(args=args)
 
@@ -57,6 +61,10 @@ def main(sys_args=None):
 
     args = parse_args(sys_args)
 
+    if not os.getenv('AWS_ACCESS_KEY_ID'):
+        os.putenv('AWS_ACCESS_KEY_ID', args.aws_access_key)
+        os.putenv('AWS_SECRET_ACCESS_KEY', args.aws_secret_key)
+
     if args.daemon:
         daemonize()
 
@@ -71,6 +79,23 @@ def main(sys_args=None):
                               6, 16000)
 
     sitter.add_machines([localhost])
+
+    job = ProductionJob(
+        task_configuration={
+            "allow_exit": False,
+            "name": "Simple Web Server",
+            "command": "/usr/bin/python -m SimpleHttpServer",
+            "auto_start": True,
+            "ensure_alive": True,
+            "max_restarts": -1,
+            "restart": True,
+            "uid": 0
+        },
+        deployment_layout={'AWS_USEast1_A': {'cpu': 4, 'mem': 500}},
+        deployment_recipe='NOOPRecipe',
+        )
+
+    sitter.add_job(job)
 
     # wait forever
     while True:

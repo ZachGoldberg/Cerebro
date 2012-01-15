@@ -14,6 +14,7 @@ setup(name='TaskSitter',
                    'machineconsole': 'src/machineconsole'},
       scripts=['run_tasksitter', 'run_machinesitter', 'run_machineconsole'],
       install_requires=[
+	'boto',
         'psi',
         'requests',
         'django-mongodb-engine',

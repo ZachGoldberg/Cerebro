@@ -7,6 +7,8 @@ import time
 import requests
 from datetime import datetime
 
+from providers.aws import AmazonEC2
+from deploymentrecipe import DeploymentRecipe
 from monitoredmachine import MonitoredMachine
 from machinemonitor import MachineMonitor
 from sittercommon import http_monitor
@@ -48,12 +50,24 @@ class MachineConfig(object):
 class ProductionJob(object):
     def __init__(self,
                  task_configuration,
-                 deployment_layout):
+                 deployment_layout,
+                 deployment_recipe,
+                 recipe_options={}):
         # The config to pass to a machinesitter / tasksitter
         self.task_configuration = task_configuration
 
-        # A mapping of SharedFateZoneObj : (# Jobs, CPU, Mem)
+        # A mapping of SharedFateZoneObj : {'cpu': #CPU, 'mem': MB_Mem_Per_CPU}
         self.deployment_layout = deployment_layout
+
+        #!MACHINEASSUMPTION!
+        # Hack to make num_machines == num_cpu, for now.
+        for zone in self.deployment_layout.keys():
+            self.deployment_layout[zone]['num_machines'] = \
+                self.deployment_layout[zone]['cpu']
+
+
+    def get_shared_fate_zones(self):
+        return self.deployment_layout.keys()
 
     def get_required_machines_in_zone(self, zone):
         """
@@ -87,6 +101,7 @@ class ClusterSitter(object):
         self.zones = []
         self.jobcatalog = {"byjob": {}, "bymachine": {}}
         self.jobs = []
+        self.providers = {}
 
         self.orig_starting_port = starting_port
         self.next_port = starting_port
@@ -146,10 +161,19 @@ class ClusterSitter(object):
 
         for index, monitor in enumerate(self.monitors[:threads_to_use]):
             monitor[0].add_machines(
-                monitored_machines[index * machines_per_thread:(index + 1): \
+                monitored_machines[index * machines_per_thread:(index + 1) * \
                              machines_per_thread])
 
     def start(self):
+        logging.info("Initializing MachineProviders")
+
+        aws = AmazonEC2()
+        if aws.usable():
+            self.providers['aws'] = aws
+
+        for provider in self.providers.values():
+            self.zones.extend(provider.get_all_shared_fate_zones())
+
         self.http_monitor.start()
         logging.info("Cluster Sitter Monitor started at " + \
             "http://localhost:%s" % self.http_monitor.port)
@@ -172,8 +196,13 @@ class ClusterSitter(object):
         self.calculator.start()
 
     def add_job(self, job):
+        for zone in job.get_shared_fate_zones():
+            if not zone in self.zones:
+                logging.warn("Tried to add a job with an unknown SFZ %s" % zone)
+                return
+
         self.jobs.append(job)
-        job.refill_job()
+        self.refill_job(job)
 
     def refill_job(self, job):
         #!MACHINEASSUMPTION!
@@ -280,9 +309,11 @@ class ClusterSitter(object):
 
         for zone in self.zones:
             idle_machines[zone] = []
-            for machine in self.machines_by_zone[zone]:
+            for machine in self.machines_by_zone.get(zone, []):
                 tasks = machine.get_running_tasks()
 
+                #!MACHINEASSUMPTION! Here we assume no tasks == idle,
+                # not sum(jobs.cpu) < machine.cpu etc.
                 if not tasks and machine.has_loaded_data():
                     idle_machines[zone].append(machine)
 
