@@ -8,7 +8,7 @@ import requests
 from datetime import datetime
 
 from providers.aws import AmazonEC2
-from deploymentrecipe import DeploymentRecipe
+from deploymentrecipe import DeploymentRecipe, MachineSitterRecipe
 from machineconfig import MachineConfig
 from machinemonitor import MachineMonitor
 from monitoredmachine import MonitoredMachine
@@ -96,6 +96,7 @@ class ClusterSitter(object):
         self.jobcatalog = {"byjob": {}, "bymachine": {}}
         self.jobs = []
         self.providers = {}
+        self.unreachable_machines = []
 
         self.orig_starting_port = starting_port
         self.next_port = starting_port
@@ -174,8 +175,6 @@ class ClusterSitter(object):
                                       args=(machinemonitor, ))
             self.monitors.append((machinemonitor, thread))
 
-        self.calculator = threading.Thread(target=self._calculator)
-
         aws = AmazonEC2()
         if aws.usable():
             self.providers['aws'] = aws
@@ -202,7 +201,12 @@ class ClusterSitter(object):
             monitor[1].start()
 
         logging.info("Starting metadata calculator")
+        self.calculator = threading.Thread(target=self._calculator)
         self.calculator.start()
+
+        logging.info("Starting machine recovery thread")
+        self.machine_doctor = threading.Thread(target=self._machine_doctor)
+        self.machine_doctor.start()
 
 
     def add_job(self, job):
@@ -284,14 +288,16 @@ class ClusterSitter(object):
 
     def _register_sitter_failure(self, monitored_machine):
         """
-        Try and SSH into the machine and see whats up.  If we can't
-        get to it and reboot a sitter than decomission it.
-
-        Maybe do all this in a thread?  SSH etc. could take a while.
 
         !! Fabric is not threadsafe.  Do it in the main clustersitter
         thread !!
+        """
+        self.unreachable_machines.append(monitored_machine)
 
+    def _machine_doctor(self):
+        """
+        Try and SSH into the machine and see whats up.  If we can't
+        get to it and reboot a sitter than decomission it.
 
         NOTE: We should do some SERIOUS rate limiting here.
         If we just have a 10 minute network hiccup we *should*
@@ -302,6 +308,10 @@ class ClusterSitter(object):
         then simply remove the jobs from the machine and add them
         to the idle resources pool.
         """
+        while True:
+            for machine in self.unreachable_machines:
+                # This is strange indeed!  Try reinstalling the clustersitter
+                recipe = Machinesitter
 
         # For now just assume its dead, johnny.
         # Find which jobs this was running
@@ -311,6 +321,8 @@ class ClusterSitter(object):
             if job.needs_machines():
                 self.refill_job(job)
 
+
+            sleep(self.stats_poll_interval)
 
     def _calculator(self):
         while True:

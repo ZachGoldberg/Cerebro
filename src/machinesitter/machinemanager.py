@@ -16,8 +16,10 @@ class MachineManager(object):
     def __init__(self, task_definition_file, log_location,
                  machine_sitter_starting_port=40000,
                  task_sitter_starting_port=50000,
+                 launch_location="",
                  daemon=False):
         self.tasks = {}
+        self.launch_location = launch_location
         self.task_definition_file = task_definition_file
         self.daemon = daemon
         self.thread = None

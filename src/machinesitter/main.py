@@ -58,12 +58,14 @@ def main(sys_args=None):
     if not sys_args:
         sys_args = sys.argv[1:]
 
+    orig_dir = os.getcwd()
+
     args = parse_args(sys_args)
 
     if args.taskfile:
         config = simplejson.load(open(args.taskfile))
     else:
-        config = {'log_location': '/tmp/'}
+        config = {'log_location': '/tmp/', 'task_definitions': {}}
 
     try:
         os.makedirs(config['log_location'])
@@ -77,6 +79,7 @@ def main(sys_args=None):
                                             config['log_location'],
                                             machine_sitter_starting_port=40000,
                                             task_sitter_starting_port=50000,
+                                            launch_location=orig_dir,
                                             daemon=args.daemon)
 
     task_definitions = config['task_definitions']

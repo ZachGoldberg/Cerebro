@@ -31,6 +31,14 @@ def parse_args(args):
 
     parser.add_argument("--aws-secret-key", dest="aws_secret_key")
 
+    parser.add_argument("--key-files", dest="keyfiles",
+                        required=True,
+                        help="A comma separated list of SSH key files to " \
+                        "use to access machines in the cluster")
+
+    parser.add_argument("--login-user", dest="username",
+                        default="ubuntu", help="User to login as")
+
     return parser.parse_args(args=args)
 
 
@@ -70,7 +78,10 @@ def main(sys_args=None):
 
     logging.getLogger().setLevel(logging.INFO)
 
+    keys = args.keyfiles.split(',')
+
     sitter = ClusterSitter(daemon=args.daemon,
+                           keys=keys, user=args.username,
                            log_location="/mnt/data")
     sitter.start()
 

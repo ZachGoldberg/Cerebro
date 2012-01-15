@@ -38,6 +38,7 @@ class MachineStats(StatsCollector):
     def get_metadata(self):
         data = {}
         data['machinesitter_pid'] = os.getpid()
+        data['launch_location'] = self.harness.launch_location
         data['log_location'] = self.harness.log_location
         data['task_sitter_starting_port'] = self.harness.task_sitter_starting_port
         data['machine_sitter_starting_port'] = self.harness.machine_sitter_starting_port
