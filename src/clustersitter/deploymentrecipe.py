@@ -1,3 +1,4 @@
+import os
 from fabric.api import env
 from fabric.operations import run, put
 from fabric.state import output
@@ -15,14 +16,34 @@ class DeploymentRecipe(object):
         env.key_filename = [self.keyfile]
 
         # Silence Fabric's echoing of everything
-        for k, v in output.items():
-            output[k] = False
+        #for k, v in output.items():
+        #    output[k] = False
 
         self.run_deploy()
 
 class MachineSitterRecipe(DeploymentRecipe):
     def run_deploy(self):
-        keys = run("ls", pty=False)
+        # Find the newest build to upload
+        release_dir = os.getcwd() + "/releases/"
+        filelist = os.listdir(release_dir)
+        filelist = filter(lambda x: not os.path.isdir(x), filelist)
+        print filelist
+        newest = max(filelist, key=lambda x: os.stat(release_dir + x).st_mtime)
+        print newest
+        remote_dir = "/home/ubuntu/clustersitter/"
+        print run("mkdir -p %s" % remote_dir)
+        print put(release_dir + newest, remote_dir)
+        print run("cd %s && tar -xzf %s%s" % (
+                remote_dir,
+                remote_dir,
+                newest))
+        newdirname = newest.replace(".tgz", "")
+        print run("cd %s/%s && python2.7 install.py" % (
+                remote_dir,
+                newdirname))
+
+
+        # Upload the build file
         print keys
 
 
