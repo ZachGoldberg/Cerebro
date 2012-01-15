@@ -5,11 +5,13 @@ from fabric.state import output
 
 
 class DeploymentRecipe(object):
-    def __init__(self, hostname, username, keys, post_callback):
+    def __init__(self, hostname, username, keys,
+                 post_callback=None, options=None):
         self.hostname = hostname
         self.username = username
         self.keys = keys
-        self.post_callback = post_callback
+        self.post_callback = post_callback or id
+        self.options = options
 
     def deploy(self):
         env.host_string = self.hostname
