@@ -27,7 +27,6 @@ setup(name='TaskSitter',
 #        'django-mongodb-engine',
         'djangotoolbox',
         'fabric',
-        'psi',
         'requests',
         ],
      )
