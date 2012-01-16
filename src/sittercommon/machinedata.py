@@ -44,21 +44,21 @@ class MachineData(object):
                                      self.portnum)
         return self.url
 
-    def _make_request(self, function, path, host=None):
+    def _make_request(self, function, path, host=None, data=None):
         val = None
         hostname = host
         if not hostname:
             hostname = self.url
 
         try:
-            val = function("%s/%s" % (hostname, path))
+            val = function("%s/%s" % (hostname, path), data=data)
         except:
             self._find_portnum()
             hostname = host
             if not hostname:
                 hostname = self.url
             try:
-                val = function("%s/%s" % (hostname, path))
+                val = function("%s/%s" % (hostname, path), data=data)
             except:
                 logging.warn("Couldn't execute %s/%s!" % (
                         hostname, path))
@@ -134,6 +134,13 @@ class MachineData(object):
                 self.strip_html(self.tasks[task_name]['monitoring']),
                 'stats'))
 
+    def add_task(self, config):
+        params = '&'.join(
+            "%s=%s" % (k, urllib.quote_plus(str(v))) for k, v in config.items())
+        return self._make_request(requests.get,
+                                  path="add_task?%s" % params,
+                                  data=config)
+
     def start_task(self, task):
         tid = urllib.quote(task['name'])
         self._make_request(requests.get,
@@ -141,7 +148,6 @@ class MachineData(object):
 
     def stop_task(self, task):
         tid = urllib.quote(task['name'])
-        url = "%s/stop_task?task_name=%s" % (self.url, tid)
         print self._make_request(
             requests.get,
             path="stop_task?task_name=%s" % tid).content

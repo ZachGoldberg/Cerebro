@@ -16,7 +16,7 @@ class ProductionJob(object):
         self.deployment_recipe = deployment_recipe
         self.recipe_options = recipe_options
 
-        # A mapping of SharedFateZoneObj : {'cpu': #CPU, 'mem': MB_Mem_Per_CPU}
+        # A mapping of SharedFateZoneName: {'cpu': #CPU, 'mem': MB_Mem_Per_CPU}
         self.deployment_layout = deployment_layout
 
         #!MACHINEASSUMPTION!
@@ -40,7 +40,7 @@ class ProductionJob(object):
 
     def refill(self, state, sitter):
         while not state.job_fill:
-            # 1) Assume this job has already been added to self.jobs
+            # 1) Assume this job has already been added to state.jobs
             # 2) Want to ensure calculator has run at least once to find out
             #    if this job already exists throughout the cluster
             logging.info("Waiting for calculator thread to kick in before "
@@ -64,9 +64,14 @@ class ProductionJob(object):
             logging.info(
                 ("Calculated job requirements for %s in %s: " % (self.name,
                                                                  zone)) +
-                "Total Required: %s, Total New: %s" % (
+                "Idle Required: %s, Total New: %s " % (
                     idle_required,
-                    required_new_machine_count))
+                    required_new_machine_count) +
+                "Currently Spawning: %s " % (currently_spawning) +
+                "idle-available: %s " % (len(idle_available)) +
+                "total_required: %s " % (total_required)
+                )
+
 
             # For the machines we have idle now, use those immediately
             # For the others, spinup a thread to launch machines (which
@@ -78,24 +83,28 @@ class ProductionJob(object):
                 # idle_available > idle_required, so use just as many
                 # as we need
                 usable_machines = idle_available[:idle_required]
-            else:
+            elif required_new_machine_count > 0:
                 usable_machines.extend(idle_available)
 
             for machine in usable_machines:
                 # Have the recipe deploy the job then set the callback
                 # to be for the monitoredmachine to trigger the machinesitter
                 # to actually start the job
-                recipe = sitter.build_recipe(
-                    self.deployment_layout,
-                    machine,
-                    lambda: machine.start_task(self.name),
-                    self.recipe_options)
+                if self.deployment_recipe:
+                    recipe = sitter.build_recipe(
+                        self.deployment_recipe,
+                        machine,
+                        post_callback=lambda: machine.start_task(self),
+                        options=self.recipe_options)
+
+                    state.pending_recipes.add(recipe)
+                else:
+                    machine.start_task(self)
 
                 # TODO - Mark this machine as no longer idle
                 # so another job doesn't pick it up while we're deploying
-                state.pending_recipes.add(recipe)
 
-            if required_new_machine_count:
+            if required_new_machine_count > 0:
                 spawn_thread = threading.Thread(
                     target=sitter.spawn_machines,
                     args=(zone, required_new_machine_count, self))

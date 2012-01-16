@@ -1,3 +1,4 @@
+--Fabric is terrible.  Use a proper SSH library that is parallelizable.
 -- Consider turning job spawning into some kind of state machine?
 -- machine sitter / console
  - Setup ENV with defaults for all child tasks

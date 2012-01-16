@@ -19,7 +19,7 @@ class TaskManager(object):
         'time_limit',
         'uid']
 
-    def __init__(self, task_definition, log_location):
+    def __init__(self, task_definition, log_location, launch_location):
         self.auto_start = task_definition.get('auto_start', False)
         self.restart = task_definition.get('restart', False)
         self.max_restarts = task_definition.get('max_restarts', -1)
@@ -32,6 +32,7 @@ class TaskManager(object):
         self.uid = task_definition.get('uid')
         self.command = task_definition['command']
         self.name = task_definition['name']
+        self.launch_location = launch_location
 
         self.http_monitoring = True
         self.http_monitoring_port = None
@@ -97,7 +98,7 @@ class TaskManager(object):
             time.sleep(.1)
 
     def start(self):
-        args = ["run_tasksitter"]
+        args = ["%s/bin/tasksitter" % self.launch_location]
 
         if self.restart:
             args.append("--restart")

@@ -80,7 +80,23 @@ def main(sys_args=None):
 
     keys = args.keyfiles.split(',')
 
+    provider_config = {
+        'aws': {
+            'us-east-1a': {
+                '32b_image_id': 'ami-c59259ac',
+                '64b_image_id': 'ami-eb915a82',
+                'key_name': 'WiFastAWS',
+                'security_groups': ['clustersitter'],
+                }
+            }
+        }
+
+    provider_config['aws']['us-east-1b'] = provider_config['aws']['us-east-1a']
+    provider_config['aws']['us-east-1c'] = provider_config['aws']['us-east-1a']
+    provider_config['aws']['us-east-1d'] = provider_config['aws']['us-east-1a']
+
     sitter = ClusterSitter(daemon=args.daemon,
+                           provider_config=provider_config,
                            keys=keys, user=args.username,
                            log_location="/mnt/data")
     sitter.start()
@@ -104,8 +120,8 @@ def main(sys_args=None):
             "restart": True,
             "uid": 0
         },
-        deployment_layout={'aws-us-east-1a': {'cpu': 4, 'mem': 500}},
-        deployment_recipe='NOOPRecipe',
+        deployment_layout={'aws-us-east-1a': {'cpu': 1, 'mem': 50}},
+        deployment_recipe=None,
         )
 
     sitter.add_job(job)

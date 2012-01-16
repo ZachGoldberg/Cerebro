@@ -45,6 +45,7 @@ class ClusterState(object):
         self.monitors = []
         self.machines_by_zone = {}
         self.zones = []
+        self.provider_by_zone = {}
         self.jobs = []
         self.job_fill = {}
         self.providers = {}
@@ -63,6 +64,10 @@ class ClusterState(object):
         return self.idle_machines[zone]
 
     def calculate_job_fill(self):
+        # If we find out that a job has TOO MANY tasks,
+        # then we should decomission some machines or make
+        # them idle
+
         job_fill = {}
         #!MACHINEASSUMPTION! Should be cpu_count not machine_count
         # Fill out a mapping of [job][task] -> machine_count
@@ -87,7 +92,6 @@ class ClusterState(object):
 
     def calculate_idle_machines(self):
         idle_machines = {}
-
         for zone in self.zones:
             idle_machines[zone] = []
             for machine in self.machines_by_zone.get(zone, []):
@@ -106,13 +110,14 @@ class ClusterState(object):
 
 class ClusterSitter(object):
     def __init__(self, log_location, daemon,
+                 provider_config,
                  keys=None, user=None,
                  starting_port=30000):
         self.worker_thread_count = 2
         self.daemon = daemon
-
         self.keys = keys
         self.user = user
+        self.provider_config = provider_config
 
         self.state = ClusterState()
 
@@ -133,7 +138,8 @@ class ClusterSitter(object):
                                                      self,
                                                      self.get_next_port())
 
-    def build_recipe(self, recipe_class, machine, post_callback, options):
+    def build_recipe(self, recipe_class, machine,
+                     post_callback=None, options=None):
         username = self.user
         keys = self.keys
         if machine.config.login_name:
@@ -145,8 +151,8 @@ class ClusterSitter(object):
         return recipe_class(machine.config.hostname,
                             username,
                             keys,
-                            post_callback,
-                            options)
+                            post_callback=post_callback,
+                            options=options)
 
     def get_next_port(self):
         works = None
@@ -169,14 +175,17 @@ class ClusterSitter(object):
         monitored_machines = []
 
         for m in machines:
-            mm = MonitoredMachine(m)
-            if not m.shared_fate_zone in self.state.machines_by_zone:
-                self.state.machines_by_zone[m.shared_fate_zone] = []
+            mm = m
+            if not isinstance(mm, MonitoredMachine):
+                mm = MonitoredMachine(m)
 
-            self.state.machines_by_zone[m.shared_fate_zone].append(mm)
+            if not mm.config.shared_fate_zone in self.state.machines_by_zone:
+                self.state.machines_by_zone[mm.config.shared_fate_zone] = []
+
+            self.state.machines_by_zone[mm.config.shared_fate_zone].append(mm)
             monitored_machines.append(mm)
 
-        # Spread them out evenly across threads
+        # Spread the machines out evenly across threads
         num_threads_to_use = min(self.worker_thread_count, len(machines)) or 1
         machines_per_thread = int(len(machines) / num_threads_to_use) or 1
         self.state.monitors.sort(key=lambda x: x[0].num_monitored_machines())
@@ -211,12 +220,16 @@ class ClusterSitter(object):
                                       args=(machinemonitor, ))
             self.state.monitors.append((machinemonitor, thread))
 
-        aws = AmazonEC2()
+        aws = AmazonEC2(self.provider_config['aws'])
         if aws.usable():
             self.state.providers['aws'] = aws
 
         for provider in self.state.providers.values():
-            self.state.zones.extend(provider.get_all_shared_fate_zones())
+            newzones = provider.get_all_shared_fate_zones()
+            self.state.zones.extend(newzones)
+            for zone in newzones:
+                self.state.provider_by_zone[zone] = provider
+
             # Note: add_machines() has to be called AFTER the monitors
             # are initialized.
             self.add_machines(provider.get_machine_list())
@@ -252,15 +265,43 @@ class ClusterSitter(object):
                 return
 
         self.state.jobs.append(job)
-        job.refill(self.state, self)
 
     def spawn_machines(self, zone, count, job):
         # This should run some kind of modular procedure
         # to bring up the machines, ASYNCHRONOUSLY (in a new thread?)
         # and return objects representing the machiens on their way up.
-        print "UNIMPLEMENTED " * 10
-        print zone, count
-        pass
+        provider = self.state.provider_by_zone[zone]
+        mem_per_job = job.deployment_layout[zone]['mem']
+
+        machineconfigs = provider.fill_request(zone=zone,
+                                               cpus=count,
+                                               mem_per_job=mem_per_job)
+
+        machines = [MonitoredMachine(m) for m in machineconfigs]
+
+        # Now build the deployments
+        for machine in machines:
+            #, recipe_class, machine, post_callback, options):
+            if job.deployment_recipe:
+                recipe = self.build_recipe(
+                    job.deployment_recipe,
+                    machine,
+                    post_callback=None,
+                    options=job.recipe_options)
+
+                # TODO -- Can we do this here?  Are we in the right thread?
+                recipe.deploy()
+
+        # then do tasksitter deployment
+        for machine in machines:
+            recipe = self.build_recipe(MachineSitterRecipe, machine)
+
+            # TODO -- Can we do this here?  Are we in the right thread?
+            recipe.deploy()
+
+        # then add it to the monitoring system
+        self.add_machines(machines)
+        # Done!
 
     def _register_sitter_failure(self, monitored_machine, monitor):
         """

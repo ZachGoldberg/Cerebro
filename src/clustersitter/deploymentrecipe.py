@@ -10,7 +10,7 @@ class DeploymentRecipe(object):
         self.hostname = hostname
         self.username = username
         self.keys = keys
-        self.post_callback = post_callback or id
+        self.post_callback = post_callback
         self.options = options
 
     def deploy(self):
@@ -26,7 +26,10 @@ class DeploymentRecipe(object):
         #    output[k] = False
 
         retval = self.run_deploy()
-        self.post_callback()
+
+        if self.post_callback:
+            self.post_callback()
+
         return retval
 
 
@@ -37,6 +40,7 @@ class MachineSitterRecipe(DeploymentRecipe):
         release_dir = os.getcwd() + "/releases/"
         filelist = os.listdir(release_dir)
         filelist = filter(lambda x: not os.path.isdir(x), filelist)
+        filelist = filter(lambda x: "tgz" in x, filelist)
         newest = max(filelist, key=lambda x: os.stat(release_dir + x).st_mtime)
 
         try:
@@ -52,6 +56,12 @@ class MachineSitterRecipe(DeploymentRecipe):
                     remote_dir,
                     remote_dir,
                     newest))
+
+            # Needed for pycrypto
+            # TODO - The actual release shouldn't need this,
+            # but it does for some reason
+            sudo("apt-get install -y python-dev")
+
             newdirname = newest.replace(".tgz", "")
             run("cd %s/%s && python2.7 install.py" % (
                     remote_dir,

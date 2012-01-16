@@ -13,8 +13,13 @@ class HasMachineSitter(object):
         self.historic_data = []
         self.loaded = False
 
-    def _api_start_task(self, name):
-        pass
+    def _api_start_task(self, job):
+        val = self.datamanager.add_task(job.task_configuration)
+        logging.info("Add task %s result: %s" % (job.name, val))
+        self.datamanager.reload()
+        val = self.datamanager.start_task(
+            self.datamanager.tasks[job.name])
+        logging.info("Start task %s result: %s" % (job.name, val))
 
     def _api_identify_sitter(self):
         logging.info("Attempting to find a machinesitter at %s" % (
@@ -104,7 +109,8 @@ class MonitoredMachine(HasMachineSitter):
         # Otherwise, spawn a thread to wait for the machine to be up
         # and then make the call
         if self.is_initialized():
-            self._api_run_request(self._api_start_task(job.get_name()))
+            logging.info("Starting a task %s on %s" % (job.name, str(self)))
+            self._api_run_request(self._api_start_task(job))
 
     def begin_initialization(self):
         # Start an async request to find the

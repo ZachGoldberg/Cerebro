@@ -1,5 +1,6 @@
 import boto
 import logging
+import time
 from boto import ec2
 
 from clustersitter.machineconfig import MachineConfig
@@ -19,11 +20,15 @@ class AmazonEC2(MachineProvider):
         'c1.xlarge': (8, 7000, 1690, 64)
         }
 
-    def __init__(self):
+    def __init__(self, config):
+        self.config = config
         self.zones = []
+        self.connection_by_zone = {}
         self.regions = []
         self.connections = {}
         self.machines = {}
+
+        # TODO Ensure security group has port 22 permissions
         try:
             logging.info("Download EC2 Region List")
             self.regions = ec2.regions()
@@ -46,6 +51,66 @@ class AmazonEC2(MachineProvider):
                              bits=perf[3],
                              )
 
+    def _get_image_by_type(self, zone, instance_type):
+        if self.instance_types[instance_type][3] == 32:
+            return self.config[zone]['32b_image_id']
+        else:
+            return self.config[zone]['64b_image_id']
+
+    def fill_request(self, zone, cpus, mem_per_job=None):
+        """
+        Ideally what we do now is figure out
+        what instance_type combination best fills
+        this request.  For simplicity for now
+        we'll just spin up one m1.small per cpu.
+        """
+        aws_placement = zone.replace('aws-', '')
+        conn = self.connection_by_zone[aws_placement]
+        instance_type = 'm1.small'
+        logging.info("Spinnig up %s amazon instances..." % cpus)
+        reservation = conn.run_instances(
+            image_id=self._get_image_by_type(aws_placement, instance_type),
+            key_name=self.config[aws_placement]['key_name'],
+            security_groups=self.config[aws_placement]['security_groups'],
+            min_count=cpus,
+            max_count=cpus,
+            instance_type=instance_type,
+            placement=aws_placement,
+            monitoring_enabled=False
+            )
+
+        instance_ids = [i.id for i in reservation.instances]
+        logging.info("Reservation made for %s instances of type %s" % (
+                cpus, instance_type))
+        logging.info("Ids: %s" % instance_ids)
+        done = False
+        instances = []
+        while not done:
+            # Add logging here
+            # Don't wait for all of them, incase some don't come up
+            available = 0
+            reservation = conn.get_all_instances(instance_ids)[0]
+            instances = reservation.instances
+            all_found = True
+            for instance in instances:
+                if not (instance.public_dns_name and
+                        instance.state == 'running'):
+                    all_found = False
+                else:
+                    available += 1
+
+            logging.warn("%s of %s instances are ready" % (available,
+                                                           len(instances)))
+            done = all_found
+            if not done:
+                time.sleep(1)
+
+        time.sleep(45)
+
+        logging.warn("All instances up, returning from AWS deploy routine")
+
+        return [AmazonEC2.config_from_instance(i) for i in instances]
+
     def get_machine_list(self):
         self._initialize_connections()
         machine_list = []
@@ -57,9 +122,12 @@ class AmazonEC2(MachineProvider):
                         sf_zone = "aws-%s" % instance.placement
                         if sf_zone not in self.machines:
                             self.machines[sf_zone] = []
-                        self.machines[sf_zone].append(instance)
-                        machine_list.append(
-                            AmazonEC2.config_from_instance(instance))
+
+                        if (instance.public_dns_name and
+                            instance.state == 'running'):
+                            self.machines[sf_zone].append(instance)
+                            machine_list.append(
+                                AmazonEC2.config_from_instance(instance))
 
         return machine_list
 
@@ -80,6 +148,7 @@ class AmazonEC2(MachineProvider):
         for conn in self.connections.values():
             zones = conn.get_all_zones()
             for zone in zones:
+                self.connection_by_zone[zone.name] = conn
                 self.zones.append(zone.name)
 
         return ["aws-%s" % s for s in self.zones]

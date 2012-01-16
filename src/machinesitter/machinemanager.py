@@ -157,7 +157,9 @@ class MachineManager(object):
 
     def add_new_task(self, task_definition):
         task = taskmanager.TaskManager(task_definition,
-                                       self.log_location)
+                                       self.log_location,
+                                       self.launch_location)
+
         task.set_port(self.next_port())
 
         self.tasks[task.name] = task
