@@ -184,7 +184,7 @@ class ClusterSitter(object):
             module.logger.addHandler(all_file)
             module.logger.addHandler(handler)
 
-        socket.setdefaulttimeout(1)
+        socket.setdefaulttimeout(2)
 
     def build_recipe(self, recipe_class, machine,
                      post_callback=None, options=None):
@@ -388,25 +388,34 @@ class ClusterSitter(object):
         """
         while True:
             start_time = datetime.now()
-            for machine, monitor in self.state.unreachable_machines:
-                # This is strange indeed!  Try reinstalling the clustersitter
-                recipe = self.build_recipe(MachineSitterRecipe, machine)
+            logger.info("Begin machine doctor run.  Unreachables: %s"
+                        % (self.state.unreachable_machines))
+            try:
+                for machine, monitor in self.state.unreachable_machines:
+                    logger.info("Attempting to redeploy to %s" %
+                                machine)
+                    # This is strange indeed!  Try reinstalling the clustersitter
+                    recipe = self.build_recipe(MachineSitterRecipe, machine)
+                    logger.info("Recipe for redeploy built, running it now")
+                    val = recipe.deploy()
+                    if val:
+                        # We were able to successfully reploy to the machine
+                        # so readd it to the monitor
+                        logger.info("Successful redeploy of %s!" % machine)
+                        monitor.add_machines([machine])
+                    else:
+                        logger.info("Redeploy failed!  Decomissioning %s" % machine)
+                        # Decomission time!
+                        # For now just assume its dead, johnny.
 
-                logger.info("Attempting to redeploy to %s" % machine)
-                val = recipe.deploy()
-                if val:
-                    # We were able to successfully reploy to the machine
-                    # so readd it to the monitor
-                    logger.info("Successful redeploy of %s!" % machine)
-                    monitor.add_machines([machine])
-                else:
-                    logger.info("Redeploy failed!  Decomissioning %s" % machine)
-                    # Decomission time!
-                    # For now just assume its dead, johnny.
+                        # TODO: Write machine decomission logic
 
-                    # TODO: Write machine decomission logic
-
-                self.state.unreachable_machines.remove((machine, monitor))
+                    self.state.unreachable_machines.remove((machine, monitor))
+            except:
+                # Der?  Not sure what this could be...
+                import traceback
+                traceback.print_exc()
+                logger.error(traceback.format_exc())
 
             # Now see if we need to add any new machines to any jobs
             for job in self.state.jobs:

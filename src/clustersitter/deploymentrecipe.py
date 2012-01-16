@@ -20,17 +20,22 @@ class DeploymentRecipe(object):
         self.client = paramiko.SSHClient()
         self.client.set_missing_host_key_policy(
             paramiko.AutoAddPolicy())
+        self.connected = False
 
         for key in self.keys:
             try:
                 self.client.connect(hostname=self.hostname,
                                     username=self.username,
-                                    key_filename=key)
+                                    key_filename=key,
+                                    timeout=10)
+                self.sftp = self.client.open_sftp()
+                self.connected = True
                 break
             except:
+                logger.warn("Couldnt ssh into %s@%s with %s" % (
+                        self.username, self.hostname, key
+                        ))
                 continue
-
-        self.sftp = self.client.open_sftp()
 
     def run(self, cmd):
         logger.info("Running %s on %s" % (cmd, self.hostname))
@@ -56,6 +61,11 @@ class DeploymentRecipe(object):
         return self.run("sudo bash -c '%s'" % cmd)
 
     def deploy(self):
+        if not self.connected:
+            logger.error("Couldn't do deployment: SSH Not connected")
+            return False
+
+        logger.info("Begin deployment on %s" % self.hostname)
         # 2 tries
         try:
             retval = self.run_deploy()
@@ -68,6 +78,7 @@ class DeploymentRecipe(object):
                 traceback.print_exc()
                 return False
 
+        logger.info("Calling post-deply callback for %s" % self.hostname)
         if self.post_callback:
             self.post_callback()
 
