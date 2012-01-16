@@ -37,15 +37,13 @@ class DeploymentRecipe(object):
         output = self.client.exec_command(cmd)
         stdout = output[1]
         stderr = output[2]
-        import pdb
-        pdb.set_trace()
         while True:
             line = stdout.readline()
             if not line:
                 break
 
             logger.info("Output from (%s): %s" % (cmd, line.strip()))
-        logger.info(stderr.readlines())
+        logger.info("Stderr from (%s): %s" % (cmd, stderr.readlines()))
 
     def put(self, local, remote):
         if os.path.basename(local) != os.path.basename(remote):
@@ -120,7 +118,7 @@ if __name__ == '__main__':
         "ubuntu",
         "/home/zgoldberg/workspace/wifast/keys/WiFastAWSus-east-1.pem")
 
-    a.sudo('cd /home/ubuntu/clustersitter//tasksitter-120-fcdd5c9-1326692829 && ./bin/machinesitter --daemon')
+    a.sudo('cd /home/ubuntu/clustersitter/tasksitter-123-241e19c-1326699447 && ./bin/machinesitter --daemon')
 #    a.run("ls && sleep 1 && ls")
 #    a.sudo("cd /etc && ls")
 #    a.put("/home/zgoldberg/workspace/tasksitter/buildout.cfg",

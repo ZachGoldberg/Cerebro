@@ -42,26 +42,6 @@ def parse_args(args):
     return parser.parse_args(args=args)
 
 
-def daemonize():
-    pid = os.fork()
-    if pid > 0:
-        sys.exit(0)
-
-    os.setsid()
-    os.umask(0)
-    os.chdir("/")
-
-    pid = os.fork()
-    if pid > 0:
-        sys.exit(0)
-
-    sys.stdout.flush()
-    sys.stderr.flush()
-    sys.stdin.close()
-
-    print "Sitter PID: %s" % os.getpid()
-
-
 def main(sys_args=None):
 
     if not sys_args:
@@ -116,7 +96,7 @@ def main(sys_args=None):
         task_configuration={
             "allow_exit": False,
             "name": "Simple Web Server",
-            "command": "/usr/bin/python -m SimpleHTTPServer",
+            "command": "cd /home && /usr/bin/python -m SimpleHTTPServer",
             "auto_start": True,
             "ensure_alive": True,
             "max_restarts": -1,
@@ -127,7 +107,7 @@ def main(sys_args=None):
         deployment_recipe=None,
         )
 
-    sitter.add_job(job)
+    #sitter.add_job(job)
 
     # wait forever
     os.system("tail -f %s" % (sitter.logfiles[0]))

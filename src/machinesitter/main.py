@@ -62,6 +62,10 @@ def main(sys_args=None):
 
     args = parse_args(sys_args)
 
+    if args.daemon:
+        print "Daemonizing"
+        daemonize()
+
     if args.taskfile:
         config = simplejson.load(open(args.taskfile))
     else:
@@ -85,9 +89,6 @@ def main(sys_args=None):
         manager.add_new_task(task)
 
     manager.start()
-
-    if args.daemon:
-        daemonize()
 
     # wait forever
     while True:

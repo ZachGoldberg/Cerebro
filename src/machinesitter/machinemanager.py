@@ -210,6 +210,7 @@ class MachineManager(object):
         if self.daemon:
             self.logmanager.setup_all()
 
+
         for task in self.tasks.values():
             print "Initializing %s" % task.name
             task.initialize()
