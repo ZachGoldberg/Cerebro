@@ -121,9 +121,10 @@ class MachineManager(object):
 
         config['task_definitions'] = task_definitions
 
-        file = open(self.task_definition_file, 'w')
-        file.write(json.dumps(config))
-        file.close()
+        if self.task_definition_file:
+            file = open(self.task_definition_file, 'w')
+            file.write(json.dumps(config))
+            file.close()
 
         return config
 

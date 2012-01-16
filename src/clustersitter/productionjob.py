@@ -41,7 +41,7 @@ class ProductionJob(object):
         return self.task_configuration['name']
 
     def refill(self, state, sitter):
-        while not state.job_fill:
+        while not self.name in state.job_fill:
             # 1) Assume this job has already been added to state.jobs
             # 2) Want to ensure calculator has run at least once to find out
             #    if this job already exists throughout the cluster

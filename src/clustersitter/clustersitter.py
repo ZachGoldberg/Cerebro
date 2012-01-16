@@ -82,6 +82,7 @@ class ClusterState(object):
         job_fill = {}
         #!MACHINEASSUMPTION! Should be cpu_count not machine_count
         # Fill out a mapping of [job][task] -> machine_count
+        logger.info("Calculating job fill for jobs: %s" % self.jobs)
         for job in self.jobs:
             job_fill[job.name] = {}
             if not job.name in self.spawning_machines:
@@ -96,12 +97,15 @@ class ClusterState(object):
         for zone, machines in self.machines_by_zone.items():
             for machine in machines:
                 for task in machine.get_running_tasks():
+                    # Don't add tasks from machines to the job_fill
+                    # dict unless we already know about the job
                     if not task['name'] in job_fill:
-                        job_fill[task['name']] = {}
+                        continue
+
                     job_fill[task['name']][zone] += 1
 
         self.job_fill = job_fill
-
+        logger.info("Calculated job fill: %s" % self.job_fill)
 
     def calculate_idle_machines(self):
         idle_machines = {}
@@ -395,8 +399,10 @@ class ClusterSitter(object):
             for job in self.state.jobs:
                 for zone in job.get_shared_fate_zones():
                     while job.name not in self.state.job_fill:
-                        logger.info("Doctor waiting for calculator thread"
-                                     "to kick in before filling jobs")
+                        logger.info(
+                            "Doctor waiting for calculator thread "
+                            "to kick in before filling jobs " +
+                            "(%s, %s)" % (job.name, self.state.job_fill))
                         time.sleep(0.5)
 
                     """

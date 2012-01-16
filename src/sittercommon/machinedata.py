@@ -137,20 +137,32 @@ class MachineData(object):
     def add_task(self, config):
         params = '&'.join(
             "%s=%s" % (k, urllib.quote_plus(str(v))) for k, v in config.items())
-        return self._make_request(requests.get,
-                                  path="add_task?%s" % params,
-                                  data=config)
+        val = self._make_request(requests.get,
+                                 path="add_task?%s" % params,
+                                 data=config)
+        if val:
+            return val.content
+        else:
+            return None
 
     def start_task(self, task):
         tid = urllib.quote(task['name'])
-        self._make_request(requests.get,
-                           path="start_task?task_name=%s" % tid)
+        val = self._make_request(requests.get,
+                                 path="start_task?task_name=%s" % tid)
+        if val:
+            return val.content
+
+        return None
 
     def stop_task(self, task):
         tid = urllib.quote(task['name'])
-        print self._make_request(
+        val = self._make_request(
             requests.get,
             path="stop_task?task_name=%s" % tid).content
+        if val:
+            return val.content
+
+        return None
 
     def strip_html(self, val):
         return re.sub('<[^<]+?>', '', val)

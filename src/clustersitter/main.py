@@ -107,7 +107,9 @@ def main(sys_args=None):
         deployment_recipe=None,
         )
 
-    #sitter.add_job(job)
+    print "!" * 100
+    print "Adding a job"
+    sitter.add_job(job)
 
     # wait forever
     os.system("tail -f %s" % (sitter.logfiles[0]))
