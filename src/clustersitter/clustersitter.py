@@ -375,7 +375,7 @@ class ClusterSitter(object):
                 # This is strange indeed!  Try reinstalling the clustersitter
                 recipe = self.build_recipe(MachineSitterRecipe, machine)
 
-                logger.info("Attempting to reploy to %s" % machine)
+                logger.info("Attempting to redeploy to %s" % machine)
                 val = recipe.deploy()
                 if val:
                     # We were able to successfully reploy to the machine
@@ -388,7 +388,6 @@ class ClusterSitter(object):
                     # For now just assume its dead, johnny.
 
                     # TODO: Write machine decomission logic
-                    pass
 
                 self.state.unreachable_machines.remove((machine, monitor))
 
