@@ -2,6 +2,8 @@ import logging
 import time
 from datetime import datetime
 
+logger = logging.getLogger(__name__)
+
 
 class MachineMonitor:
     def __init__(self, parent, number, monitored_machines=[]):
@@ -14,7 +16,7 @@ class MachineMonitor:
         self.pull_failures = {}
         self.failure_threshold = 1
 
-        logging.info("Initialized a machine monitor for %s" % (
+        logger.info("Initialized a machine monitor for %s" % (
                 str(self.monitored_machines)))
 
     def num_monitored_machines(self):
@@ -25,7 +27,7 @@ class MachineMonitor:
         for m in monitored_machines:
             self.pull_failures[m] = 0
 
-        logging.info("Queued %s for inclusion in next stats run in %s" % (
+        logger.info("Queued %s for inclusion in next stats run in %s" % (
                 [str(a) for a in monitored_machines],
                 self.number))
 
@@ -39,7 +41,7 @@ class MachineMonitor:
 
         while True:
             start_time = datetime.now()
-            logging.info("Processing add queue %s at %s" % (self.add_queue,
+            logger.info("Processing add queue %s at %s" % (self.add_queue,
                                                             self.number))
             while len(self.add_queue) > 0:
                 machine = self.add_queue[-1]
@@ -47,8 +49,8 @@ class MachineMonitor:
                 self.monitored_machines.append(machine)
                 self.add_queue.remove(machine)
 
-            logging.info("Finished processing add queue")
-            logging.info("Beggining machine monitoring poll for %s at %s" % (
+            logger.info("Finished processing add queue")
+            logger.info("Beggining machine monitoring poll for %s at %s" % (
                     [str(a) for a in self.monitored_machines],
                     self.number))
 
@@ -61,7 +63,7 @@ class MachineMonitor:
                 else:
                     self.initialize_machines([machine])
 
-            logging.info("Pull Failures: %s" % (
+            logger.info("Pull Failures: %s" % (
                     [(m.hostname, count) for m, count in \
                          self.pull_failures.items()]))
 
@@ -70,7 +72,7 @@ class MachineMonitor:
                     self.monitored_machines.remove(machine)
                     del self.pull_failures[machine]
                     machine.detected_sitter_failures += 1
-                    logging.warn(
+                    logger.warn(
                         "Removing %s because we can't contact the sitter! " % (
                             machine.hostname))
                     self.clustersitter._register_sitter_failure(machine, self)
@@ -78,7 +80,7 @@ class MachineMonitor:
             time_spent = datetime.now() - start_time
             sleep_time = self.clustersitter.stats_poll_interval - \
                 time_spent.seconds
-            logging.info(
+            logger.info(
                 "Finished poll run for %s.  Time_spent: %s, sleep_time: %s" % (
                     [str(a) for a in self.monitored_machines],
                     time_spent,

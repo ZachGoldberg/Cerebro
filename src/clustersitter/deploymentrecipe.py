@@ -1,7 +1,10 @@
+import logging
 import os
 from fabric.api import env
 from fabric.operations import run, put, sudo
 from fabric.state import output
+
+logger = logging.getLogger(__name__)
 
 
 class DeploymentRecipe(object):

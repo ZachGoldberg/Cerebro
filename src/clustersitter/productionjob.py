@@ -2,6 +2,8 @@ import logging
 import threading
 import time
 
+logger = logging.getLogger(__name__)
+
 
 class ProductionJob(object):
     def __init__(self,
@@ -43,7 +45,7 @@ class ProductionJob(object):
             # 1) Assume this job has already been added to state.jobs
             # 2) Want to ensure calculator has run at least once to find out
             #    if this job already exists throughout the cluster
-            logging.info("Waiting for calculator thread to kick in before "
+            logger.info("Waiting for calculator thread to kick in before "
                          "filling jobs")
             time.sleep(0.5)
 
@@ -61,7 +63,7 @@ class ProductionJob(object):
             # not machines
             required_new_machine_count = (idle_required -
                                           len(idle_available))
-            logging.info(
+            logger.info(
                 ("Calculated job requirements for %s in %s: " % (self.name,
                                                                  zone)) +
                 "Idle Required: %s, Total New: %s " % (

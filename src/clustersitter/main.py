@@ -77,6 +77,9 @@ def main(sys_args=None):
         daemonize()
 
     logging.getLogger().setLevel(logging.INFO)
+    logging.basicConfig(
+        format='%(asctime)s %(name)s:%(levelname)s %(message)s')
+    logging.getLogger().handlers[0].setLevel(logging.ERROR)
 
     keys = args.keyfiles.split(',')
 
@@ -98,7 +101,7 @@ def main(sys_args=None):
     sitter = ClusterSitter(daemon=args.daemon,
                            provider_config=provider_config,
                            keys=keys, user=args.username,
-                           log_location="/mnt/data")
+                           log_location="/mnt/data/clustersitter/")
     sitter.start()
 
     localhost = MachineConfig("localhost",
@@ -107,13 +110,13 @@ def main(sys_args=None):
 
     sitter.add_machines([localhost])
 
-    time.sleep(2)
+    time.sleep(1)
 
     job = ProductionJob(
         task_configuration={
             "allow_exit": False,
             "name": "Simple Web Server",
-            "command": "/usr/bin/python -m SimpleHttpServer",
+            "command": "/usr/bin/python -m SimpleHTTPServer",
             "auto_start": True,
             "ensure_alive": True,
             "max_restarts": -1,
@@ -124,12 +127,20 @@ def main(sys_args=None):
         deployment_recipe=None,
         )
 
-    sitter.add_job(job)
+    #sitter.add_job(job)
 
     # wait forever
+    os.system("tail -f %s" % (sitter.logfiles[0]))
     while True:
         try:
-            time.sleep(1)
+            for index, name in enumerate(sitter.logfiles):
+                print "%s. %s" % (index, name)
+            num = raw_input("Chose a log to view: ")
+            try:
+                num = int(num)
+                os.system("tail -f %s" % (sitter.logfiles[num]))
+            except:
+                pass
         except KeyboardInterrupt:
             print "Caught Control-C, exiting"
             os._exit(0)

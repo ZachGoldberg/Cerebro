@@ -2,10 +2,19 @@ import logging
 import os
 import random
 import socket
+import sys
 import threading
 import time
 import requests
 from datetime import datetime
+from logging import FileHandler
+
+import providers.aws
+import deploymentrecipe
+import machineconfig
+import machinemonitor
+import monitoredmachine
+import productionjob
 
 from providers.aws import AmazonEC2
 from deploymentrecipe import DeploymentRecipe, MachineSitterRecipe
@@ -16,6 +25,8 @@ from productionjob import ProductionJob
 from sittercommon import http_monitor
 from sittercommon import logmanager
 from sittercommon.machinedata import MachineData
+
+logger = logging.getLogger(__name__)
 
 """
 We have 3 kinds of data
@@ -85,6 +96,8 @@ class ClusterState(object):
         for zone, machines in self.machines_by_zone.items():
             for machine in machines:
                 for task in machine.get_running_tasks():
+                    if not task['name'] in job_fill:
+                        job_fill[task['name']] = {}
                     job_fill[task['name']][zone] += 1
 
         self.job_fill = job_fill
@@ -105,7 +118,7 @@ class ClusterState(object):
         # The DICT swap must be atomic, or else another
         # thread could get a bad value during calculation.
         self.idle_machines = idle_machines
-        logging.info("Calculated idle machines: %s" % str(self.idle_machines))
+        logger.info("Calculated idle machines: %s" % str(self.idle_machines))
 
 
 class ClusterSitter(object):
@@ -118,6 +131,7 @@ class ClusterSitter(object):
         self.keys = keys
         self.user = user
         self.provider_config = provider_config
+        self.log_location = log_location
 
         self.state = ClusterState()
 
@@ -137,6 +151,30 @@ class ClusterSitter(object):
         self.http_monitor = http_monitor.HTTPMonitor(self.stats,
                                                      self,
                                                      self.get_next_port())
+
+        # Do lots of logging configuration
+        modules = [sys.modules[__name__],
+                   machinemonitor,
+                   monitoredmachine,
+                   productionjob,
+                   providers.aws,
+                   deploymentrecipe]
+
+        all_file = FileHandler("%s/all.log" % self.log_location)
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s:%(levelname)s - %(message)s')
+
+        self.logfiles = ["%s/all.log" % self.log_location]
+
+        for module in modules:
+            name = module.__name__.split('.')[-1]
+            logfile = "%s/%s.log" % (self.log_location,
+                                                 name)
+            self.logfiles.append(logfile)
+            handler = FileHandler(logfile)
+            handler.setFormatter(formatter)
+            module.logger.addHandler(all_file)
+            module.logger.addHandler(handler)
 
     def build_recipe(self, recipe_class, machine,
                      post_callback=None, options=None):
@@ -206,12 +244,12 @@ class ClusterSitter(object):
                     monitored_machines[start_index:end_index])
 
     def start(self):
-        logging.info("Initializing MachineProviders")
+        logger.info("Initializing MachineProviders")
         # Initialize (non-started) machine monitors first
         # Then download machine data, populate data structure and monitors
         # then kickoff everything.
 
-        logging.info("Initializing %s MachineMonitors" % self.worker_thread_count)
+        logger.info("Initializing %s MachineMonitors" % self.worker_thread_count)
         # Spin up all the monitoring threads
         for threadnum in range(self.worker_thread_count):
             machinemonitor = MachineMonitor(parent=self,
@@ -234,34 +272,34 @@ class ClusterSitter(object):
             # are initialized.
             self.add_machines(provider.get_machine_list())
 
-        logging.info("Zone List: %s" % self.state.zones)
+        logger.info("Zone List: %s" % self.state.zones)
 
         # Kickoff all the threads at once
         self.http_monitor.start()
-        logging.info("Cluster Sitter Monitor started at " + \
+        logger.info("Cluster Sitter Monitor started at " + \
             "http://localhost:%s" % self.http_monitor.port)
 
         if self.daemon:
             self.logmanager.setup_all()
 
-        logging.info("Spinning up %s monitoring threads" % (
+        logger.info("Spinning up %s monitoring threads" % (
                 self.worker_thread_count))
         for monitor in self.state.monitors:
             monitor[1].start()
 
-        logging.info("Starting metadata calculator")
+        logger.info("Starting metadata calculator")
         self.calculator = threading.Thread(target=self._calculator)
         self.calculator.start()
 
-        logging.info("Starting machine recovery thread")
+        logger.info("Starting machine recovery thread")
         self.machine_doctor = threading.Thread(target=self._machine_doctor)
         self.machine_doctor.start()
 
     def add_job(self, job):
-        logging.info("Add Job: %s" % job.name)
+        logger.info("Add Job: %s" % job.name)
         for zone in job.get_shared_fate_zones():
             if not zone in self.state.zones:
-                logging.warn("Tried to add a job with an unknown SFZ %s" % zone)
+                logger.warn("Tried to add a job with an unknown SFZ %s" % zone)
                 return
 
         self.state.jobs.append(job)
@@ -298,6 +336,7 @@ class ClusterSitter(object):
 
             # TODO -- Can we do this here?  Are we in the right thread?
             recipe.deploy()
+            machine.start_task(job)
 
         # then add it to the monitoring system
         self.add_machines(machines)
@@ -308,7 +347,7 @@ class ClusterSitter(object):
         !! Fabric is not threadsafe.  Do all work in one thread by appending to
         a queue !!
         """
-        logging.info("Registering an unreachable machine %s" % monitored_machine)
+        logger.info("Registering an unreachable machine %s" % monitored_machine)
         self.state.unreachable_machines.append((monitored_machine, monitor))
 
     def _machine_doctor(self):
@@ -333,15 +372,15 @@ class ClusterSitter(object):
                 # This is strange indeed!  Try reinstalling the clustersitter
                 recipe = self.build_recipe(MachineSitterRecipe, machine)
 
-                logging.info("Attempting to reploy to %s" % machine)
+                logger.info("Attempting to reploy to %s" % machine)
                 val = recipe.deploy()
                 if val:
                     # We were able to successfully reploy to the machine
                     # so readd it to the monitor
-                    logging.info("Successful redeploy of %s!" % machine)
+                    logger.info("Successful redeploy of %s!" % machine)
                     monitor.add_machines([machine])
                 else:
-                    logging.info("Redeploy failed!  Decomissioning %s" % machine)
+                    logger.info("Redeploy failed!  Decomissioning %s" % machine)
                     # Decomission time!
                     # For now just assume its dead, johnny.
 
@@ -354,7 +393,7 @@ class ClusterSitter(object):
             for job in self.state.jobs:
                 for zone in job.get_shared_fate_zones():
                     while job.name not in self.state.job_fill:
-                        logging.info("Doctor waiting for calculator thread"
+                        logger.info("Doctor waiting for calculator thread"
                                      "to kick in before filling jobs")
                         time.sleep(0.5)
 
@@ -382,7 +421,7 @@ class ClusterSitter(object):
             time_spent = datetime.now() - start_time
             sleep_time = self.stats_poll_interval - \
                 time_spent.seconds
-            logging.info(
+            logger.info(
                 "Finished Machine Doctor run.  Time_spent: %s, sleep_time: %s" % (
                     time_spent,
                     sleep_time))

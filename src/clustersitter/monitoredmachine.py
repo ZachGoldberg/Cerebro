@@ -1,6 +1,8 @@
 import logging
 from sittercommon.machinedata import MachineData
 
+logger = logging.getLogger(__name__)
+
 
 class HasMachineSitter(object):
     """
@@ -15,14 +17,14 @@ class HasMachineSitter(object):
 
     def _api_start_task(self, job):
         val = self.datamanager.add_task(job.task_configuration)
-        logging.info("Add task %s result: %s" % (job.name, val))
+        logger.info("Add task %s result: %s" % (job.name, val))
         self.datamanager.reload()
         val = self.datamanager.start_task(
             self.datamanager.tasks[job.name])
-        logging.info("Start task %s result: %s" % (job.name, val))
+        logger.info("Start task %s result: %s" % (job.name, val))
 
     def _api_identify_sitter(self):
-        logging.info("Attempting to find a machinesitter at %s" % (
+        logger.info("Attempting to find a machinesitter at %s" % (
                 self.hostname))
         if not self.datamanager:
             self.datamanager = MachineData(self.hostname, 40000)
@@ -30,9 +32,9 @@ class HasMachineSitter(object):
             self.datamanager._find_portnum()
 
         if self.datamanager.url:
-            logging.info("Found sitter at %s" % self.datamanager.url)
+            logger.info("Found sitter at %s" % self.datamanager.url)
         else:
-            logging.warn("Couldn't find a sitter for %s" % self.hostname)
+            logger.warn("Couldn't find a sitter for %s" % self.hostname)
 
         return self.datamanager.portnum
 
@@ -47,7 +49,7 @@ class HasMachineSitter(object):
                                     path)
 
     def _api_get_stats(self):
-        logging.info("Get stats for %s" % str(self))
+        logger.info("Get stats for %s" % str(self))
         tasks = None
         try:
             tasks = self.datamanager.reload()
@@ -109,7 +111,7 @@ class MonitoredMachine(HasMachineSitter):
         # Otherwise, spawn a thread to wait for the machine to be up
         # and then make the call
         if self.is_initialized():
-            logging.info("Starting a task %s on %s" % (job.name, str(self)))
+            logger.info("Starting a task %s on %s" % (job.name, str(self)))
             self._api_run_request(self._api_start_task(job))
 
     def begin_initialization(self):

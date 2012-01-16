@@ -6,6 +6,8 @@ from boto import ec2
 from clustersitter.machineconfig import MachineConfig
 from machineprovider import MachineProvider
 
+logger = logging.getLogger(__name__)
+
 
 class AmazonEC2(MachineProvider):
     instance_types = {
@@ -30,10 +32,10 @@ class AmazonEC2(MachineProvider):
 
         # TODO Ensure security group has port 22 permissions
         try:
-            logging.info("Download EC2 Region List")
+            logger.info("Download EC2 Region List")
             self.regions = ec2.regions()
         except boto.exception.NoAuthHandlerFound:
-            logging.warn("Couldn't connect to EC2.  Auth Error.  " +
+            logger.warn("Couldn't connect to EC2.  Auth Error.  " +
                          "Ensure AWS crednetials are set in the env " +
                          "(AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY")
 
@@ -67,7 +69,7 @@ class AmazonEC2(MachineProvider):
         aws_placement = zone.replace('aws-', '')
         conn = self.connection_by_zone[aws_placement]
         instance_type = 'm1.small'
-        logging.info("Spinnig up %s amazon instances..." % cpus)
+        logger.info("Spinnig up %s amazon instances..." % cpus)
         reservation = conn.run_instances(
             image_id=self._get_image_by_type(aws_placement, instance_type),
             key_name=self.config[aws_placement]['key_name'],
@@ -80,9 +82,9 @@ class AmazonEC2(MachineProvider):
             )
 
         instance_ids = [i.id for i in reservation.instances]
-        logging.info("Reservation made for %s instances of type %s" % (
+        logger.info("Reservation made for %s instances of type %s" % (
                 cpus, instance_type))
-        logging.info("Ids: %s" % instance_ids)
+        logger.info("Ids: %s" % instance_ids)
         done = False
         instances = []
         while not done:
@@ -99,7 +101,7 @@ class AmazonEC2(MachineProvider):
                 else:
                     available += 1
 
-            logging.warn("%s of %s instances are ready" % (available,
+            logger.warn("%s of %s instances are ready" % (available,
                                                            len(instances)))
             done = all_found
             if not done:
@@ -107,7 +109,7 @@ class AmazonEC2(MachineProvider):
 
         time.sleep(45)
 
-        logging.warn("All instances up, returning from AWS deploy routine")
+        logger.warn("All instances up, returning from AWS deploy routine")
 
         return [AmazonEC2.config_from_instance(i) for i in instances]
 
@@ -134,7 +136,7 @@ class AmazonEC2(MachineProvider):
     def _initialize_connections(self):
         for region in self.regions:
             if not region.name in self.connections:
-                logging.info("Connecting to %s" % region.name)
+                logger.info("Connecting to %s" % region.name)
                 self.connections[region.name] = ec2.connect_to_region(
                     region.name)
 
