@@ -110,7 +110,7 @@ def main(sys_args=None):
 
     sitter.add_machines([localhost])
 
-    time.sleep(1)
+    time.sleep(2)
 
     job = ProductionJob(
         task_configuration={
@@ -127,7 +127,7 @@ def main(sys_args=None):
         deployment_recipe=None,
         )
 
-    #sitter.add_job(job)
+    sitter.add_job(job)
 
     # wait forever
     os.system("tail -f %s" % (sitter.logfiles[0]))

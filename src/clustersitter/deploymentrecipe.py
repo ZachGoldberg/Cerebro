@@ -1,8 +1,6 @@
 import logging
 import os
-from fabric.api import env
-from fabric.operations import run, put, sudo
-from fabric.state import output
+import paramiko
 
 logger = logging.getLogger(__name__)
 
@@ -12,22 +10,43 @@ class DeploymentRecipe(object):
                  post_callback=None, options=None):
         self.hostname = hostname
         self.username = username
+
         self.keys = keys
+        if not isinstance(self.keys, list):
+            self.keys = [self.keys]
+
         self.post_callback = post_callback
         self.options = options
+        self.client = paramiko.SSHClient()
+        self.client.set_missing_host_key_policy(
+            paramiko.AutoAddPolicy())
+
+        for key in self.keys:
+            try:
+                self.client.connect(hostname=self.hostname,
+                                    username=self.username,
+                                    key_filename=key)
+                break
+            except:
+                import traceback
+                traceback.print_exc()
+                continue
+
+        self.sftp = self.client.open_sftp()
+
+    def run(self, cmd):
+        return self.client.exec_command(cmd)[1].read()
+
+    def put(self, local, remote):
+        if os.path.basename(local) != os.path.basename(remote):
+            remote += os.path.basename(local)
+
+        return self.sftp.put(local, remote)
+
+    def sudo(self, cmd):
+        return self.client.exec_command("sudo %s" % cmd)[1].read()
 
     def deploy(self):
-        env.host_string = self.hostname
-        env.user = self.username
-        if isinstance(self.keys, list):
-            env.key_filename = self.keys
-        else:
-            env.key_filename = [self.keys]
-
-        # Silence Fabric's echoing of everything
-        #for k, v in output.items():
-        #    output[k] = False
-
         retval = self.run_deploy()
 
         if self.post_callback:
@@ -49,13 +68,13 @@ class MachineSitterRecipe(DeploymentRecipe):
         try:
             # Now create the remote directory
             remote_dir = "/home/ubuntu/clustersitter/"
-            run("mkdir -p %s" % remote_dir)
+            self.run("mkdir -p %s" % remote_dir)
 
             # Upload the release
-            put(release_dir + newest, remote_dir)
+            self.put(release_dir + newest, remote_dir)
 
             # Extrat it and run the installer
-            run("cd %s && tar -xzf %s%s" % (
+            self.run("cd %s && tar -xzf %s%s" % (
                     remote_dir,
                     remote_dir,
                     newest))
@@ -63,15 +82,15 @@ class MachineSitterRecipe(DeploymentRecipe):
             # Needed for pycrypto
             # TODO - The actual release shouldn't need this,
             # but it does for some reason
-            sudo("apt-get install -y python-dev")
+            self.sudo("apt-get install -y python-dev")
 
             newdirname = newest.replace(".tgz", "")
-            run("cd %s/%s && python2.7 install.py" % (
+            self.run("cd %s/%s && python2.7 install.py" % (
                     remote_dir,
                     newdirname))
 
             # Launch a machine sitter as root
-            sudo("cd %s/%s && ./bin/machinesitter --daemon" % (
+            self.sudo("cd %s/%s && ./bin/machinesitter --daemon" % (
                     remote_dir,
                     newdirname))
         except:
@@ -88,4 +107,8 @@ if __name__ == '__main__':
         "ubuntu",
         "/home/zgoldberg/workspace/wifast/keys/WiFastAWSus-west-1.pem")
 
+    print a.run("ls")
+    print a.sudo("touch /t")
+    print a.put("/home/zgoldberg/workspace/tasksitter/buildout.cfg",
+                "/home/ubuntu/")
     a.deploy()

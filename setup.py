@@ -24,9 +24,9 @@ setup(name='TaskSitter',
         'run_machineconsole'],
       install_requires=[
         'boto',
-#        'django-mongodb-engine',
-#        'djangotoolbox',
-        'fabric',
+        #        'django-mongodb-engine',
+        #        'djangotoolbox',
+        'paramiko',
         'requests',
         ],
      )
