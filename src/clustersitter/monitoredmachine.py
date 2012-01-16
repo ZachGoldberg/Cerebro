@@ -114,11 +114,8 @@ class MonitoredMachine(HasMachineSitter):
             logger.info("Starting a task %s on %s" % (job.name, str(self)))
             self._api_run_request(self._api_start_task(job))
 
-    def begin_initialization(self):
-        # Start an async request to find the
-        # machinesitter port number
-        # and load basic configuration
-        pass
+    def initialize(self):
+        self._api_identify_sitter()
 
     def is_initialized(self):
         if not self.datamanager:

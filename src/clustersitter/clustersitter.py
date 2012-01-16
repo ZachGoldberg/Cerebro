@@ -338,6 +338,7 @@ class ClusterSitter(object):
 
             # TODO -- Can we do this here?  Are we in the right thread?
             recipe.deploy()
+            machine.initialize()
             machine.start_task(job)
 
         # then add it to the monitoring system
