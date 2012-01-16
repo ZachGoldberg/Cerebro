@@ -101,7 +101,7 @@ def main(sys_args=None):
     sitter = ClusterSitter(daemon=args.daemon,
                            provider_config=provider_config,
                            keys=keys, user=args.username,
-                           log_location="/mnt/data/clustersitter/")
+                           log_location="/mnt/data/clustersitter")
     sitter.start()
 
     localhost = MachineConfig("localhost",

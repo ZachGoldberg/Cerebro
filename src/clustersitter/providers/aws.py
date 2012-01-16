@@ -35,7 +35,7 @@ class AmazonEC2(MachineProvider):
             logger.info("Download EC2 Region List")
             self.regions = ec2.regions()
         except boto.exception.NoAuthHandlerFound:
-            logger.warn("Couldn't connect to EC2.  Auth Error.  " +
+            logger.error("Couldn't connect to EC2.  Auth Error.  " +
                          "Ensure AWS crednetials are set in the env " +
                          "(AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY")
 
@@ -101,7 +101,7 @@ class AmazonEC2(MachineProvider):
                 else:
                     available += 1
 
-            logger.warn("%s of %s instances are ready" % (available,
+            logger.info("%s of %s instances are ready" % (available,
                                                            len(instances)))
             done = all_found
             if not done:
@@ -109,7 +109,7 @@ class AmazonEC2(MachineProvider):
 
         time.sleep(45)
 
-        logger.warn("All instances up, returning from AWS deploy routine")
+        logger.info("All instances up, returning from AWS deploy routine")
 
         return [AmazonEC2.config_from_instance(i) for i in instances]
 

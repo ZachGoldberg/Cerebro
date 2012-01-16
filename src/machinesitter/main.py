@@ -72,9 +72,6 @@ def main(sys_args=None):
     except:
         pass
 
-    if args.daemon:
-        daemonize()
-
     manager = machinemanager.MachineManager(args.taskfile,
                                             config['log_location'],
                                             machine_sitter_starting_port=40000,
@@ -88,6 +85,9 @@ def main(sys_args=None):
         manager.add_new_task(task)
 
     manager.start()
+
+    if args.daemon:
+        daemonize()
 
     # wait forever
     while True:

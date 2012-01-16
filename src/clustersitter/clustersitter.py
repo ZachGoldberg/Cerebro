@@ -160,9 +160,11 @@ class ClusterSitter(object):
                    providers.aws,
                    deploymentrecipe]
 
-        all_file = FileHandler("%s/all.log" % self.log_location)
         formatter = logging.Formatter(
             '%(asctime)s - %(name)s:%(levelname)s - %(message)s')
+
+        all_file = FileHandler("%s/all.log" % self.log_location)
+        all_file.setFormatter(formatter)
 
         self.logfiles = ["%s/all.log" % self.log_location]
 
