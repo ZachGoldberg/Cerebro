@@ -57,12 +57,15 @@ class HasMachineSitter(object):
             self.loaded = False
             import traceback
             traceback.print_exc()
+            logger.error(traceback.format_exc())
 
         if tasks != None:
             self.loaded = True
         else:
             self.loaded = False
 
+        logger.info("Get stats for %s result: %s" % (str(self),
+                                                     self.loaded))
         return self.loaded
 
     def _get_machinename(self):

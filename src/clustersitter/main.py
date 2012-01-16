@@ -103,7 +103,16 @@ def main(sys_args=None):
             "restart": True,
             "uid": 0
         },
-        deployment_layout={'aws-us-east-1a': {'cpu': 1, 'mem': 50}},
+        deployment_layout={
+            'aws-us-east-1a': {
+                'cpu': 2,
+                'mem': 50
+                },
+            'aws-us-east-1b': {
+                'cpu': 1,
+                'mem': 50
+                }
+            },
         deployment_recipe=None,
         )
 

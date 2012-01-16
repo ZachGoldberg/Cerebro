@@ -107,6 +107,12 @@ class ProductionJob(object):
                 # so another job doesn't pick it up while we're deploying
 
             if required_new_machine_count > 0:
+                logging.info(
+                    "Spawning a thread for " +
+                    "%s machines for job %s in zone %s" % (
+                        required_new_machine_count,
+                        self.name, zone))
+
                 spawn_thread = threading.Thread(
                     target=sitter.spawn_machines,
                     args=(zone, required_new_machine_count, self))

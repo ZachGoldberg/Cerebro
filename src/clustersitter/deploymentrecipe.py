@@ -56,7 +56,17 @@ class DeploymentRecipe(object):
         return self.run("sudo bash -c '%s'" % cmd)
 
     def deploy(self):
-        retval = self.run_deploy()
+        # 2 tries
+        try:
+            retval = self.run_deploy()
+        except:
+            try:
+                retval = self.run_deploy()
+            except:
+                # TODO Log this instead of printing it
+                import traceback
+                traceback.print_exc()
+                return False
 
         if self.post_callback:
             self.post_callback()

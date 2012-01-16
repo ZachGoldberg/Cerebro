@@ -15,6 +15,7 @@ import machineconfig
 import machinemonitor
 import monitoredmachine
 import productionjob
+import sittercommon.machinedata
 
 from providers.aws import AmazonEC2
 from deploymentrecipe import DeploymentRecipe, MachineSitterRecipe
@@ -162,7 +163,8 @@ class ClusterSitter(object):
                    monitoredmachine,
                    productionjob,
                    providers.aws,
-                   deploymentrecipe]
+                   deploymentrecipe,
+                   sittercommon.machinedata]
 
         formatter = logging.Formatter(
             '%(asctime)s - %(name)s:%(levelname)s - %(message)s')
@@ -181,6 +183,8 @@ class ClusterSitter(object):
             handler.setFormatter(formatter)
             module.logger.addHandler(all_file)
             module.logger.addHandler(handler)
+
+        socket.setdefaulttimeout(1)
 
     def build_recipe(self, recipe_class, machine,
                      post_callback=None, options=None):
@@ -320,10 +324,14 @@ class ClusterSitter(object):
         machineconfigs = provider.fill_request(zone=zone,
                                                cpus=count,
                                                mem_per_job=mem_per_job)
+        if not machineconfigs:
+            # Decrement spawning machines and return
+            pass
 
         machines = [MonitoredMachine(m) for m in machineconfigs]
 
         # Now build the deployments
+        # TODO do this in parallel
         for machine in machines:
             #, recipe_class, machine, post_callback, options):
             if job.deployment_recipe:
@@ -333,20 +341,25 @@ class ClusterSitter(object):
                     post_callback=None,
                     options=job.recipe_options)
 
-                # TODO -- Can we do this here?  Are we in the right thread?
                 recipe.deploy()
 
         # then do tasksitter deployment
         for machine in machines:
+            logging.info("Building recipe to deploy tasksitter to %s" % machine)
             recipe = self.build_recipe(MachineSitterRecipe, machine)
 
-            # TODO -- Can we do this here?  Are we in the right thread?
-            recipe.deploy()
+            val = recipe.deploy()
+            if not val:
+                # TODO: decrement spawning_machines and decomission
+                # Test killing a machine mid-deployment
+                pass
+
             machine.initialize()
             machine.start_task(job)
 
-        # then add it to the monitoring system
-        self.add_machines(machines)
+            # Npw add it to monitoring!
+            self.add_machines([machine])
+
         # Done!
 
     def _register_sitter_failure(self, monitored_machine, monitor):
@@ -397,33 +410,36 @@ class ClusterSitter(object):
 
             # Now see if we need to add any new machines to any jobs
             for job in self.state.jobs:
-                for zone in job.get_shared_fate_zones():
-                    while job.name not in self.state.job_fill:
-                        logger.info(
-                            "Doctor waiting for calculator thread "
-                            "to kick in before filling jobs " +
-                            "(%s, %s)" % (job.name, self.state.job_fill))
-                        time.sleep(0.5)
+                while job.name not in self.state.job_fill:
+                    logger.info(
+                        "Doctor waiting for calculator thread "
+                        "to kick in before filling jobs " +
+                        "(%s, %s)" % (job.name, self.state.job_fill))
+                    time.sleep(0.5)
 
-                    """
-                    Always refill the job -- if we're fill then
-                    this is a noop.  The real reason for this is that inside
-                    refill_job we have a "spawning_machines" tracker.
-                    If we did a comparison here, active_machines == job.machines
-                    then spawning_machines would always have one left,
-                    and would never be zeroe'd out after an initial spawn.
-                    This is because idle_required is what decrements the spawn
-                    count, which only happens if we call refill job when there
-                    are (active_machines + spawning_machines > needed_machines)
-                    If we had a condition here refill IFF active machines < needed_machines
-                    then the above condition would never be met when spawning_machines = 1
-                    and active_machines == needed_machines (aka the last machine came up
-                    """
-                    job.refill(self.state, self)
+                """
+                Always refill the job -- if we're fill then
+                this is a noop.  The real reason for this is that inside
+                refill_job we have a "spawning_machines" tracker.
+                If we did a comparison here, active_machines == job.machines
+                then spawning_machines would always have one left,
+                and would never be zeroe'd out after an initial spawn.
+                This is because idle_required is what decrements the spawn
+                count, which only happens if we call refill job when there
+                are (active_machines + spawning_machines > needed_machines)
+                If we had a condition here refill IFF active machines < needed_machines
+                then the above condition would never be met when spawning_machines = 1
+                and active_machines == needed_machines (aka the last machine came up
+                """
+                job.refill(self.state, self)
 
-            # Now do any other fabric type work
+            # Now do any other remoting type work
+            deployed = []
             for recipe in self.state.pending_recipes:
                 recipe.deploy()
+                deployed.append(recipe)
+
+            for recipe in deployed:
                 self.state.pending_recipes.remove(recipe)
 
             time_spent = datetime.now() - start_time

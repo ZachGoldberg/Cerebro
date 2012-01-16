@@ -66,10 +66,11 @@ class AmazonEC2(MachineProvider):
         this request.  For simplicity for now
         we'll just spin up one m1.small per cpu.
         """
+        # TODO if this fails decomission the machines and return false
         aws_placement = zone.replace('aws-', '')
         conn = self.connection_by_zone[aws_placement]
         instance_type = 'm1.small'
-        logger.info("Spinnig up %s amazon instances..." % cpus)
+        logger.info("Spinning up %s amazon instances..." % cpus)
         reservation = conn.run_instances(
             image_id=self._get_image_by_type(aws_placement, instance_type),
             key_name=self.config[aws_placement]['key_name'],

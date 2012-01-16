@@ -5,6 +5,8 @@ import socket
 import time
 import urllib
 
+logger = logging.getLogger(__name__)
+
 
 class MachineData(object):
     def __init__(self, hostname, starting_port):
@@ -21,7 +23,7 @@ class MachineData(object):
         port = self.starting_port
         while not found:
             try:
-                logging.info("Attempting to connect to %s" % (
+                logger.info("Attempting to connect to %s" % (
                         "%s:%s" % (self.hostname, port)))
                 sock = socket.socket(socket.AF_INET)
                 sock.connect((self.hostname, port))
@@ -31,11 +33,11 @@ class MachineData(object):
                 # actually a machinesitter?
                 found = True
                 self.portnum = port
-                logging.info("Successfully connected to %s:%s" % (
+                logger.info("Successfully connected to %s:%s" % (
                         self.hosntame, self.portnum))
             except:
                 port += 1
-                if port > self.starting_port + 100:
+                if port > self.starting_port + 50:
                     self.url = ""
                     self.portnum = None
                     return
@@ -51,16 +53,18 @@ class MachineData(object):
             hostname = self.url
 
         try:
-            val = function("%s/%s" % (hostname, path), data=data)
+            val = function("%s/%s" % (hostname, path), data=data,
+                           timeout=5)
         except:
             self._find_portnum()
             hostname = host
             if not hostname:
                 hostname = self.url
             try:
-                val = function("%s/%s" % (hostname, path), data=data)
+                val = function("%s/%s" % (hostname, path), data=data,
+                               timeout=5)
             except:
-                logging.warn("Couldn't execute %s/%s!" % (
+                logger.warn("Couldn't execute %s/%s!" % (
                         hostname, path))
                 return None
 
