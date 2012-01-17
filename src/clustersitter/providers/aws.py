@@ -71,16 +71,22 @@ class AmazonEC2(MachineProvider):
         conn = self.connection_by_zone[aws_placement]
         instance_type = 'm1.small'
         logger.info("Spinning up %s amazon instances..." % cpus)
-        reservation = conn.run_instances(
-            image_id=self._get_image_by_type(aws_placement, instance_type),
-            key_name=self.config[aws_placement]['key_name'],
-            security_groups=self.config[aws_placement]['security_groups'],
-            min_count=cpus,
-            max_count=cpus,
-            instance_type=instance_type,
-            placement=aws_placement,
-            monitoring_enabled=False
-            )
+        reservation = None
+        try:
+            reservation = conn.run_instances(
+                image_id=self._get_image_by_type(aws_placement, instance_type),
+                key_name=self.config[aws_placement]['key_name'],
+                security_groups=self.config[aws_placement]['security_groups'],
+                min_count=cpus,
+                max_count=cpus,
+                instance_type=instance_type,
+                placement=aws_placement,
+                monitoring_enabled=False
+                )
+        except:
+            import traceback
+            logger.error(traceback.format_exc())
+            return False
 
         instance_ids = [i.id for i in reservation.instances]
         logger.info("Reservation made for %s instances of type %s" % (
@@ -88,11 +94,20 @@ class AmazonEC2(MachineProvider):
         logger.info("Ids: %s" % instance_ids)
         done = False
         instances = []
+        failure_count = 0
         while not done:
             # Add logging here
             # Don't wait for all of them, incase some don't come up
             available = 0
-            reservation = conn.get_all_instances(instance_ids)[0]
+            reservation = None
+            try:
+                reservation = conn.get_all_instances(instance_ids)[0]
+            except:
+                failure_count += 1
+                if failure_count > 5:
+                    logger.error(traceback.format_exc())
+                    return False
+                continue
             instances = reservation.instances
             all_found = True
             for instance in instances:
@@ -107,8 +122,6 @@ class AmazonEC2(MachineProvider):
             done = all_found
             if not done:
                 time.sleep(1)
-
-        time.sleep(45)
 
         logger.info("All instances up, returning from AWS deploy routine")
 

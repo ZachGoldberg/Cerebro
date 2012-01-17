@@ -14,7 +14,7 @@ class MachineMonitor:
         self.monitored_machines = [m for m in monitored_machines]
         self.add_queue = []
         self.pull_failures = {}
-        self.failure_threshold = 1
+        self.failure_threshold = 15
 
         logger.info("Initialized a machine monitor for %s" % (
                 str(self.monitored_machines)))

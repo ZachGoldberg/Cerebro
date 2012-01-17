@@ -80,6 +80,7 @@ class ProductionJob(object):
             logger.info(
                 ("Calculated job requirements for %s in %s: " % (self.name,
                                                                  zone)) +
+                "Currently Active: %s " % (state.job_fill[self.name][zone]) +
                 "Idle Required: %s, Total New: %s " % (
                     idle_required,
                     required_new_machine_count) +

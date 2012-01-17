@@ -66,7 +66,7 @@ def main(sys_args=None):
     provider_config = {
         'aws': {
             'us-east-1a': {
-                '32b_image_id': 'ami-c59259ac',
+                '32b_image_id': 'ami-8b78afe2',
                 '64b_image_id': 'ami-eb915a82',
                 'key_name': 'WiFastAWS',
                 'security_groups': ['clustersitter'],
@@ -105,11 +105,11 @@ def main(sys_args=None):
         },
         deployment_layout={
             'aws-us-east-1a': {
-                'cpu': 0,
+                'cpu': 2,
                 'mem': 50
                 },
             'aws-us-east-1b': {
-                'cpu': 0,
+                'cpu': 2,
                 'mem': 50
                 }
             },

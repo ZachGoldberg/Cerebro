@@ -1,9 +1,15 @@
 import logging
+import threading
+
+from deploymentrecipe import MachineSitterRecipe
+from monitoredmachine import MonitoredMachine
 
 logger = logging.getLogger(__name__)
 
 
 class StateMachine(object):
+    states = {}
+
     def __init__(self):
         self.state = 0
         self.last_state = 0
@@ -18,8 +24,11 @@ class StateMachine(object):
         self.last_state = self.state
         self.state = new_state
 
+    def next(self):
+        self.set_state(self.state + 1)
+
     def __str__(self):
-        return "%s.%s" % (self.state, self.states[self.state])
+        return "%s: %s" % (self.state, self.states[self.state])
 
 
 class MachineDeploymentState(StateMachine):
@@ -61,12 +70,12 @@ class JobFiller(object):
             machine.state.set_state(3)
 
     def num_remaining(self):
-        if self.state.get_state() != 3:
+        if self.state.get_state() < 3:
             return self.num_cores
         else:
             count = 0
             for machine in self.machines:
-                if machine.state.get_state() != 6:
+                if not machine.state or machine.state.get_state() != 6:
                     count += 1
 
             return count
@@ -96,23 +105,27 @@ class JobFiller(object):
         for machine in self.machines:
             machine.state = None
 
+        logger.info("Job Filler: Done!")
+
     def run_create_resources(self):
         #!MACHINEASSUMPTION! Should calculate core (input_machines.num_cores).
         if len(self.machines) < self.num_cores:
             new_machine_count = self.num_cores - len(self.machines)
             # Then spin some up!
             if self.launch_machines(new_machine_count):
-                self.state.set_state(1)
+                self.state.next()
             else:
                 logger.warn(
                     "Couldn't launch machines for %s?" % self.job.name)
+        else:
+            self.state.next()
 
     def deploy_monitoring_code(self):
         # TODO Parallelize this somehow
         for machine in self.machines:
-            while machine.state.get_state() < 2:
+            while machine.state.get_state() <= 2:
                 machine.state.set_state(2)
-                recipe = sitter.build_recipe(
+                recipe = self.job.sitter.build_recipe(
                     MachineSitterRecipe,
                     machine,
                     post_callback=None,
@@ -125,31 +138,36 @@ class JobFiller(object):
                     logger.warn(
                         "Couldn't deploy monitoring code to %s?" % (
                             str(machine)))
+        self.state.next()
 
     def deploy_job_code(self):
         # TODO Parallelize this somehow
         for machine in self.machines:
-            while machine.state.get_state() < 3:
+            while machine.state.get_state() <= 3:
                 machine.state.set_state(3)
-                if self.deployment_recipe:
-                    recipe = sitter.build_recipe(
+                val = True
+                if self.job.deployment_recipe:
+                    recipe = self.job.sitter.build_recipe(
                         self.job.deployment_recipe,
                         machine,
                         post_callback=None,
                         options=None)
 
                     val = recipe.deploy()
-                    if val:
-                        machine.state.set_state(4)
-                    else:
-                        logger.warn(
-                            "Couldn't deploy job code to %s?" % (
-                                str(machine)))
+
+                if val:
+                    machine.state.set_state(4)
+                else:
+                    logger.warn(
+                        "Couldn't deploy job code to %s?" % (
+                            str(machine)))
+
+        self.state.next()
 
     def launch_tasks(self):
         # TODO Parallelize this somehow
         for machine in self.machines:
-            while machine.state.get_state() < 4:
+            while machine.state.get_state() <= 4:
                 machine.state.set_state(4)
                 machine.initialize()
                 machine.start_task(self.job)
@@ -165,19 +183,14 @@ class JobFiller(object):
                         "Tried to start %s on %s but failed?" % (
                             self.job.name, str(machine)))
 
-        if required_new_machine_count > 0:
-            logging.info(
-                "Spawning a thread for " +
-                "%s machines for job %s in zone %s" % (
-                    required_new_machine_count,
-                    self.name, zone))
+        self.state.next()
 
     def add_to_monitoring(self):
-        self.sitter.add_machines(self.machines)
-        self.state.set_state(5)
+        self.job.sitter.add_machines(self.machines)
+        self.state.next()
 
     def launch_machines(self, new_machine_count):
-        provider = self.job.state.provider_by_zone[self.zone]
+        provider = self.job.sitter.state.provider_by_zone[self.zone]
         mem_per_job = self.job.deployment_layout[self.zone]['mem']
 
         machineconfigs = provider.fill_request(zone=self.zone,
@@ -190,5 +203,7 @@ class JobFiller(object):
 
         for machine in machines:
             machine.state = MachineDeploymentState()
+
+        self.machines.extend(machines)
 
         return True

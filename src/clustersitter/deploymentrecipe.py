@@ -119,6 +119,9 @@ class MachineSitterRecipe(DeploymentRecipe):
                     remote_dir,
                     newdirname))
 
+            # Clear any old ones
+            self.sudo("pkill -9 -f sitter")
+
             # Launch a machine sitter as root
             self.sudo("cd %s/%s && ./bin/machinesitter --daemon" % (
                     remote_dir,
