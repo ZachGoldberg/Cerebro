@@ -1,5 +1,3 @@
---Fabric is terrible.  Use a proper SSH library that is parallelizable.
--- Consider turning job spawning into some kind of state machine?
 -- machine sitter / console
  - Setup ENV with defaults for all child tasks
  - Configure actions in console / http
@@ -7,22 +5,12 @@
  - prettier web UI for starting/stopping tasks
 
 -- cluster sitter ideas
-   - Reconnect to a machine sitter if it disappears (changes port)
-   - Have .cfg per task which specifies all options (like borg)
-   - Daemon which monitors all known machines
    - local database (or cloud hosted somehow to avoid downtime?) of
       machines
-   - ability to spinup new machines
-   - monitors if machines are alive via machinesitter.  If unreachable
-      try and ssh in (via fabric) and reboot sitter & tasks.  If not,
-      kill the machine and automatically remake it
-   - Cluster sitter knows how to take latest build and deploy it
-      to a machine and boot the machinesitter.
    - Web UI to show... everything
 
 -- For all stats sitters, look for a VERSION file and show that if available
 
-Test clustersitter
 Flesh out the stats collector, show CPU usage and history etc.
 Set CPU Core Affinity
  -- (requires a subpackage 'affinity')

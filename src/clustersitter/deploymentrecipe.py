@@ -73,9 +73,8 @@ class DeploymentRecipe(object):
             try:
                 retval = self.run_deploy()
             except:
-                # TODO Log this instead of printing it
                 import traceback
-                traceback.print_exc()
+                logger.error(traceback.format_exc())
                 return False
 
         logger.info("Calling post-deply callback for %s" % self.hostname)
