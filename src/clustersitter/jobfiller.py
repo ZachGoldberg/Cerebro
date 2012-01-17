@@ -199,6 +199,8 @@ class JobFiller(object):
     def add_to_monitoring(self):
         # Ensure the machines aren't already monitored
         machines_to_add = []
+        # TODO move this to a function in clustersitter.py
+        # def check_already_monitored or some such
         for machine in self.machines:
             found = False
             for monitor, _ in self.job.sitter.state.monitors:

@@ -29,3 +29,23 @@ Task Sitter Details:
 
  -- Monitoring
     - HTTP Based Monitor (--http-monitoring, --http-monitoring-port)
+
+Machine Sitter Details:
+ -- Monitor a set of TaskSitters
+ -- Reboot TaskSitters if they fail (should never happen)
+ -- Provide an API to add new tasks and start/stop tasks on a machine
+ -- Provides central log access for all tasks
+
+Cluster Sitter Details:
+ -- Monitors a set of MachineSitters in a cluster
+ -- Accepts 'Jobs' which define how many cpus/memory a particular task needs,
+ finds or creates machines (and deploys machinesitters if necessary) and then
+ activates the "Jobs" as tasks on each machine
+ -- Provides a web UI to see where all your tasks are.
+ -- Pulls in data and aggregates it from the cluster, to see task CPU
+ usage, task rebooting behavior, machine performance data etc.
+ -- Provides an abstract "DeploymentRecipe" class that you can fill out
+ to have the clustersitter actually deploy your jobs automagically.
+ -- Presently knows how to spinup/teardown AWS instances, though implementing
+ other cloud providers should be pretty straightforward as there is a
+ pretty minimal interface to the 'providers'.

@@ -361,8 +361,6 @@ class ClusterSitter(object):
 
     def _machine_doctor(self):
         """
-        !! Note: This is the ONLY place where we can run Fabric !!
-
         Try and SSH into the machine and see whats up.  If we can't
         get to it and reboot a sitter than decomission it.
 

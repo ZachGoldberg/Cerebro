@@ -1,7 +1,11 @@
-What happens to tasks and job fill if a machine is in POLL_FAILURES?
-   Will the job refill or wait for machine doctor to finish?
-
+--What happens to tasks and job fill if a machine is in POLL_FAILURES?
+ - Right now nothing, the job thinks things are OK
+ - First thing MachineDoctor does should be to clear the machine's
+   tasks so the job will refill it elsewhere
 -- Machine Doctor should use the job filler to launch machines
+ - This will require a pretty non-trivial refactor of the jobfiller,
+   but should be done
+
 -- Add jobs while clustersitter is running
 -- Lots of links in HTML page, to STDOUT etc.
 -- Performance data in web console!
