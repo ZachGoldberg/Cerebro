@@ -1,0 +1,21 @@
+<html>
+<body>
+<h3> Stats </h3>
+<table>
+<tr>
+  <th>
+   Stat
+  </th>
+  <th>
+   Value
+  </th>
+</tr>
+<?py for key, value in data.items(): ?>
+  <tr>
+    <td> ${key} </td>
+    <td align='center'> ${value} </td>
+  </tr>
+<?py #endfor ?>
+</table>
+</body>
+</html>

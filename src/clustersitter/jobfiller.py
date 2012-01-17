@@ -81,7 +81,13 @@ class JobFiller(object):
             return count
 
     def start_fill(self):
-        self.thread = threading.Thread(target=self.run)
+        self.thread = threading.Thread(
+            target=self.run,
+            name="JobFiller-%s:%s:%s" % (
+                self.job.name,
+                self.zone,
+                self.num_cores))
+
         self.thread.start()
 
     def run(self):
@@ -90,16 +96,21 @@ class JobFiller(object):
             state = self.state.get_state()
             logger.info("Running State: %s" % str(self.state))
 
-            if state == 0:
-                self.run_create_resources()
-            elif state == 1:
-                self.deploy_monitoring_code()
-            elif state == 2:
-                self.deploy_job_code()
-            elif state == 3:
-                self.launch_tasks()
-            elif state == 4:
-                self.add_to_monitoring()
+            try:
+                if state == 0:
+                    self.run_create_resources()
+                elif state == 1:
+                    self.deploy_monitoring_code()
+                elif state == 2:
+                    self.deploy_job_code()
+                elif state == 3:
+                    self.launch_tasks()
+                elif state == 4:
+                    self.add_to_monitoring()
+            except:
+                import traceback
+                traceback.print_exc()
+                logger.error(traceback.format_exc())
 
         # We're done, so clear the deployment states
         for machine in self.machines:
@@ -186,7 +197,21 @@ class JobFiller(object):
         self.state.next()
 
     def add_to_monitoring(self):
-        self.job.sitter.add_machines(self.machines)
+        # Ensure the machines aren't already monitored
+        machines_to_add = []
+        for machine in self.machines:
+            found = False
+            for monitor, _ in self.job.sitter.state.monitors:
+                if machine in monitor.monitored_machines:
+                    found = True
+                    break
+
+            if not found:
+                machines_to_add.append(machine)
+
+        if machines_to_add:
+            self.job.sitter.add_machines(machines_to_add)
+
         self.state.next()
 
     def launch_machines(self, new_machine_count):

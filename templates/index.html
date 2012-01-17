@@ -1,0 +1,16 @@
+<html>
+<body>
+<h3>
+Welcome to a ${name}
+</h3>
+
+Subpages:
+<ul>
+<?py for key, value in handlers.items(): ?>
+  <li> <a href='${key}'>${key}</a></li>
+<?py #endfor ?>
+</ul>
+
+
+</body>
+</html>

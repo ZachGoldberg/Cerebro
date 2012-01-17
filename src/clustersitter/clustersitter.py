@@ -18,12 +18,13 @@ import monitoredmachine
 import productionjob
 import sittercommon.machinedata
 
-from providers.aws import AmazonEC2
+from clusterstats import ClusterStats
 from deploymentrecipe import DeploymentRecipe, MachineSitterRecipe
 from machineconfig import MachineConfig
 from machinemonitor import MachineMonitor
 from monitoredmachine import MonitoredMachine
 from productionjob import ProductionJob
+from providers.aws import AmazonEC2
 from sittercommon import http_monitor
 from sittercommon import logmanager
 from sittercommon.machinedata import MachineData
@@ -52,6 +53,8 @@ sake we're cutting some corners (FOR NOW) and assuming one job
 per machine.  These sections are noted with the comment
 #!MACHINEASSUMPTION!
 """
+
+
 class ClusterState(object):
     def __init__(self, parent):
         # list of tuples (MachineMonitor, ThreadObj)
@@ -64,7 +67,6 @@ class ClusterState(object):
         self.providers = {}
         self.unreachable_machines = []
         self.machine_spawn_threads = []
-        self.pending_recipes = []
         self.idle_machines = []
         self.sitter = parent
 
@@ -147,6 +149,8 @@ class ClusterSitter(object):
         self.user = user
         self.provider_config = provider_config
         self.log_location = log_location
+        self.launch_time = datetime.now()
+        self.start_state = "Not Started"
 
         self.state = ClusterState(self)
 
@@ -162,10 +166,12 @@ class ClusterSitter(object):
         # In seconds
         self.stats_poll_interval = 2
 
-        self.stats = None
+        self.stats = ClusterStats(self)
         self.http_monitor = http_monitor.HTTPMonitor(self.stats,
                                                      self,
                                                      self.get_next_port())
+
+        self.http_monitor.add_handler('/overview', self.stats.overview)
 
         # Do lots of logging configuration
         modules = [sys.modules[__name__],
@@ -229,10 +235,11 @@ class ClusterSitter(object):
         return works
 
     def add_machines(self, machines):
-        """
-        """
-        monitored_machines = []
+        if not machines:
+            return
 
+        monitored_machines = []
+        logger.info("Adding machines to monitoring: %s" % machines)
         for m in machines:
             mm = m
             if not isinstance(mm, MonitoredMachine):
@@ -247,8 +254,16 @@ class ClusterSitter(object):
         # Spread the machines out evenly across threads
         num_threads_to_use = min(self.worker_thread_count, len(machines)) or 1
         machines_per_thread = int(len(machines) / num_threads_to_use) or 1
+
+        # Take care of individisable # of machines by thread
+        if machines_per_thread * num_threads_to_use != len(machines):
+            machines_per_thread += 1
+
         self.state.monitors.sort(key=lambda x: x[0].num_monitored_machines())
         monitors_to_use = self.state.monitors[:num_threads_to_use]
+
+        logger.info("Add to Monitoring, num_threads_to_use: %s" % num_threads_to_use +
+                    "machines_per_thread: %s, " % machines_per_thread)
 
         for index, monitor in enumerate(monitors_to_use):
             start_index = index * machines_per_thread
@@ -265,6 +280,12 @@ class ClusterSitter(object):
                     monitored_machines[start_index:end_index])
 
     def start(self):
+        self.http_monitor.start()
+        logger.info("Cluster Sitter Monitor started at " + \
+            "http://localhost:%s" % self.http_monitor.port)
+
+        self.start_state = "Starting Up"
+
         logger.info("Initializing MachineProviders")
         # Initialize (non-started) machine monitors first
         # Then download machine data, populate data structure and monitors
@@ -276,7 +297,8 @@ class ClusterSitter(object):
             machinemonitor = MachineMonitor(parent=self,
                                             number=threadnum)
             thread = threading.Thread(target=self._run_monitor,
-                                      args=(machinemonitor, ))
+                                      args=(machinemonitor, ),
+                                      name='Monitoring-%s' % threadnum)
             self.state.monitors.append((machinemonitor, thread))
 
         aws = AmazonEC2(self.provider_config['aws'])
@@ -296,10 +318,6 @@ class ClusterSitter(object):
         logger.info("Zone List: %s" % self.state.zones)
 
         # Kickoff all the threads at once
-        self.http_monitor.start()
-        logger.info("Cluster Sitter Monitor started at " + \
-            "http://localhost:%s" % self.http_monitor.port)
-
         if self.daemon:
             self.logmanager.setup_all()
 
@@ -309,12 +327,16 @@ class ClusterSitter(object):
             monitor[1].start()
 
         logger.info("Starting metadata calculator")
-        self.calculator = threading.Thread(target=self._calculator)
+        self.calculator = threading.Thread(target=self._calculator,
+                                           name="Calculator")
         self.calculator.start()
 
         logger.info("Starting machine recovery thread")
-        self.machine_doctor = threading.Thread(target=self._machine_doctor)
+        self.machine_doctor = threading.Thread(target=self._machine_doctor,
+                                               name="MachineDoctor")
         self.machine_doctor.start()
+
+        self.start_state = "Started"
 
     def add_job(self, job):
         logger.info("Add Job: %s" % job.name)
@@ -361,7 +383,7 @@ class ClusterSitter(object):
                 for machine, monitor in self.state.unreachable_machines:
                     logger.info("Attempting to redeploy to %s" %
                                 machine)
-                    # This is strange indeed!  Try reinstalling the clustersitter
+
                     recipe = self.build_recipe(MachineSitterRecipe, machine)
                     logger.info("Recipe for redeploy built, running it now")
                     val = recipe.deploy()

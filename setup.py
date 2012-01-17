@@ -28,5 +28,6 @@ setup(name='TaskSitter',
         #        'djangotoolbox',
         'paramiko',
         'requests',
+        'tenjin',
         ],
      )

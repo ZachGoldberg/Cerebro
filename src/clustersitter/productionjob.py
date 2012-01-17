@@ -20,6 +20,7 @@ class ProductionJob(object):
         self.deployment_recipe = deployment_recipe
         self.recipe_options = recipe_options
         self.sitter = None
+        self.currently_spawning = {}
 
         # A mapping of SharedFateZoneName: {'cpu': #CPU, 'mem': MB_Mem_Per_CPU}
         self.deployment_layout = deployment_layout
@@ -27,6 +28,7 @@ class ProductionJob(object):
         self.fillers = {}
         for zone in self.deployment_layout.keys():
             self.fillers[zone] = []
+            self.currently_spawning[zone] = 0
 
         #!MACHINEASSUMPTION!
         # Hack to make num_machines == num_cpu, for now.
@@ -46,6 +48,9 @@ class ProductionJob(object):
 
     def get_name(self):
         return self.task_configuration['name']
+
+    def __str__(self):
+        return self.name
 
     def refill(self, state, sitter):
         self.sitter = sitter
@@ -70,6 +75,8 @@ class ProductionJob(object):
             currently_spawning = 0
             for filler in current_fillers:
                 currently_spawning += filler.num_remaining()
+
+            self.currently_spawning[zone] = currently_spawning
 
             idle_required -= currently_spawning
 
@@ -104,3 +111,4 @@ class ProductionJob(object):
                                    zone, usable_machines)
                 filler.start_fill()
                 self.fillers[zone].append(filler)
+                # TODO -- Should delete finished fillers

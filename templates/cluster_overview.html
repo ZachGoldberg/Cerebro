@@ -1,0 +1,520 @@
+<html>
+<head>
+<title>ClusterSitter Overview</title>
+<style>
+body
+{
+	margin: 0 0 30px 0;
+	padding: 0;
+	background: #DDD;
+	font-size: 75%;
+	font-family: "arial", "verdana", "tahoma", "georgia", "trebuchet ms";
+	color: #555;
+}
+
+img
+{
+	border: 0;
+}
+
+#container
+{
+	margin: 0 auto;
+	width: ${pagewidth}px;
+    background: #FFF;
+}
+
+#headercont
+{
+	width: ${pagewidth}px;
+	height: 100px;
+	border-bottom: 2px solid #F90;
+}
+
+#headerleft
+{
+	float: left;
+	width: 300px;
+	height: 100px;
+}
+
+#headerleft h1
+{
+	margin: 48px 0 0 15px;
+	padding: 0;
+	font-size: 220%;
+	font-weight: bold;
+	color: #D90;
+	letter-spacing: -1px;
+}
+
+#headerleft h1 span
+{
+	color: #FFC875;
+	font-weight: normal;
+}
+
+#headerright
+{
+	float: left;
+	width: 500px;
+	height: 100px;
+}
+
+#headerright ul
+{
+	margin: 55px 15px 0 0;
+	padding: 0;
+	list-style-type: none;
+	text-align: right;
+	color: #CCC;
+}
+
+#headerright ul li
+{
+	display: inline;
+	margin: 0 0 0 10px;
+}
+
+#headerright ul li a
+{
+	text-decoration: none;
+	color: #999;
+	font-weight: bold;
+}
+
+#headerright ul li a.active
+{
+	text-decoration: none;
+	color: #D90;
+	font-weight: bold;
+}
+
+#headerright ul li a:hover
+{
+	text-decoration: none;
+	color: #333;
+}
+
+#maincont
+{
+	width: ${pagewidth}px;
+	line-height: 160%;
+	padding: 15px 0 0 0;
+	border-bottom: 2px solid #D90;
+}
+
+#maincont p
+{
+	margin: 0 15px 15px 40px;
+}
+
+#maincont h2
+{
+	margin: 0px 0px 15px 0px;
+	padding: 5px 15px;
+	font-size: 180%;
+	font-weight: bold;
+	color: #D90;
+	border-bottom: 1px solid #E5E5E5;
+}
+
+#maincont h3
+{
+	margin: 0 0 15px 10px;
+	padding: 5px 15px;
+	font-size: 140%;
+	font-weight: bold;
+	color: #D90;
+	border-bottom: 1px solid #E5E5E5;
+}
+
+#maincont h4
+{
+	margin: 0 0 15px 20px;
+	padding: 5px 15px;
+	font-size: 130%;
+	font-weight: bold;
+	color: #622;
+	border-bottom: 1px solid #E5E5E5;
+}
+
+#mainleft
+{
+	float: left;
+	width: 485px;
+	padding: 0 15px 0 0;
+}
+
+#mainleft img
+{
+	float: left;
+	border: 1px solid #CDCDCD;
+	padding: 5px;
+	margin: 0 15px 5px 15px;
+}
+
+#mainright
+{
+	float: left;
+	width: 285px;
+	padding: 0 0 0 15px;
+}
+
+#bottom
+{
+	clear: both;
+	width: ${pagewidth}px;
+}
+
+#footercont
+{
+	float: left;
+	width: ${pagewidth}px;
+	height: 50px;
+	color: #999;
+    background: #FFF;
+}
+
+#footercont p
+{
+	margin: 0;
+	padding: 15px;
+}
+
+#footercont a
+{
+	color: #999;
+	text-decoration: none;
+}
+
+#footercont a:hover
+{
+	color: #D90;
+	text-decoration: none;
+}
+
+#footerleft
+{
+	float: left;
+	width: 300px;
+	height: 50px;
+}
+
+#footerright
+{
+	float: left;
+	width: 500px;
+	height: 50px;
+	text-align: right;
+}
+
+table
+{
+    border-width: 1px;
+	border-spacing: 2px;
+	border-style: solid;
+	border-color: gray;
+	border-collapse: separate;
+    padding: 2px;
+    font-size: 100%;
+	font-family: "arial", "verdana", "tahoma", "georgia", "trebuchet ms";
+	color: #555;
+    width: 100%;
+}
+
+td
+{
+	border-width: 1px;
+	padding: 5px;
+	border-style: dotted;
+	border-color: gray;
+	background-color: white;
+	-moz-border-radius: ;
+}
+
+th
+{
+	border-width: 1px;
+	padding: 2px;
+	border-style: dotted;
+	border-color: gray;
+	background-color: white;
+	-moz-border-radius: ;
+}
+
+</style>
+</head>
+<body>
+<div id='container'>
+  <div id='headercont'>
+   <div id='headerleft'>
+      <h1>ClusterSitter Overview</h1>
+   </div>
+   <div id='headerright'>
+     <ul>
+       <li>
+         <a href='#'>Main Overview</a>
+       </li>
+       <li> | </li>
+       <li>
+         <a href='#'>Logs</a>
+       </li>
+     </ul>
+   </div>
+  </div>
+  <div id='maincont'>
+    <h2>Active Job Fillters / Launching Processes</h2>
+    <p>
+    <table>
+      <tr>
+        <th>
+          Job Name
+        </th>
+        <th>
+          Zone
+        </th>
+        <th>
+          Number of new cores
+        </th>
+        <th>
+          Filler State
+        </th>
+        <th>
+          New-Machine State
+        </th>
+      </tr>
+    <?py for job in data['jobs']: ?>
+    <?py for filler in job['fillers']: ?>
+      <tr>
+        <td>
+          ${job['name']}
+        </td>
+        <td>
+          ${filler['zone']}
+        </td>
+        <td>
+          ${filler['num_cores']}
+        </td>
+        <td>
+          ${filler['state']}
+        </td>
+        <td>
+          <ul>
+          <?py for hostname, state in filler['machine_states']: ?>
+          <li>
+            ${hostname}: ${state}
+          </li>
+          <?py #endfor ?>
+          </ul>
+        </td>
+      </tr>
+    <?py #endfor ?>
+    <?py #endfor ?>
+    </table>
+    </p>
+    <h2>Running Jobs</h2>
+    <?py for jobinfo in data['jobs']: ?>
+    <h3>${jobinfo['name']}</h3>
+    <h4> Metadata </h4>
+    <p>
+      <ul>
+        <li>
+          Deployment Recipe: ${jobinfo['deployment_recipe']}
+        </li>
+        <li>
+          Recipe Options: ${jobinfo['recipe_options']}
+        </li>
+        </ul>
+    </p>
+    <h4> Task Configuration </h4>
+    <p>
+      <ul>
+        <?py for k, v in jobinfo['task_configuration'].items(): ?>
+        <li>${k}: ${v}</li>
+        <?py #endfor ?>
+      </ul>
+    </p>
+    <h4> Deployment Layout </h4>
+    <p>
+      <ul>
+      <?py for zone in jobinfo['deployment_layout']: ?>
+      <li><b> ${zone} </b>:
+        <!-- !MACHINEASSUMPTION -->
+        Active Machines: ${jobinfo['fill'].get(zone, 0)},
+        Spawning Machines: ${jobinfo['spawning'][zone]},
+        Configured Required Machines: ${jobinfo['deployment_layout'][zone]['cpu']},
+        Memory per Core: ${jobinfo['deployment_layout'][zone]['mem']}MB
+      </li>
+      <?py #endfor ?>
+      </ul>
+    <p>
+    <?py #endfor ?>
+    <h2>Tracked Machines</h2>
+    <p>
+    <table>
+      <tr>
+        <th>
+          Hostname
+        </th>
+        <th>
+          Zone
+        </th>
+        <th>
+          Performance
+        </th>
+        <th>
+          Status
+        </th>
+        <th>
+          Task Status
+        </th>
+      </tr>
+    <?py for machine in data['machines']: ?>
+      <tr>
+        <td> ${machine['hostname']} </td>
+        <td> ${machine['zone']} </td>
+        <td> ${machine['cpus']}x
+          ${machine['bits']}-bit ${machine['mem']}MB -
+          ${machine['disk']}GB
+        </td>
+        <td>
+          <?py if machine['is_in_deployment']: ?>
+          In Deployment,
+          <?py #endif ?>
+          <?py if machine['initialized']: ?>
+          Initialized,
+          <?py #endif ?>
+          <?py if machine['has_loaded_data']: ?>
+          Data Loaded,
+          <?py #endif ?>
+          <?py if machine['idle']: ?>
+          <font color='#A00'>Idle,</font>
+          <?py #endif ?>
+          <?py if machine['pull_failures']: ?>
+          <font color='#A00'><b>Pull Failures: ${machine['pull_failures']}</b></font>
+          <?py #endif ?>
+        </td>
+        <td>
+          ${machine['tasks']}
+        </td>
+      </tr>
+    <?py #endfor ?>
+    </table>
+    </p>
+    <h2>Machine Monitors</h2>
+    <p>
+      <table>
+        <tr>
+          <th>
+            Number
+          </th>
+          <th>
+            Monitored Machines
+          </th>
+          <th>
+            Add Queue
+          </th>
+          <th>
+            Pull Failures
+          </th>
+          <th>
+            Failure Threshold
+          </th>
+        </tr>
+        <?py for monitor in data['monitors']: ?>
+        <tr>
+          <td> ${monitor['number']} </td>
+          <td>
+            <ul>
+            <?py for machine in monitor['monitored_machines']: ?>
+            <li>${machine}</li>
+            <?py #endfor ?>
+            </ul>
+          </td>
+          <td>
+            <ul>
+              <?py for machine in monitor['add_queue']: ?>
+              <li>${machine}</li>
+              <?py #endfor ?>
+            </ul>
+          </td>
+          <td>
+            <ul>
+              <?py for machine, failures in monitor['pull_failures'].items(): ?>
+              <li>${machine}: <b>${failures}</b></li>
+              <?py #endfor ?>
+            </ul>
+          </td>
+          <td> ${monitor['failure_threshold']} </td>
+        </tr>
+        <?py #endfor ?>
+      </table>
+    </p>
+    <h2>ClusterSitter Thread Status</h2>
+    <ul>
+      <?py for name in data['std_threads']: ?>
+      <li>
+        ${name}:
+        <?py if data['threads'][name]: ?>
+        <font color='#0A0'>OK</font>
+        <?py else: ?>
+        <font color='#A00'>Missing</font>
+        <?py #endif ?>
+      </li>
+      <?py #endfor ?>
+      <?py for name in data['other_threads']: ?>
+      <li>
+        ${name}: <font color='#0A0'>OK</font>
+      </li>
+      <?py #endfor ?>
+    </ul>
+    <h2>Metadata</h2>
+    <ul>
+      <li>
+        Load Average: ${data['load_one_min']} ${data['load_five_min']}
+        ${data['load_fifteen_min']}
+        </li>
+      <li>
+        Clustersitter PID: ${data['clustersitter_pid']}
+      </li>
+      <li>
+        Log Location: ${data['log_location']}
+      </li>
+      <li>
+        Launch Time: ${data['launch_time']}
+      </li>
+      <li>
+        Starting State: ${data['start_state']}
+      </li>
+      <li>
+        Username: ${data['username']}
+      </li>
+      <li>
+        Keys: ${data['keys']}
+      </li>
+      <li>
+        Providers:
+        <?py for provider in data['providers'].keys(): ?>
+        ${provider}
+        <?py #endfor ?>
+      </li>
+      <li>
+        Provider Config:
+        <?py import json; provider_config = json.dumps(data['provider_config'], indent=4) ?>
+        <pre>${provider_config}</pre>
+      </li>
+    </ul>
+  </div>
+  <div id='bottom'>
+  </div>
+  <div id='footercont'>
+    <p>
+      This page brought to you by
+      <a href='http://www.zachgoldberg.com'>Zach Goldberg's</a>
+      <a href='https://github.com/ZachGoldberg/TaskSitter'>ClusterSitter</a>
+    </p>
+  </div>
+</div>
+</body>
+</html>

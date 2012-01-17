@@ -144,3 +144,6 @@ class MonitoredMachine(HasMachineSitter):
 
     def __str__(self):
         return self._get_machinename()
+
+    def __repr__(self):
+        return str(self)

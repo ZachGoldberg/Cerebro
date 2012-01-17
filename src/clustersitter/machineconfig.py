@@ -9,3 +9,9 @@ class MachineConfig(object):
         self.disk = disk
         self.login_name = None
         self.login_key = None
+
+    def __str__(self):
+        return self.hostname
+
+    def __repr__(self):
+        return str(self)

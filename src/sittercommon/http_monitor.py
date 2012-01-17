@@ -4,9 +4,15 @@ Reads data from a stats collector and exposes it via HTTP
 import os
 import simplejson
 import threading
+import tenjin
 import urlparse
+import sys
 import SocketServer
 import BaseHTTPServer
+
+# A weird requirement from tenjin to have this
+# The world explodes if we don't have it
+from tenjin.helpers import *
 
 
 class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
@@ -21,11 +27,16 @@ class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             }
 
         self.handlers.update(new_handlers)
+        self.engine = tenjin.Engine(path=['templates'])
 
         BaseHTTPServer.BaseHTTPRequestHandler.__init__(self, *args, **kwargs)
 
     def _usage(self, _):
         output = """Invalid Path Requests.  Options:<br><ul>"""
+
+        return self.engine.render('index.html', {'handlers':
+                                                     self.handlers,
+                                                 'name': sys.argv[0]})
 
         for handler in self.handlers.keys():
             output += "<li><a href='%s'>%s</a></li>" % (handler, handler)
@@ -63,7 +74,10 @@ class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     def _get_stats(self, args):
         stats = self.monitor.get_stats()
-        return self._format_dict(stats, args)
+        if "nohtml" in args:
+            return self._format_dict(stats, args)
+        else:
+            return self.engine.render('stats.html', {'data': stats})
 
     def _format_dict(self, data, args):
         """
@@ -78,10 +92,7 @@ class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             else:
                 output = "Invalid Format"
         else:
-            seperator = "<br>"
-            if "nohtml" in args:
-                seperator = "\n"
-
+            seperator = "\n"
             for key, value in data.items():
                 output += "%s=%s%s" % (key, value, seperator)
 
@@ -92,17 +103,13 @@ class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         array_args = urlparse.parse_qs(urldata.query)
         args = dict([(k, v[0]) for k, v in array_args.items()])
 
-        if not "nohtml" in args:
-            self.wfile.write("<html><body>")
-
         if not urldata.path in self.handlers:
             self.wfile.write(self._usage(args))
             return
 
-        self.wfile.write(self.handlers[urldata.path](args))
+        args['engine'] = self.engine
 
-        if not "nohtml" in args:
-            self.wfile.write("</body></html>")
+        self.wfile.write(self.handlers[urldata.path](args))
 
         return
 
@@ -143,7 +150,8 @@ class HTTPMonitor(object):
         if self.stopped:
             return
 
-        self.run_thread = threading.Thread(target=self._start_server)
+        self.run_thread = threading.Thread(target=self._start_server,
+                                           name="HTTPServer")
         self.run_thread.start()
 
     def stop(self):

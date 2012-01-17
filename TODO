@@ -1,3 +1,11 @@
+What happens to tasks and job fill if a machine is in POLL_FAILURES?
+   Will the job refill or wait for machine doctor to finish?
+
+-- Machine Doctor should use the job filler to launch machines
+-- Add jobs while clustersitter is running
+-- Lots of links in HTML page, to STDOUT etc.
+-- Performance data in web console!
+-- Archive old JobFillers?  Delete them?
 -- machine sitter / console
  - Setup ENV with defaults for all child tasks
  - Configure actions in console / http

@@ -90,7 +90,7 @@ def main(sys_args=None):
 
     sitter.add_machines([localhost])
 
-    time.sleep(2)
+    time.sleep(5)
 
     job = ProductionJob(
         task_configuration={
@@ -105,23 +105,21 @@ def main(sys_args=None):
         },
         deployment_layout={
             'aws-us-east-1a': {
-                'cpu': 2,
+                'cpu': 1,
                 'mem': 50
                 },
             'aws-us-east-1b': {
-                'cpu': 2,
+                'cpu': 1,
                 'mem': 50
                 }
             },
         deployment_recipe=None,
         )
 
-    print "!" * 100
-    print "Adding a job"
     sitter.add_job(job)
 
     # wait forever
-    os.system("tail -f %s" % (sitter.logfiles[0]))
+    os.system("tail -f -n 100 %s" % (sitter.logfiles[0]))
     while True:
         try:
             for index, name in enumerate(sitter.logfiles):
