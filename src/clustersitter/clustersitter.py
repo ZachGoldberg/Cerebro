@@ -11,6 +11,7 @@ from logging import FileHandler
 
 import providers.aws
 import deploymentrecipe
+import jobfiller
 import machineconfig
 import machinemonitor
 import monitoredmachine
@@ -52,7 +53,7 @@ per machine.  These sections are noted with the comment
 #!MACHINEASSUMPTION!
 """
 class ClusterState(object):
-    def __init__(self):
+    def __init__(self, parent):
         # list of tuples (MachineMonitor, ThreadObj)
         self.monitors = []
         self.machines_by_zone = {}
@@ -63,9 +64,9 @@ class ClusterState(object):
         self.providers = {}
         self.unreachable_machines = []
         self.machine_spawn_threads = []
-        self.spawning_machines = {}
         self.pending_recipes = []
         self.idle_machines = []
+        self.sitter = parent
 
     def get_idle_machines_in_zone(self, zone):
         """
@@ -86,13 +87,9 @@ class ClusterState(object):
         logger.info("Calculating job fill for jobs: %s" % self.jobs)
         for job in self.jobs:
             job_fill[job.name] = {}
-            if not job.name in self.spawning_machines:
-                self.spawning_machines[job.name] = {}
 
             for zone in job.get_shared_fate_zones():
                 job_fill[job.name][zone] = 0
-                if not zone in self.spawning_machines[job.name]:
-                    self.spawning_machines[job.name][zone] = 0
 
         # Actually do the counting
         for zone, machines in self.machines_by_zone.items():
@@ -108,6 +105,15 @@ class ClusterState(object):
         self.job_fill = job_fill
         logger.info("Calculated job fill: %s" % self.job_fill)
 
+    def calculate_job_refill(self):
+        logger.info("Calculating job refill for jobs: %s" % self.jobs)
+        # Now see if we need to add any new machines to any jobs
+        for job in self.jobs:
+            if job.name in self.job_fill:
+                job.refill(self, self.sitter)
+
+        logger.info("Calculated job refill: %s" % self.job_fill)
+
     def calculate_idle_machines(self):
         idle_machines = {}
         for zone in self.zones:
@@ -117,7 +123,11 @@ class ClusterState(object):
 
                 #!MACHINEASSUMPTION! Here we assume no tasks == idle,
                 # not sum(jobs.cpu) < machine.cpu etc.
-                if not tasks and machine.has_loaded_data():
+                idle = bool(not tasks)
+                idle = idle and machine.has_loaded_data()
+                idle = idle and not machine.is_in_deployment()
+
+                if idle:
                     idle_machines[zone].append(machine)
 
         # The DICT swap must be atomic, or else another
@@ -138,7 +148,7 @@ class ClusterSitter(object):
         self.provider_config = provider_config
         self.log_location = log_location
 
-        self.state = ClusterState()
+        self.state = ClusterState(self)
 
         self.orig_starting_port = starting_port
         self.next_port = starting_port
@@ -164,10 +174,11 @@ class ClusterSitter(object):
                    productionjob,
                    providers.aws,
                    deploymentrecipe,
-                   sittercommon.machinedata]
+                   sittercommon.machinedata,
+                   jobfiller]
 
         formatter = logging.Formatter(
-            '%(asctime)s - %(name)s:%(levelname)s - %(message)s')
+            '%(asctime)s - %(name)s:%(threadName)s.%(levelname)s - %(message)s')
 
         all_file = FileHandler("%s/all.log" % self.log_location)
         all_file.setFormatter(formatter)
@@ -314,58 +325,14 @@ class ClusterSitter(object):
 
         self.state.jobs.append(job)
 
-    def spawn_machines(self, zone, count, job):
-        # This should run some kind of modular procedure
-        # to bring up the machines, ASYNCHRONOUSLY (in a new thread?)
-        # and return objects representing the machiens on their way up.
-        provider = self.state.provider_by_zone[zone]
-        mem_per_job = job.deployment_layout[zone]['mem']
-
-        machineconfigs = provider.fill_request(zone=zone,
-                                               cpus=count,
-                                               mem_per_job=mem_per_job)
-        if not machineconfigs:
-            # Decrement spawning machines and return
-            pass
-
-        machines = [MonitoredMachine(m) for m in machineconfigs]
-
-        # Now build the deployments
-        # TODO do this in parallel
-        for machine in machines:
-            #, recipe_class, machine, post_callback, options):
-            if job.deployment_recipe:
-                recipe = self.build_recipe(
-                    job.deployment_recipe,
-                    machine,
-                    post_callback=None,
-                    options=job.recipe_options)
-
-                recipe.deploy()
-
-        # then do tasksitter deployment
-        for machine in machines:
-            logging.info("Building recipe to deploy tasksitter to %s" % machine)
-            recipe = self.build_recipe(MachineSitterRecipe, machine)
-
-            val = recipe.deploy()
-            if not val:
-                # TODO: decrement spawning_machines and decomission
-                # Test killing a machine mid-deployment
-                pass
-
-            machine.initialize()
-            machine.start_task(job)
-
-            # Npw add it to monitoring!
-            self.add_machines([machine])
-
-        # Done!
-
     def _register_sitter_failure(self, monitored_machine, monitor):
         """
         !! Fabric is not threadsafe.  Do all work in one thread by appending to
         a queue !!
+        # Update -- not using fabric anymore, but we still don't want
+        to be mucking with machines in the machinemonitor thread,
+        still a good idea to shift to machinedoctor
+
         """
         logger.info("Registering an unreachable machine %s" % monitored_machine)
         self.state.unreachable_machines.append((monitored_machine, monitor))
@@ -417,39 +384,6 @@ class ClusterSitter(object):
                 traceback.print_exc()
                 logger.error(traceback.format_exc())
 
-            # Now see if we need to add any new machines to any jobs
-            for job in self.state.jobs:
-                while job.name not in self.state.job_fill:
-                    logger.info(
-                        "Doctor waiting for calculator thread "
-                        "to kick in before filling jobs " +
-                        "(%s, %s)" % (job.name, self.state.job_fill))
-                    time.sleep(0.5)
-
-                """
-                Always refill the job -- if we're fill then
-                this is a noop.  The real reason for this is that inside
-                refill_job we have a "spawning_machines" tracker.
-                If we did a comparison here, active_machines == job.machines
-                then spawning_machines would always have one left,
-                and would never be zeroe'd out after an initial spawn.
-                This is because idle_required is what decrements the spawn
-                count, which only happens if we call refill job when there
-                are (active_machines + spawning_machines > needed_machines)
-                If we had a condition here refill IFF active machines < needed_machines
-                then the above condition would never be met when spawning_machines = 1
-                and active_machines == needed_machines (aka the last machine came up
-                """
-                job.refill(self.state, self)
-
-            # Now do any other remoting type work
-            deployed = []
-            for recipe in self.state.pending_recipes:
-                recipe.deploy()
-                deployed.append(recipe)
-
-            for recipe in deployed:
-                self.state.pending_recipes.remove(recipe)
 
             time_spent = datetime.now() - start_time
             sleep_time = self.stats_poll_interval - \
@@ -466,7 +400,7 @@ class ClusterSitter(object):
         while True:
             self.state.calculate_idle_machines()
             self.state.calculate_job_fill()
-
+            self.state.calculate_job_refill()
             time.sleep(self.stats_poll_interval)
 
     def _run_monitor(self, monitor):

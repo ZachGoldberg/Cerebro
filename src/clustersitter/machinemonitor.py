@@ -35,7 +35,7 @@ class MachineMonitor:
         for m in monitored_machines:
             val = True
             try:
-                val = m._api_identify_sitter()
+                val = m.initialize()
             except:
                 val = False
                 import traceback

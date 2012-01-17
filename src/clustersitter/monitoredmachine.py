@@ -22,6 +22,7 @@ class HasMachineSitter(object):
         val = self.datamanager.start_task(
             self.datamanager.tasks[job.name])
         logger.info("Start task %s result: %s" % (job.name, val))
+        return val
 
     def _api_identify_sitter(self):
         logger.info("Attempting to find a machinesitter at %s" % (
@@ -96,6 +97,18 @@ class MonitoredMachine(HasMachineSitter):
         self.hostname = self.config.hostname
         self.detected_sitter_failures = 0
 
+        # Used for deployment purposes by a JobFiller
+        self.state = None
+
+    def is_in_deployment(self):
+        if not self.state:
+            return False
+
+        if self.state.get_state() == 6:
+            return False
+
+        return True
+
     def get_tasks(self):
         return self.datamanager.tasks
 
@@ -118,7 +131,7 @@ class MonitoredMachine(HasMachineSitter):
             self._api_run_request(self._api_start_task(job))
 
     def initialize(self):
-        self._api_identify_sitter()
+        return self._api_identify_sitter()
 
     def is_initialized(self):
         if not self.datamanager:

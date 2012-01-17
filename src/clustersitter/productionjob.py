@@ -2,6 +2,8 @@ import logging
 import threading
 import time
 
+from jobfiller import JobFiller
+
 logger = logging.getLogger(__name__)
 
 
@@ -17,9 +19,14 @@ class ProductionJob(object):
         self.name = task_configuration['name']
         self.deployment_recipe = deployment_recipe
         self.recipe_options = recipe_options
+        self.sitter = None
 
         # A mapping of SharedFateZoneName: {'cpu': #CPU, 'mem': MB_Mem_Per_CPU}
         self.deployment_layout = deployment_layout
+
+        self.fillers = {}
+        for zone in self.deployment_layout.keys():
+            self.fillers[zone] = []
 
         #!MACHINEASSUMPTION!
         # Hack to make num_machines == num_cpu, for now.
@@ -41,6 +48,8 @@ class ProductionJob(object):
         return self.task_configuration['name']
 
     def refill(self, state, sitter):
+        self.sitter = sitter
+
         while not self.name in state.job_fill:
             # 1) Assume this job has already been added to state.jobs
             # 2) Want to ensure calculator has run at least once to find out
@@ -56,7 +65,12 @@ class ProductionJob(object):
             idle_available = state.get_idle_machines_in_zone(zone)
             total_required = self.get_num_required_machines_in_zone(zone)
             idle_required = total_required - state.job_fill[self.name][zone]
-            currently_spawning = state.spawning_machines[self.name][zone]
+
+            current_fillers = self.fillers[zone]
+            currently_spawning = 0
+            for filler in current_fillers:
+                currently_spawning += filler.num_remaining()
+
             idle_required -= currently_spawning
 
             # !MACHINEASSUMPTION! Ideally we're counting resources here
@@ -74,50 +88,18 @@ class ProductionJob(object):
                 "total_required: %s " % (total_required)
                 )
 
-
-            # For the machines we have idle now, use those immediately
-            # For the others, spinup a thread to launch machines (which
-            # takes time) and do the deployment
-
-            # Now reserve part of the machine for this job
             usable_machines = []
             if required_new_machine_count == 0:
                 # idle_available > idle_required, so use just as many
                 # as we need
                 usable_machines = idle_available[:idle_required]
             elif required_new_machine_count > 0:
+                # Otherwise take all the available idle ones, and
+                # we'll make more
                 usable_machines.extend(idle_available)
 
-            for machine in usable_machines:
-                # Have the recipe deploy the job then set the callback
-                # to be for the monitoredmachine to trigger the machinesitter
-                # to actually start the job
-                if self.deployment_recipe:
-                    recipe = sitter.build_recipe(
-                        self.deployment_recipe,
-                        machine,
-                        post_callback=lambda: machine.start_task(self),
-                        options=self.recipe_options)
-
-                    state.pending_recipes.add(recipe)
-                else:
-                    machine.start_task(self)
-
-                # TODO - Mark this machine as no longer idle
-                # so another job doesn't pick it up while we're deploying
-
-            if required_new_machine_count > 0:
-                logging.info(
-                    "Spawning a thread for " +
-                    "%s machines for job %s in zone %s" % (
-                        required_new_machine_count,
-                        self.name, zone))
-
-                spawn_thread = threading.Thread(
-                    target=sitter.spawn_machines,
-                    args=(zone, required_new_machine_count, self))
-                spawn_thread.start()
-
-            # This will get decremented automatically, aka idle_required will
-            # become negative as machines start to come up.
-            state.spawning_machines[self.name][zone] += idle_required
+            if idle_required > 0:
+                filler = JobFiller(idle_required, self,
+                                   zone, usable_machines)
+                filler.start_fill()
+                self.fillers[zone].append(filler)
