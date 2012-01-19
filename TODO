@@ -9,6 +9,9 @@
 
 -- Make a thirdparty for tasksitter, put pkgs there.
 
+-- Pass in the deploymentrecipe logger to the DeploymentRecipes as
+   they don't properly inherit a logger right now
+-- Add job templates to clustersitter config
 --What happens to tasks and job fill if a machine is in POLL_FAILURES?
  - Right now nothing, the job thinks things are OK
  - First thing MachineDoctor does should be to clear the machine's

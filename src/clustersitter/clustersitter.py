@@ -220,11 +220,23 @@ class ClusterSitter(object):
         if machine.config.login_key:
             keys.append(machine.config.login_key)
 
-        return recipe_class(machine.config.hostname,
-                            username,
-                            keys,
-                            post_callback=post_callback,
-                            options=options)
+        if isinstance(recipe_class, type):
+            return recipe_class(machine.config.hostname,
+                         username,
+                         keys,
+                         post_callback=post_callback,
+                         options=options)
+        else:
+            # Its probably a module, find a proper type within
+            exports = dir(recipe_class)
+            for export in exports:
+                if hasattr(getattr(recipe_class, export), "run_deploy"):
+                    return getattr(recipe_class, export)(
+                        machine.config.hostname,
+                        username,
+                        keys,
+                        post_callback=post_callback,
+                        options=options)
 
     def get_next_port(self):
         works = None

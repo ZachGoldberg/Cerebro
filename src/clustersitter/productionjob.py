@@ -12,8 +12,16 @@ class ProductionJob(object):
                  task_configuration,
                  deployment_layout,
                  deployment_recipe,
-                 recipe_options={}):
-
+                 recipe_options={},
+                 ):
+        """
+        Args:
+          task_configuration -- JSON representing options to pass to a tasksitter
+          to launch the job
+          deployment_layout -- How many CPUS/Memory per shared fate zone,  dict
+          deployment_recipe -- A python class which knows how to deploy this task
+          recipe_options -- any options to pass to the recipe
+        """
         # The config to pass to a machinesitter / tasksitter
         self.task_configuration = task_configuration
         self.name = task_configuration['name']

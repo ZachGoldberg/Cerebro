@@ -101,11 +101,13 @@ def main(sys_args=None):
 
     time.sleep(5)
 
+    import wifast.recipes.deploy
+
     job = ProductionJob(
         task_configuration={
             "allow_exit": False,
-            "name": "Simple Web Server",
-            "command": "cd /home && /usr/bin/python -m SimpleHTTPServer",
+            "name": "Do Nothing",
+            "command": "while true; do sleep 1; done",
             "auto_start": True,
             "ensure_alive": True,
             "max_restarts": -1,
@@ -126,6 +128,36 @@ def main(sys_args=None):
         )
 
     sitter.add_job(job)
+
+    wifast = ProductionJob(
+        task_configuration={
+            "allow_exit": False,
+            "name": "Redis",
+            # TODO Dynamically generate this path based on extracted release?
+            "command": "/home/ubuntu/workspace/wifast/bin/redis-server",
+            "auto_start": True,
+            "ensure_alive": True,
+            "max_restarts": -1,
+            "restart": True,
+            "uid": 0
+        },
+        deployment_layout={
+            'aws-us-east-1a': {
+                'cpu': 1,
+                'mem': 50
+                },
+            'aws-us-east-1b': {
+                'cpu': 0,
+                'mem': 50
+                }
+            },
+        deployment_recipe=wifast.recipes.deploy,
+        recipe_options={
+            'release_dir': '/home/zgoldberg/workspace/wifast/releases/',
+            }
+        )
+
+    sitter.add_job(wifast)
 
     # wait forever
     os.system("tail -f -n 100 %s" % (sitter.logfiles[0]))

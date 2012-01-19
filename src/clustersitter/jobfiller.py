@@ -6,7 +6,7 @@ from monitoredmachine import MonitoredMachine
 from eventmanager import ClusterEventManager
 
 logger = logging.getLogger(__name__)
-
+logger.setLevel(logging.INFO)
 
 class StateMachine(object):
     states = {}
@@ -171,7 +171,7 @@ class JobFiller(object):
                         self.job.deployment_recipe,
                         machine,
                         post_callback=None,
-                        options=None)
+                        options=self.job.recipe_options)
 
                     val = recipe.deploy()
 
