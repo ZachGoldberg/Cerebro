@@ -92,6 +92,10 @@ class MachineSitterRecipe(DeploymentRecipe):
         filelist = os.listdir(release_dir)
         filelist = filter(lambda x: not os.path.isdir(x), filelist)
         filelist = filter(lambda x: "tgz" in x, filelist)
+        if not filelist:
+            logger.error("No releases found!")
+            return False
+
         newest = max(filelist, key=lambda x: os.stat(release_dir + x).st_mtime)
 
         try:

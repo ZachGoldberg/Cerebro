@@ -1,10 +1,13 @@
 -- General event framework
  - Machine Deployed
  - Machine Terminated
- - etc.
+ - Add timestamp, add a bit more structured data
 
 -- Abstract out monitoredmachine so we can do something like monitoredmongo ?
--- Error reporting to UI -- what if we can't SSH into a machine, how is that reported?
+-- Error reporting to UI -- what if we can't SSH into a machine, how
+   is that reported?
+
+-- Make a thirdparty for tasksitter, put pkgs there.
 
 --What happens to tasks and job fill if a machine is in POLL_FAILURES?
  - Right now nothing, the job thinks things are OK

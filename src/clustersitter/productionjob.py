@@ -63,6 +63,12 @@ class ProductionJob(object):
                          "filling jobs")
             time.sleep(0.5)
 
+        # Clear out finished fillers
+        for zone, fillers in self.fillers.items():
+            for filler in fillers:
+                if filler.is_done():
+                    self.fillers[zone].remove(filler)
+
         #!MACHINEASSUMPTION!
         # Step 1: Ensure we have enough machines in each SFZ
         # Step 1a: Check for idle machines and reserve as we find them

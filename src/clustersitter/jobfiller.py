@@ -95,6 +95,9 @@ class JobFiller(object):
 
         self.thread.start()
 
+    def is_done(self):
+        return self.state.get_state() == 5
+
     def run(self):
         logger.info("Starting JobFiller")
         while self.state.get_state() != 5:

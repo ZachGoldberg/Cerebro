@@ -401,6 +401,8 @@ class ClusterSitter(object):
                         logger.info("Redeploy failed!  Decomissioning %s" % machine)
                         # Decomission time!
                         # For now just assume its dead, johnny.
+                        self.state.machines_by_zone[
+                            machine.config.shared_fate_zone].remove(machine)
                         ClusterEventManager.handle(
                             "Decomissioning %s" % machine)
                         # TODO: Write machine decomission logic

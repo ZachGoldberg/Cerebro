@@ -70,13 +70,22 @@ def main(sys_args=None):
                 '64b_image_id': 'ami-eb915a82',
                 'key_name': 'WiFastAWS',
                 'security_groups': ['clustersitter'],
+                },
+            'us-west-2a': {
+                '32b_image_id': 'ami-da41ccea',
+                '64b_image_id': 'ami-ce4bc6fe',
+                'key_name': 'WiFastAWSus-west-2',
+                'security_groups': ['clustersitter'],
                 }
-            }
+            },
         }
 
-    provider_config['aws']['us-east-1b'] = provider_config['aws']['us-east-1a']
-    provider_config['aws']['us-east-1c'] = provider_config['aws']['us-east-1a']
-    provider_config['aws']['us-east-1d'] = provider_config['aws']['us-east-1a']
+    for az in ['b', 'c', 'd']:
+        provider_config['aws']['us-east-1%s' % az] = \
+            provider_config['aws']['us-east-1a']
+
+        provider_config['aws']['us-west-2%s' % az] = \
+            provider_config['aws']['us-west-2a']
 
     sitter = ClusterSitter(daemon=args.daemon,
                            provider_config=provider_config,
@@ -104,8 +113,8 @@ def main(sys_args=None):
             "uid": 0
         },
         deployment_layout={
-            'aws-us-east-1a': {
-                'cpu': 0,
+            'aws-us-west-2a': {
+                'cpu': 1,
                 'mem': 50
                 },
             'aws-us-east-1b': {
