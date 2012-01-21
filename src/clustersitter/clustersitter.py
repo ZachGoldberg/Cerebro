@@ -11,6 +11,7 @@ from logging import FileHandler
 
 import providers.aws
 import deploymentrecipe
+import eventmanager
 import jobfiller
 import machineconfig
 import machinemonitor
@@ -20,6 +21,7 @@ import sittercommon.machinedata
 
 from clusterstats import ClusterStats
 from deploymentrecipe import DeploymentRecipe, MachineSitterRecipe
+from eventmanager import ClusterEventManager
 from machineconfig import MachineConfig
 from machinemonitor import MachineMonitor
 from monitoredmachine import MonitoredMachine
@@ -181,7 +183,8 @@ class ClusterSitter(object):
                    providers.aws,
                    deploymentrecipe,
                    sittercommon.machinedata,
-                   jobfiller]
+                   jobfiller,
+                   eventmanager]
 
         formatter = logging.Formatter(
             '%(asctime)s - %(name)s:%(threadName)s'
@@ -398,7 +401,8 @@ class ClusterSitter(object):
                         logger.info("Redeploy failed!  Decomissioning %s" % machine)
                         # Decomission time!
                         # For now just assume its dead, johnny.
-
+                        ClusterEventManager.handle(
+                            "Decomissioning %s" % machine)
                         # TODO: Write machine decomission logic
 
                     self.state.unreachable_machines.remove((machine, monitor))
@@ -407,7 +411,6 @@ class ClusterSitter(object):
                 import traceback
                 traceback.print_exc()
                 logger.error(traceback.format_exc())
-
 
             time_spent = datetime.now() - start_time
             sleep_time = self.stats_poll_interval - \

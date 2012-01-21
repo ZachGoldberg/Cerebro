@@ -14,7 +14,7 @@
  - This will require a pretty non-trivial refactor of the jobfiller,
    but should be done
 
--- Add jobs while clustersitter is running
+-- API to Add jobs while clustersitter is running
 -- Lots of links in HTML page, to STDOUT etc.
 -- Performance data in web console!
 -- Archive old JobFillers?  Delete them?

@@ -3,6 +3,7 @@ import threading
 
 from deploymentrecipe import MachineSitterRecipe
 from monitoredmachine import MonitoredMachine
+from eventmanager import ClusterEventManager
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +70,10 @@ class JobFiller(object):
             machine.state = MachineDeploymentState()
             machine.state.set_state(3)
 
+    def __str__(self):
+        return "%s cores in %s for %s" % (self.num_cores,
+                                          self.zone, self.job)
+
     def num_remaining(self):
         if self.state.get_state() < 3:
             return self.num_cores
@@ -116,6 +121,7 @@ class JobFiller(object):
         for machine in self.machines:
             machine.state = None
 
+        ClusterEventManager.handle("Job %s completed" % str(self))
         logger.info("Job Filler: Done!")
 
     def run_create_resources(self):

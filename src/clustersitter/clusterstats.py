@@ -3,6 +3,7 @@ import threading
 
 from tenjin.helpers import *
 
+from eventmanager import ClusterEventManager
 from tasksitter.stats_collector import StatsCollector
 
 
@@ -17,6 +18,8 @@ class ClusterStats(StatsCollector):
 
     def get_live_data(self):
         data = {}
+
+        data['events'] = ClusterEventManager.get_events()
 
         state = self.harness.state
 
