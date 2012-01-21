@@ -184,7 +184,11 @@ class ClusterSitter(object):
                    jobfiller]
 
         formatter = logging.Formatter(
-            '%(asctime)s - %(name)s:%(threadName)s.%(levelname)s - %(message)s')
+            '%(asctime)s - %(name)s:%(threadName)s'
+            '.%(levelname)s - %(message)s')
+
+        if not os.path.exists(self.log_location):
+            os.makedirs(self.log_location)
 
         all_file = FileHandler("%s/all.log" % self.log_location)
         all_file.setFormatter(formatter)
