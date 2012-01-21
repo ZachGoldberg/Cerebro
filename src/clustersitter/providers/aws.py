@@ -1,5 +1,6 @@
 import boto
 import logging
+import os
 import time
 from boto import ec2
 
@@ -39,6 +40,8 @@ class AmazonEC2(MachineProvider):
                          "Ensure AWS crednetials are set in the env " +
                          "(AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY")
 
+            logger.error("Got: %s, %s" % (os.getenv('AWS_ACCESS_KEY_ID'),
+                                          os.getenv('AWS_SECRET_ACCESS_KEY')))
     def usable(self):
         return bool(self.regions)
 
