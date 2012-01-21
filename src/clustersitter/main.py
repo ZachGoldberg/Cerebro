@@ -105,11 +105,11 @@ def main(sys_args=None):
         },
         deployment_layout={
             'aws-us-east-1a': {
-                'cpu': 1,
+                'cpu': 0,
                 'mem': 50
                 },
             'aws-us-east-1b': {
-                'cpu': 1,
+                'cpu': 0,
                 'mem': 50
                 }
             },

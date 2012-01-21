@@ -46,14 +46,14 @@ class MachineData(object):
                                      self.portnum)
         return self.url
 
-    def _make_request(self, function, path, host=None, data=None):
+    def _make_request(self, function, path, host=None):
         val = None
         hostname = host
         if not hostname:
             hostname = self.url
 
         try:
-            val = function("%s/%s" % (hostname, path), data=data,
+            val = function("%s/%s" % (hostname, path),
                            timeout=5)
         except:
             self._find_portnum()
@@ -61,11 +61,13 @@ class MachineData(object):
             if not hostname:
                 hostname = self.url
             try:
-                val = function("%s/%s" % (hostname, path), data=data,
+                val = function("%s/%s" % (hostname, path),
                                timeout=5)
             except:
                 logger.warn("Couldn't execute %s/%s!" % (
                         hostname, path))
+                import traceback
+                logger.error(traceback.format_exc())
                 return None
 
         return val
@@ -142,8 +144,7 @@ class MachineData(object):
         params = '&'.join(
             "%s=%s" % (k, urllib.quote_plus(str(v))) for k, v in config.items())
         val = self._make_request(requests.get,
-                                 path="add_task?%s" % params,
-                                 data=config)
+                                 path="add_task?%s" % params)
         if val:
             return val.content
         else:
