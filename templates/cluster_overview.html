@@ -372,7 +372,9 @@ th
       </tr>
     <?py for machine in data['machines']: ?>
       <tr>
-        <td> ${machine['hostname']} </td>
+        <td>
+          <a href='${machine['url']}'>${machine['hostname']}</a>
+        </td>
         <td> ${machine['zone']} </td>
         <td> ${machine['cpus']}x
           ${machine['bits']}-bit ${machine['mem']}MB -
@@ -396,7 +398,18 @@ th
           <?py #endif ?>
         </td>
         <td>
-          ${machine['tasks']}
+          <ul>
+          <?py for taskname, task in machine['tasks'].items(): ?>
+          <li>
+            <b>${taskname}</b>
+            <ul>
+            <?py for key, val in task.items(): ?>
+            <li>${key}: #{val}</li>
+            <?py #endfor ?>
+            </ul>
+          </li>
+          <?py #endfor ?>
+          </ul>
         </td>
       </tr>
     <?py #endfor ?>

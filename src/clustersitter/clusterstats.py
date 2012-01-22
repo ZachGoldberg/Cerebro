@@ -53,6 +53,7 @@ class ClusterStats(StatsCollector):
                 machine_data['bits'] = machine.config.bits
                 machine_data['cpus'] = machine.config.cpus
                 machine_data['mem'] = machine.config.mem
+                machine_data['url'] = machine.datamanager.url
                 machine_data['disk'] = machine.config.disk
                 machine_data['hostname'] = machine.hostname
                 machine_data['tasks'] = machine.get_tasks()

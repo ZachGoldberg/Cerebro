@@ -61,7 +61,8 @@ class DeploymentRecipe(object):
             remote += os.path.basename(local)
 
         try:
-            local_hash = subprocess.check_output(['md5sum', local]).split(' ')[0]
+            local_hash = subprocess.check_output(
+                ['md5sum', local]).split(' ')[0]
         except subprocess.CalledProcessError:
             import traceback
             logger.error(traceback.format_exc())
@@ -127,6 +128,8 @@ class MachineSitterRecipe(DeploymentRecipe):
             # Now create the remote directory
             remote_dir = "/home/ubuntu/clustersitter/"
             self.run("mkdir -p %s" % remote_dir)
+
+            self.sudo("hostname %s" % self.hostname)
 
             # Upload the release
             self.put(release_dir + newest, remote_dir)

@@ -142,7 +142,7 @@ def main(sys_args=None):
             "uid": 0
         },
         deployment_layout={
-            'aws-us-east-1a': {
+            'aws-us-west-2a': {
                 'cpu': 1,
                 'mem': 50
                 },

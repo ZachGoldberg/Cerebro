@@ -142,7 +142,8 @@ class MachineData(object):
 
     def add_task(self, config):
         params = '&'.join(
-            "%s=%s" % (k, urllib.quote_plus(str(v))) for k, v in config.items())
+            "%s=%s" % (
+                k, urllib.quote_plus(str(v))) for k, v in config.items())
         val = self._make_request(requests.get,
                                  path="add_task?%s" % params)
         if val:
