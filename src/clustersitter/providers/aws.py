@@ -1,6 +1,7 @@
 import boto
 import logging
 import os
+import socket
 import time
 from boto import ec2
 
@@ -42,6 +43,12 @@ class AmazonEC2(MachineProvider):
 
             logger.error("Got: %s, %s" % (os.getenv('AWS_ACCESS_KEY_ID'),
                                           os.getenv('AWS_SECRET_ACCESS_KEY')))
+
+        except:
+            import traceback
+            logger.error("Couldn't connect to EC2.")
+            logger.error(traceback.format_exc())
+
     def usable(self):
         return bool(self.regions)
 

@@ -76,6 +76,12 @@ def main(sys_args=None):
                 '64b_image_id': 'ami-ce4bc6fe',
                 'key_name': 'WiFastAWSus-west-2',
                 'security_groups': ['clustersitter'],
+                },
+            'us-west-1a': {
+                '32b_image_id': 'ami-7dd48a38',
+                '64b_image_id': 'ami-15d48a50',
+                'key_name': 'WiFastAWSus-west-1',
+                'security_groups': ['clustersitter'],
                 }
             },
         }
@@ -86,6 +92,9 @@ def main(sys_args=None):
 
         provider_config['aws']['us-west-2%s' % az] = \
             provider_config['aws']['us-west-2a']
+
+        provider_config['aws']['us-west-1%s' % az] = \
+            provider_config['aws']['us-west-1a']
 
     sitter = ClusterSitter(daemon=args.daemon,
                            provider_config=provider_config,
@@ -99,7 +108,7 @@ def main(sys_args=None):
 
     sitter.add_machines([localhost])
 
-    time.sleep(5)
+    time.sleep(10)
 
     import wifast.recipes.deploy
 
@@ -115,7 +124,7 @@ def main(sys_args=None):
             "uid": 0
         },
         deployment_layout={
-            'aws-us-west-2a': {
+            'aws-us-west-1c': {
                 'cpu': 1,
                 'mem': 50
                 },
@@ -143,7 +152,7 @@ def main(sys_args=None):
         },
         deployment_layout={
             'aws-us-west-2a': {
-                'cpu': 1,
+                'cpu': 0,
                 'mem': 50
                 },
             'aws-us-east-1b': {
