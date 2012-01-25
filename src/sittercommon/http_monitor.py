@@ -27,7 +27,13 @@ class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             }
 
         self.handlers.update(new_handlers)
-        self.engine = tenjin.Engine(path=['templates'])
+        self.engine = tenjin.Engine(path=[
+                'templates',
+                os.path.join(
+                    os.getenv('HOME'),
+                    'workspace',
+                    'tasksitter',
+                    'templates')])
 
         BaseHTTPServer.BaseHTTPRequestHandler.__init__(self, *args, **kwargs)
 
@@ -56,21 +62,20 @@ class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def _get_logs(self, args):
         logfiles = self.monitor.get_logs()
         for k, v in logfiles.items():
-            if 'nohtml' in args:
-                logfiles[k] = v
-            else:
-                size = 0
-                try:
-                    size = float(os.stat(v).st_size) / 1024
-                except:
-                    pass
+            size = 0
+            try:
+                size = float(os.stat(v).st_size) / 1024
+            except:
+                pass
 
-                logfiles[k] = "<a href='/logfile?name=%s'>%s (%s kB)</a>" % (
-                    v,
-                    v,
-                    size)
+            logfiles[k] = {'url': "/logfile?name=%s" % v,
+                           'location': v,
+                           'size': size}
 
-        return self._format_dict(logfiles, args)
+        if 'nohtml' in args:
+            return self._format_dict(logfiles, args)
+        else:
+            return self.engine.render('logs.html', {'data': logfiles})
 
     def _get_stats(self, args):
         stats = self.monitor.get_stats()

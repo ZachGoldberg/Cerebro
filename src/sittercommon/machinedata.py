@@ -135,10 +135,13 @@ class MachineData(object):
         return self.tasks
 
     def update_task_data(self, task_name):
+        stats_page = self.strip_html(self.tasks[task_name]['monitoring'])
         self.tasks[task_name].update(
             self.load_generic_page(
-                self.strip_html(self.tasks[task_name]['monitoring']),
+                stats_page,
                 'stats'))
+        self.tasks[task_name]['stats_page'] = "%s/stats" % stats_page
+        self.tasks[task_name]['logs_page'] = "%s/logs" % stats_page
 
     def add_task(self, config):
         params = '&'.join(

@@ -401,8 +401,17 @@ th
           <ul>
           <?py for taskname, task in machine['tasks'].items(): ?>
           <li>
+            <?py if 'stats_page' in task: ?>
+            <b><a href='${task['stats_page']}'>${taskname}</a></b>
+            <?py else: ?>
             <b>${taskname}</b>
+            <?py #endif ?>
             <ul>
+            <?py if 'stats_page' in task: ?>
+            <li>
+              <a href="${task['logs_page']}">Logs</a>
+            </li>
+            <?py #endif ?>
             <?py for key, val in task.items(): ?>
             <li>${key}: #{val}</li>
             <?py #endfor ?>
