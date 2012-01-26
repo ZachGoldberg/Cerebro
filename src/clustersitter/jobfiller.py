@@ -8,6 +8,7 @@ from eventmanager import ClusterEventManager
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+
 class StateMachine(object):
     states = {}
 

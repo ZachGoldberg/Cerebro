@@ -28,16 +28,19 @@ class MachineData(object):
                 sock = socket.socket(socket.AF_INET)
                 sock.connect((self.hostname, port))
                 sock.close()
-                # @TODO Verify more than a socket is open
-                # Maybe make an HTTP request and verify its
-                # actually a machinesitter?
+
+                # Verify we can actually make an http request
+                req = requests.get("http://%s:%s" % (self.hostname,
+                                               port),
+                                   timeout=2)
+
                 found = True
                 self.portnum = port
                 logger.info("Successfully connected to %s:%s" % (
-                        self.hosntame, self.portnum))
+                        self.hostname, self.portnum))
             except:
                 port += 1
-                if port > self.starting_port + 50:
+                if port > self.starting_port + 15:
                     self.url = ""
                     self.portnum = None
                     return
@@ -92,6 +95,7 @@ class MachineData(object):
         return data
 
     def reload(self):
+        # TODO self.tasks should be an atomic swap
         response = self._make_request(requests.get,
                                       path="stats?nohtml=1")
         if not response:
@@ -100,7 +104,7 @@ class MachineData(object):
         data = response.content.split('\n')
 
         task_data = {}
-        self.tasks = {}
+        new_tasks = {}
 
         for item in data:
             try:
@@ -119,29 +123,32 @@ class MachineData(object):
 
         for task_name in task_data.keys():
             task_dict = task_data[task_name]
-            self.tasks[task_dict['name']] = task_dict
+            new_tasks[task_dict['name']] = task_dict
             if task_dict['running'] == "True":
                 updated = False
                 tries = 0
                 while not updated and tries < 10:
                     tries += 1
                     try:
-                        self.update_task_data(task_dict['name'])
+                        new_tasks = self.update_task_data(new_tasks,
+                                                         task_dict['name'])
                         updated = True
                     except:
                         # Http server might not be up yet
                         time.sleep(0.01)
 
+        self.tasks = new_tasks
         return self.tasks
 
-    def update_task_data(self, task_name):
-        stats_page = self.strip_html(self.tasks[task_name]['monitoring'])
-        self.tasks[task_name].update(
+    def update_task_data(self, tasks, task_name):
+        stats_page = self.strip_html(tasks[task_name]['monitoring'])
+        tasks[task_name].update(
             self.load_generic_page(
                 stats_page,
                 'stats'))
-        self.tasks[task_name]['stats_page'] = "%s/stats" % stats_page
-        self.tasks[task_name]['logs_page'] = "%s/logs" % stats_page
+        tasks[task_name]['stats_page'] = "%s/stats" % stats_page
+        tasks[task_name]['logs_page'] = "%s/logs" % stats_page
+        return tasks
 
     def add_task(self, config):
         params = '&'.join(
@@ -155,15 +162,22 @@ class MachineData(object):
             return None
 
     def start_task(self, task):
+        if isinstance(task, str):
+            task = self.tasks[task]
+
         tid = urllib.quote(task['name'])
-        val = self._make_request(requests.get,
-                                 path="start_task?task_name=%s" % tid)
+        val = self._make_request(
+            requests.get,
+            path="start_task?task_name=%s" % tid)
         if val:
             return val.content
 
         return None
 
     def stop_task(self, task):
+        if isinstance(task, str):
+            task = self.tasks[task]
+
         tid = urllib.quote(task['name'])
         val = self._make_request(
             requests.get,

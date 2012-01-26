@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import random
@@ -67,10 +68,48 @@ class ClusterState(object):
         self.jobs = []
         self.job_fill = {}
         self.providers = {}
+        self.overflowing_jobs = {}
         self.unreachable_machines = []
         self.machine_spawn_threads = []
         self.idle_machines = []
         self.sitter = parent
+        self.job_file = "%s/jobs.json" % self.sitter.log_location
+
+    def add_job(self, job):
+        logger.info("Add Job: %s" % job.name)
+        for zone in job.get_shared_fate_zones():
+            if not zone in self.zones:
+                logger.warn("Tried to add a job with an unknown SFZ %s" % zone)
+                return False
+
+        # Ensure we don't already have a job with this name,
+        # if we do, replace it
+        for existing_job in self.jobs:
+            if existing_job.name == job.name:
+                self.jobs.remove(existing_job)
+
+        self.jobs.append(job)
+        self.persist_jobs()
+        return True
+
+    def remove_job(self, jobname):
+        removed = False
+        for job in self.jobs:
+            if job.name == jobname:
+                self.jobs.remove(job)
+                removed = True
+
+        self.persist_jobs()
+        return removed
+
+    def persist_jobs(self):
+        """
+        Naively just rewrite the whole "job db"
+        """
+        jobs_to_write = [j for j in self.jobs if j.persistent]
+        f = open(self.job_file, 'w')
+        f.write(json.dumps([j.to_dict() for j in jobs_to_write]))
+        f.close()
 
     def get_idle_machines_in_zone(self, zone):
         """
@@ -139,6 +178,24 @@ class ClusterState(object):
         self.idle_machines = idle_machines
         logger.info("Calculated idle machines: %s" % str(self.idle_machines))
 
+    def calculate_job_overfill(self):
+        # TODO we really should just do the calculating here
+        # and let the machinedoctor spin down the task
+        job_overflow = {}
+        for job in self.jobs:
+            zone_overflow = job.get_zone_overflow(self)
+            job_overflow[job.name] = zone_overflow
+
+        logger.info("Calculated job overflow: %s" % job_overflow)
+
+    def _calculator(self):
+        while True:
+            self.calculate_idle_machines()
+            self.calculate_job_fill()
+            self.calculate_job_refill()
+            self.calculate_job_overfill()
+            time.sleep(self.sitter.stats_poll_interval)
+
 
 class ClusterSitter(object):
     def __init__(self, log_location, daemon,
@@ -174,6 +231,8 @@ class ClusterSitter(object):
                                                      self.get_next_port())
 
         self.http_monitor.add_handler('/overview', self.stats.overview)
+        self.http_monitor.add_handler('/add_job', self.api_add_job)
+        self.http_monitor.add_handler('/remove_job', self.api_remove_job)
 
         # Do lots of logging configuration
         modules = [sys.modules[__name__],
@@ -210,6 +269,45 @@ class ClusterSitter(object):
 
         socket.setdefaulttimeout(2)
 
+    # ----------- API ----------------
+
+    # TODO -- Use something more formal
+    # for this API.
+    def api_add_job(self, args):
+        if self.start_state != "Started":
+            return "Not ready to recieve API calls"
+
+        required_fields = ['task_configuration',
+                           'deployment_layout',
+                           'deployment_recipe',
+                           'recipe_options',
+                           'persistent']
+
+        for field in required_fields:
+            if not field in args:
+                return "Missing Field %s" % field
+
+        if self.state.add_job(ProductionJob(
+                args['task_configuration'],
+                args['deployment_layout'],
+                args['deployment_recipe'],
+                args['recipe_options'],
+                args['persistent'])):
+            return "Job Added"
+        else:
+            return "Error adding job, see logs"
+
+    def api_remove_job(self, args):
+        if not 'name' in args:
+            return "Missing Field name"
+
+        if self.state.remove_job(args['name']):
+            return "Removal OK"
+        else:
+            return "Couldn't find job to remove"
+
+    # ----------- END API ----------
+
     def build_recipe(self, recipe_class, machine,
                      post_callback=None, options=None):
         username = self.user
@@ -219,6 +317,13 @@ class ClusterSitter(object):
 
         if machine.config.login_key:
             keys.append(machine.config.login_key)
+
+        if isinstance(recipe_class, str):
+            try:
+                recipe_class = __import__(recipe_class)
+            except:
+                # Odd?
+                logger.warn("Not sure what %s is..." % recipe_class)
 
         if isinstance(recipe_class, type):
             return recipe_class(machine.config.hostname,
@@ -281,8 +386,9 @@ class ClusterSitter(object):
         self.state.monitors.sort(key=lambda x: x[0].num_monitored_machines())
         monitors_to_use = self.state.monitors[:num_threads_to_use]
 
-        logger.info("Add to Monitoring, num_threads_to_use: %s" % num_threads_to_use +
-                    "machines_per_thread: %s, " % machines_per_thread)
+        logger.info(
+            "Add to Monitoring, num_threads_to_use: %s" % num_threads_to_use +
+            "machines_per_thread: %s, " % machines_per_thread)
 
         for index, monitor in enumerate(monitors_to_use):
             start_index = index * machines_per_thread
@@ -315,8 +421,7 @@ class ClusterSitter(object):
         for threadnum in range(self.worker_thread_count):
             machinemonitor = MachineMonitor(parent=self,
                                             number=threadnum)
-            thread = threading.Thread(target=self._run_monitor,
-                                      args=(machinemonitor, ),
+            thread = threading.Thread(target=machinemonitor.start,
                                       name='Monitoring-%s' % threadnum)
             self.state.monitors.append((machinemonitor, thread))
 
@@ -346,7 +451,7 @@ class ClusterSitter(object):
             monitor[1].start()
 
         logger.info("Starting metadata calculator")
-        self.calculator = threading.Thread(target=self._calculator,
+        self.calculator = threading.Thread(target=self.state._calculator,
                                            name="Calculator")
         self.calculator.start()
 
@@ -356,15 +461,6 @@ class ClusterSitter(object):
         self.machine_doctor.start()
 
         self.start_state = "Started"
-
-    def add_job(self, job):
-        logger.info("Add Job: %s" % job.name)
-        for zone in job.get_shared_fate_zones():
-            if not zone in self.state.zones:
-                logger.warn("Tried to add a job with an unknown SFZ %s" % zone)
-                return
-
-        self.state.jobs.append(job)
 
     def _register_sitter_failure(self, monitored_machine, monitor):
         """
@@ -420,6 +516,31 @@ class ClusterSitter(object):
                         # TODO: Write machine decomission logic
 
                     self.state.unreachable_machines.remove((machine, monitor))
+
+                for job, zone_overflow in self.state.job_overflow:
+                    for zone, count in zone_overflow.items():
+                        if count <= 0:
+                            continue
+
+                        ClusterEventManager.handle(
+                            "Detected job overflow:" +
+                            "Job: %s, Zone: %s, Count: %s" % (job.name,
+                                                              zone,
+                                                              count))
+
+                        decomissioned = 0
+                        for machine in self.machines_by_zone[zone]:
+                            if decomissioned == count:
+                                break
+
+                            for task in machine.get_running_tasks():
+                                if task['name'] == job.name:
+                                    ClusterEventManager.handle(
+                                        "Stopping %s on %s" % (job.name, str(machine)))
+                                    machine.datamanager.stop_task(job.name)
+                                    decomissioned += 1
+                                    break
+
             except:
                 # Der?  Not sure what this could be...
                 import traceback
@@ -436,14 +557,3 @@ class ClusterSitter(object):
 
             if sleep_time > 0:
                 time.sleep(sleep_time)
-
-    def _calculator(self):
-        while True:
-            self.state.calculate_idle_machines()
-            self.state.calculate_job_fill()
-            self.state.calculate_job_refill()
-            time.sleep(self.stats_poll_interval)
-
-    def _run_monitor(self, monitor):
-        # Assume we're in our own thread here
-        monitor.start()

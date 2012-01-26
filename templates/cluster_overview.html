@@ -432,10 +432,10 @@ th
             Number
           </th>
           <th>
-            Monitored Machines
+            Add Queue
           </th>
           <th>
-            Add Queue
+            Monitored Machines
           </th>
           <th>
             Pull Failures
@@ -449,16 +449,16 @@ th
           <td> ${monitor['number']} </td>
           <td>
             <ul>
-            <?py for machine in monitor['monitored_machines']: ?>
-            <li>${machine}</li>
-            <?py #endfor ?>
+              <?py for machine in monitor['add_queue']: ?>
+              <li>${machine}</li>
+              <?py #endfor ?>
             </ul>
           </td>
           <td>
             <ul>
-              <?py for machine in monitor['add_queue']: ?>
-              <li>${machine}</li>
-              <?py #endfor ?>
+            <?py for machine in monitor['monitored_machines']: ?>
+            <li>${machine}</li>
+            <?py #endfor ?>
             </ul>
           </td>
           <td>

@@ -13,6 +13,7 @@ class ProductionJob(object):
                  deployment_layout,
                  deployment_recipe,
                  recipe_options={},
+                 persistent=False,
                  ):
         """
         Args:
@@ -29,6 +30,7 @@ class ProductionJob(object):
         self.recipe_options = recipe_options
         self.sitter = None
         self.currently_spawning = {}
+        self.persistent = persistent
 
         # A mapping of SharedFateZoneName: {'cpu': #CPU, 'mem': MB_Mem_Per_CPU}
         self.deployment_layout = deployment_layout
@@ -59,6 +61,31 @@ class ProductionJob(object):
 
     def __str__(self):
         return self.name
+
+    def __repr__(self):
+        return str(self.to_dict())
+
+    def to_dict(self):
+        return {
+            'task_configuration': self.task_configuration,
+            'deployment_layout': self.deployment_layout,
+            'deployment_recipe': self.deployment_recipe,
+            'recipe_options': self.recipe_options,
+            'persistent': self.persistent
+            }
+
+    def get_zone_overflow(self, state):
+        zone_overflow = {}
+
+        for zone in self.get_shared_fate_zones():
+            zone_overflow[zone] = 0
+            required = self.get_num_required_machines_in_zone(zone)
+            active = state.job_fill[self.name][zone]
+
+            if active > required:
+                zone_overflow[zone] += (active - required)
+
+        return zone_overflow
 
     def refill(self, state, sitter):
         self.sitter = sitter

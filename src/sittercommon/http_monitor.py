@@ -1,6 +1,7 @@
 """
 Reads data from a stats collector and exposes it via HTTP
 """
+import cgi
 import os
 import simplejson
 import threading
@@ -107,6 +108,31 @@ class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         urldata = urlparse.urlparse(self.path)
         array_args = urlparse.parse_qs(urldata.query)
         args = dict([(k, v[0]) for k, v in array_args.items()])
+
+        if not urldata.path in self.handlers:
+            self.wfile.write(self._usage(args))
+            return
+
+        args['engine'] = self.engine
+
+        self.wfile.write(self.handlers[urldata.path](args))
+
+        return
+
+    def do_POST(self):
+        urldata = urlparse.urlparse(self.path)
+        ctype, pdict = cgi.parse_header(self.headers.getheader('content-type'))
+        if ctype == 'application/x-www-form-urlencoded':
+            length = int(self.headers.getheader('content-length'))
+            try:
+                args = cgi.parse_qs(self.rfile.read(length),
+                                    keep_blank_values=1)
+                args = simplejson.loads(args['data'][0])
+            except:
+                import traceback
+                return traceback.format_exc()
+        else:
+            args = {}
 
         if not urldata.path in self.handlers:
             self.wfile.write(self._usage(args))

@@ -1,5 +1,4 @@
 import json
-import random
 import simplejson
 import subprocess
 import time
@@ -77,7 +76,10 @@ class TaskManager(object):
     def get_old_logfilenames(self):
         stdout = open(self.sitter_stdout).readlines()
         print stdout
-        return simplejson.loads(stdout[-1])
+        try:
+            return simplejson.loads(stdout[-1])
+        except:
+            return {}
 
     def is_running(self):
         if not self.process:
