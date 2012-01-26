@@ -19,10 +19,13 @@ class HasMachineSitter(object):
         val = self.datamanager.add_task(job.task_configuration)
         logger.info("Add task %s result: %s" % (job.name, val))
         self.datamanager.reload()
-        val = self.datamanager.start_task(
-            self.datamanager.tasks[job.name])
-        logger.info("Start task %s result: %s" % (job.name, val))
-        return val
+        if job.name in self.datamanager.tasks:
+            val = self.datamanager.start_task(
+                self.datamanager.tasks[job.name])
+            logger.info("Start task %s result: %s" % (job.name, val))
+            return val
+        else:
+            return False
 
     def _api_identify_sitter(self):
         logger.info("Attempting to find a machinesitter at %s" % (

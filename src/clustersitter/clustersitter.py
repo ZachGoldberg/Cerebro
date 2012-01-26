@@ -522,9 +522,7 @@ class ClusterSitter(object):
 
                     if val:
                         # We were able to successfully reploy to the machine
-                        # so readd it to the monitor
                         logger.info("Successful redeploy of %s!" % machine)
-                        monitor.add_machines([machine])
                     else:
                         logger.info("Redeploy failed!  Decomissioning %s" % machine)
                         # Decomission time!
@@ -537,7 +535,7 @@ class ClusterSitter(object):
 
                     self.state.unreachable_machines.remove((machine, monitor))
 
-                for job, zone_overflow in self.state.job_overflow:
+                for job, zone_overflow in self.state.job_overflow.items():
                     for zone, count in zone_overflow.items():
                         if count <= 0:
                             continue

@@ -22,6 +22,7 @@ class ProcessHarness(object):
                  max_restarts=-1, poll_interval=.1,
                  logmanager=None, uid=None, allow_spam=False,
                  collect_stats=True):
+        self.launch_location = os.getcwd()
         self.child_proc = None
         self.child_running = True
         self.collect_stats = collect_stats

@@ -200,7 +200,12 @@ class JobFiller(object):
             while machine.state.get_state() <= 4:
                 machine.state.set_state(4)
                 machine.initialize()
-                machine.start_task(self.job)
+                val = machine.start_task(self.job)
+
+                if not val:
+                    # Couldn't start the task, which is odd
+                    # Should bail out?
+                    break
 
                 # Now verify that its started
                 machine._api_get_stats()
