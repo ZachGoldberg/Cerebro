@@ -59,7 +59,8 @@ class JobFillerState(StateMachine):
 
 
 class JobFiller(object):
-    def __init__(self, num_cores, job, zone, idle_machines):
+    def __init__(self, num_cores, job, zone, idle_machines=[],
+                 raw_machines=[]):
         self.num_cores = num_cores
         self.job = job
         self.zone = zone
@@ -70,6 +71,11 @@ class JobFiller(object):
         for machine in self.machines:
             machine.state = MachineDeploymentState()
             machine.state.set_state(3)
+
+        for machine in raw_machines:
+            machine.state = MachineDeploymentState()
+            machine.state.set_state(1)
+            self.machines.append(machine)
 
     def __str__(self):
         return "%s cores in %s for %s" % (self.num_cores,
@@ -99,7 +105,7 @@ class JobFiller(object):
     def is_done(self):
         return self.state.get_state() == 5
 
-    def run(self):
+    def run(self, fail_on_error=False):
         logger.info("Starting JobFiller")
         while self.state.get_state() != 5:
             state = self.state.get_state()
@@ -120,6 +126,8 @@ class JobFiller(object):
                 import traceback
                 traceback.print_exc()
                 logger.error(traceback.format_exc())
+                if fail_on_error:
+                    return False
 
         # We're done, so clear the deployment states
         for machine in self.machines:
@@ -127,6 +135,7 @@ class JobFiller(object):
 
         ClusterEventManager.handle("Job %s completed" % str(self))
         logger.info("Job Filler: Done!")
+        return True
 
     def run_create_resources(self):
         #!MACHINEASSUMPTION! Should calculate core (input_machines.num_cores).

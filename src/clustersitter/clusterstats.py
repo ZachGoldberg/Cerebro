@@ -71,7 +71,8 @@ class ClusterStats(StatsCollector):
         data['monitors'] = monitors
 
         jobs = []
-        for job in state.jobs:
+        check_jobs = state.jobs + state.repair_jobs
+        for job in check_jobs:
             job_data = {}
             job_data['name'] = job.name
             job_data['task_configuration'] = job.task_configuration

@@ -23,6 +23,7 @@ import sittercommon.machinedata
 from clusterstats import ClusterStats
 from deploymentrecipe import DeploymentRecipe, MachineSitterRecipe
 from eventmanager import ClusterEventManager
+from jobfiller import JobFiller
 from machineconfig import MachineConfig
 from machinemonitor import MachineMonitor
 from monitoredmachine import MonitoredMachine
@@ -68,12 +69,13 @@ class ClusterState(object):
         self.jobs = []
         self.job_fill = {}
         self.providers = {}
-        self.overflowing_jobs = {}
+        self.job_overflow = {}
         self.unreachable_machines = []
         self.machine_spawn_threads = []
         self.idle_machines = []
         self.sitter = parent
         self.job_file = "%s/jobs.json" % self.sitter.log_location
+        self.repair_jobs = []
 
     def add_job(self, job):
         logger.info("Add Job: %s" % job.name)
@@ -186,7 +188,8 @@ class ClusterState(object):
             zone_overflow = job.get_zone_overflow(self)
             job_overflow[job.name] = zone_overflow
 
-        logger.info("Calculated job overflow: %s" % job_overflow)
+        self.job_overflow = job_overflow
+        logger.info("Calculated job overflow: %s" % self.job_overflow)
 
     def _calculator(self):
         while True:
@@ -497,9 +500,26 @@ class ClusterSitter(object):
                     logger.info("Attempting to redeploy to %s" %
                                 machine)
 
-                    recipe = self.build_recipe(MachineSitterRecipe, machine)
-                    logger.info("Recipe for redeploy built, running it now")
-                    val = recipe.deploy()
+                    # Build a 'fake' job for the doctor to run
+                    job = ProductionJob(
+                        {'name': 'Machine Doctor Redeployer'},
+                        {
+                            machine.config.shared_fate_zone: {
+                                'mem': machine.config.mem,
+                                'cpu': machine.config.cpus
+                                }
+                            }, None)
+                    job.sitter = self
+                    self.state.repair_jobs.append(job)
+
+                    # Run in thread for now
+                    filler = JobFiller(1, job, machine.config.shared_fate_zone,
+                                       raw_machines=[machine])
+
+                    job.fillers[machine.config.shared_fate_zone] = [filler]
+
+                    val = filler.run(fail_on_error=True)
+
                     if val:
                         # We were able to successfully reploy to the machine
                         # so readd it to the monitor

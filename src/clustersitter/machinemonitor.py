@@ -14,7 +14,7 @@ class MachineMonitor:
         self.monitored_machines = [m for m in monitored_machines]
         self.add_queue = []
         self.pull_failures = {}
-        self.failure_threshold = 7
+        self.failure_threshold = 1
 
         logger.info("Initialized a machine monitor for %s" % (
                 str(self.monitored_machines)))
@@ -65,7 +65,8 @@ class MachineMonitor:
                     self.add_queue.remove(machine)
 
                 logger.info("Finished processing add queue")
-                logger.info("Beggining machine monitoring poll for %s at %s" % (
+                logger.info(
+                    "Beggining machine monitoring poll for %s at %s" % (
                         [str(a) for a in self.monitored_machines],
                         self.number))
 

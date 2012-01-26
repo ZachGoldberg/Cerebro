@@ -28,13 +28,20 @@ class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             }
 
         self.handlers.update(new_handlers)
-        self.engine = tenjin.Engine(path=[
-                'templates',
-                os.path.join(
-                    os.getenv('HOME'),
-                    'workspace',
-                    'tasksitter',
-                    'templates')])
+
+        paths = [
+            'templates',
+            os.path.join(
+                os.getenv('HOME'),
+                'workspace',
+                'tasksitter',
+                'templates')]
+
+        if hasattr(monitor.harness, "launch_location"):
+            paths.append(
+                os.path.join(monitor.harness.launch_location, "templates"))
+
+        self.engine = tenjin.Engine(path=paths)
 
         BaseHTTPServer.BaseHTTPRequestHandler.__init__(self, *args, **kwargs)
 
