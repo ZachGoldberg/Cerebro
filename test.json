@@ -1,1 +1,1 @@
-{"task_definitions": [{"allow_exit": true, "name": "foo", "poll_interval": 0.1, "command": "date", "auto_start": false, "ensure_alive": false, "cpu": "0.5", "restart": false, "max_restarts": -1}], "log_location": "/mnt/data"}
+{"task_definitions": [{"allow_exit": true, "name": "foo", "poll_interval": 0.1, "command": "perl -pe 'while(1){sleep;}'", "auto_start": false, "ensure_alive": false, "cpu": "0.5", "restart": false, "max_restarts": -1}], "log_location": "/mnt/data"}

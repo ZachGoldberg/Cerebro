@@ -375,7 +375,12 @@ class ClusterSitter(object):
             if not mm.config.shared_fate_zone in self.state.machines_by_zone:
                 self.state.machines_by_zone[mm.config.shared_fate_zone] = []
 
-            self.state.machines_by_zone[mm.config.shared_fate_zone].append(mm)
+            # We can re-add machines after they temporarily disappear
+            if mm not in self.state.machines_by_zone[
+                mm.config.shared_fate_zone]:
+                self.state.machines_by_zone[
+                    mm.config.shared_fate_zone].append(mm)
+
             monitored_machines.append(mm)
 
         # Spread the machines out evenly across threads
@@ -520,6 +525,9 @@ class ClusterSitter(object):
 
                     val = filler.run(fail_on_error=True)
 
+                    # Remove the job from the job list, now that its finished
+                    self.state.repair_jobs.remove(job)
+
                     if val:
                         # We were able to successfully reploy to the machine
                         logger.info("Successful redeploy of %s!" % machine)
@@ -535,27 +543,27 @@ class ClusterSitter(object):
 
                     self.state.unreachable_machines.remove((machine, monitor))
 
-                for job, zone_overflow in self.state.job_overflow.items():
+                for jobname, zone_overflow in self.state.job_overflow.items():
                     for zone, count in zone_overflow.items():
                         if count <= 0:
                             continue
 
                         ClusterEventManager.handle(
                             "Detected job overflow:" +
-                            "Job: %s, Zone: %s, Count: %s" % (job.name,
+                            "Job: %s, Zone: %s, Count: %s" % (jobname,
                                                               zone,
                                                               count))
 
                         decomissioned = 0
-                        for machine in self.machines_by_zone[zone]:
+                        for machine in self.state.machines_by_zone[zone]:
                             if decomissioned == count:
                                 break
 
                             for task in machine.get_running_tasks():
-                                if task['name'] == job.name:
+                                if task['name'] == jobname:
                                     ClusterEventManager.handle(
-                                        "Stopping %s on %s" % (job.name, str(machine)))
-                                    machine.datamanager.stop_task(job.name)
+                                        "Stopping %s on %s" % (jobname, str(machine)))
+                                    machine.datamanager.stop_task(jobname)
                                     decomissioned += 1
                                     break
 

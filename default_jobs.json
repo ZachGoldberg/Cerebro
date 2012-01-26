@@ -4,7 +4,7 @@
         "deployment_layout": {
             "aws-us-west-1c": {
                 "mem": 50, 
-                "cpu": 2
+                "cpu": 0
             }, 
             "aws-us-east-1b": {
                 "mem": 50, 

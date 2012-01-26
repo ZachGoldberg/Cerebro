@@ -1,0 +1,23 @@
+<html>
+<body>
+<h3> Stats </h3>
+<table>
+<tr>
+  <th>
+   Stat
+  </th>
+  <th>
+   Value
+  </th>
+</tr>
+<?py for name, info in data.items(): ?>
+  <tr>
+    <td> ${name} </td>
+    <td align='left'>
+      <a href='${info['url']}'>${info['location']}</a> (${info['size']}kB)
+    </td>
+  </tr>
+<?py #endfor ?>
+</table>
+</body>
+</html>

@@ -14,7 +14,7 @@ class ClusterStats(StatsCollector):
         data = self.get_metadata()
         data.update(self.get_live_data())
         return engine.render('cluster_overview.html', {'data': data,
-                                                       'pagewidth': 1100})
+                                                       'pagewidth': 1300})
 
     def get_live_data(self):
         data = {}

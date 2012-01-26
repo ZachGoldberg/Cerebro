@@ -107,9 +107,6 @@ class ProcessHarness(object):
             if self.collect_stats:
                 self.child_proc.update_usage(deep=True)
 
-            print "OK"
-            print self.constraints
-
             restarted = False
 
             for constraint in self.constraints:

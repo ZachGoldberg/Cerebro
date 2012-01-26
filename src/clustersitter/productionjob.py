@@ -123,8 +123,9 @@ class ProductionJob(object):
 
             # !MACHINEASSUMPTION! Ideally we're counting resources here
             # not machines
-            required_new_machine_count = (idle_required -
-                                          len(idle_available))
+            required_new_machine_count = max(
+                (idle_required - len(idle_available)), 0)
+
             logger.info(
                 ("Calculated job requirements for %s in %s: " % (self.name,
                                                                  zone)) +
@@ -138,7 +139,7 @@ class ProductionJob(object):
                 )
 
             usable_machines = []
-            if required_new_machine_count == 0:
+            if required_new_machine_count <= 0:
                 # idle_available > idle_required, so use just as many
                 # as we need
                 usable_machines = idle_available[:idle_required]
