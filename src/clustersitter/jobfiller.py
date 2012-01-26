@@ -133,7 +133,7 @@ class JobFiller(object):
         for machine in self.machines:
             machine.state = None
 
-        ClusterEventManager.handle("Job %s completed" % str(self))
+        ClusterEventManager.handle("Completed Filling: %s" % str(self))
         logger.info("Job Filler: Done!")
         return True
 

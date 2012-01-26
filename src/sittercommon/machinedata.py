@@ -170,6 +170,7 @@ class MachineData(object):
         val = self._make_request(
             requests.get,
             path="start_task?task_name=%s" % tid)
+
         if val:
             return val.content
 
@@ -182,7 +183,8 @@ class MachineData(object):
         tid = urllib.quote(task['name'])
         val = self._make_request(
             requests.get,
-            path="stop_task?task_name=%s" % tid).content
+            path="stop_task?task_name=%s" % tid)
+
         if val:
             return val.content
 
