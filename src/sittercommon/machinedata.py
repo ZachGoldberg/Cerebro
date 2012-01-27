@@ -26,10 +26,6 @@ class MachineData(object):
                 logger.info("Attempting to connect to %s" % (
                         "%s:%s" % (self.hostname, port)))
 
-                sock = socket.socket(socket.AF_INET)
-                sock.connect((self.hostname, port))
-                sock.close()
-
                 # Verify we can actually make an http request
                 req = requests.get("http://%s:%s" % (self.hostname,
                                                      port),
