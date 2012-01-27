@@ -26,9 +26,14 @@ class MachineData(object):
                 logger.info("Attempting to connect to %s" % (
                         "%s:%s" % (self.hostname, port)))
 
+                timeout = socket.getdefaulttimeout()
+                socket.setdefaulttimeout(0.5)
+
                 sock = socket.socket(socket.AF_INET)
                 sock.connect((self.hostname, port))
                 sock.close()
+
+                socket.setdefaulttimeout(timeout)
 
                 # Verify we can actually make an http request
                 req = requests.get("http://%s:%s" % (self.hostname,

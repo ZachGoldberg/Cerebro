@@ -9,7 +9,7 @@ class MachineMonitor:
     def __init__(self, parent, number, monitored_machines=[]):
         self.clustersitter = parent
         self.number = number
-        # Need to copy the array to deref it so its not shareda
+        # Need to copy the array to deref it so its not shared
         # amoung threads
         self.monitored_machines = [m for m in monitored_machines]
         self.add_queue = []
@@ -21,6 +21,10 @@ class MachineMonitor:
 
     def num_monitored_machines(self):
         return len(self.monitored_machines) + len(self.add_queue)
+
+    def remove_machine(self, monitored_machine):
+        if monitored_machine in self.monitored_machines:
+            self.monitored_machines.remove(monitored_machine)
 
     def add_machines(self, monitored_machines):
         self.add_queue.extend(monitored_machines)
@@ -99,9 +103,11 @@ class MachineMonitor:
                         del self.pull_failures[machine]
                         machine.detected_sitter_failures += 1
                         logger.warn(
-                            "Removing %s because we can't contact the sitter! " % (
+                            "Removing" +
+                            "%s because we can't contact the sitter! " % (
                                 machine.hostname))
-                        self.clustersitter._register_sitter_failure(machine, self)
+                        self.clustersitter._register_sitter_failure(
+                            machine, self)
 
             except:
                 import traceback

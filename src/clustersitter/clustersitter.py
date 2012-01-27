@@ -384,6 +384,13 @@ class ClusterSitter(object):
                     self.next_port = self.orig_starting_port
         return works
 
+    def remove_machine(self, machine):
+        self.state.machines_by_zone[
+            machine.config.shared_fate_zone].remove(machine)
+
+        for monitor in self.state.monitors:
+            monitor[0].remove_machine(machine)
+
     def add_machines(self, machines):
         if not machines:
             return
@@ -611,14 +618,15 @@ class ClusterSitter(object):
                     self.state.max_idle_per_zone = -1
                     for zone, machines in self.state.idle_machines.items():
                         provider = self.state.provider_by_zone[zone]
-                        logger.info("%s > %s?" % (len(machines), idle_limit))
+
                         if len(machines) > idle_limit:
                             decomission_targets = [
                                 m for m in machines[idle_limit:]]
                             for machine in decomission_targets:
-                                logger.info("Decomissioning %s" % str(machine))
+                                ClusterEventManager.handle(
+                                    "Decomissioning %s" % str(machine))
+                                self.remove_machine(machine)
                                 provider.decomission(machine)
-                                # Now remove it from monitoring etc.
 
             except:
                 # Der?  Not sure what this could be...
