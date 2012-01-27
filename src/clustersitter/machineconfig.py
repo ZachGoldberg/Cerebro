@@ -1,6 +1,6 @@
 class MachineConfig(object):
     def __init__(self, hostname, shared_fate_zone,
-                 cpus, mem, bits=64, disk=0):
+                 cpus, mem, bits=64, disk=0, data=None):
         self.hostname = hostname
         self.cpus = cpus
         self.mem = mem
@@ -9,6 +9,7 @@ class MachineConfig(object):
         self.disk = disk
         self.login_name = None
         self.login_key = None
+        self.data = data
 
     def __str__(self):
         return self.hostname

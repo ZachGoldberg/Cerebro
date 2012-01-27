@@ -137,6 +137,8 @@ class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 args = simplejson.loads(args['data'][0])
             except:
                 import traceback
+                traceback.print_exc()
+                self.wfile.write("Error decoding POST data")
                 return traceback.format_exc()
         else:
             args = {}

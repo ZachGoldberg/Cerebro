@@ -52,6 +52,23 @@ class AmazonEC2(MachineProvider):
     def usable(self):
         return bool(self.regions)
 
+    def decomission(self, machine):
+        """
+        machine -- A Monitored Machine
+        """
+        aws_placement = machine.config.shared_fate_zone.replace(
+            'aws-', '')
+        conn = self.connection_by_zone[aws_placement]
+        instance = machine.config.data
+        try:
+            conn.terminate_instances([instance.id])
+        except:
+            import traceback
+            logger.warn(traceback.format_exc())
+            return False
+
+        return True
+
     @classmethod
     def config_from_instance(cls, instance):
         perf = cls.instance_types[instance.instance_type]
@@ -61,6 +78,7 @@ class AmazonEC2(MachineProvider):
                              mem=perf[1],
                              disk=perf[2],
                              bits=perf[3],
+                             data=instance
                              )
 
     def _get_image_by_type(self, zone, instance_type):

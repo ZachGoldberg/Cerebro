@@ -7,3 +7,6 @@ class MachineProvider(object):
 
     def usable(self):
         return False
+
+    def decomission(self, machine):
+        pass

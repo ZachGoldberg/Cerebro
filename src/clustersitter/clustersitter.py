@@ -76,6 +76,7 @@ class ClusterState(object):
         self.sitter = parent
         self.job_file = "%s/jobs.json" % self.sitter.log_location
         self.repair_jobs = []
+        self.max_idle_per_zone = -1
 
     def add_job(self, job):
         logger.info("Add Job: %s" % job.name)
@@ -236,6 +237,8 @@ class ClusterSitter(object):
         self.http_monitor.add_handler('/overview', self.stats.overview)
         self.http_monitor.add_handler('/add_job', self.api_add_job)
         self.http_monitor.add_handler('/remove_job', self.api_remove_job)
+        self.http_monitor.add_handler('/update_idle_limit',
+                                      self.api_enforce_idle)
 
         # Do lots of logging configuration
         modules = [sys.modules[__name__],
@@ -273,22 +276,40 @@ class ClusterSitter(object):
         socket.setdefaulttimeout(2)
 
     # ----------- API ----------------
-
-    # TODO -- Use something more formal
-    # for this API.
-    def api_add_job(self, args):
+    def _api_check(self, args, required_fields):
         if self.start_state != "Started":
             return "Not ready to recieve API calls"
-
-        required_fields = ['task_configuration',
-                           'deployment_layout',
-                           'deployment_recipe',
-                           'recipe_options',
-                           'persistent']
 
         for field in required_fields:
             if not field in args:
                 return "Missing Field %s" % field
+
+        return
+
+    def api_enforce_idle(self, args):
+        # Really naive right now, a global # of
+        # max idle per zone.  Could do a lot more here.
+        check = self._api_check(args, ['idle_count_per_zone'])
+
+        if check:
+            return check
+
+        try:
+            self.state.max_idle_per_zone = int(args['idle_count_per_zone'])
+        except:
+            return "Invalid limit"
+
+        return "Limit set"
+
+    def api_add_job(self, args):
+        check = self._api_check(args,
+                                ['task_configuration',
+                                 'deployment_layout',
+                                 'deployment_recipe',
+                                 'recipe_options',
+                                 'persistent'])
+        if check:
+            return check
 
         if self.state.add_job(ProductionJob(
                 args['task_configuration'],
@@ -301,8 +322,10 @@ class ClusterSitter(object):
             return "Error adding job, see logs"
 
     def api_remove_job(self, args):
-        if not 'name' in args:
-            return "Missing Field name"
+        check = self._api_check(args, ['name'])
+
+        if check:
+            return check
 
         if self.state.remove_job(args['name']):
             return "Removal OK"
@@ -424,7 +447,8 @@ class ClusterSitter(object):
         # Then download machine data, populate data structure and monitors
         # then kickoff everything.
 
-        logger.info("Initializing %s MachineMonitors" % self.worker_thread_count)
+        logger.info(
+            "Initializing %s MachineMonitors" % self.worker_thread_count)
         # Spin up all the monitoring threads
         for threadnum in range(self.worker_thread_count):
             machinemonitor = MachineMonitor(parent=self,
@@ -479,7 +503,8 @@ class ClusterSitter(object):
         still a good idea to shift to machinedoctor
 
         """
-        logger.info("Registering an unreachable machine %s" % monitored_machine)
+        logger.info(
+            "Registering an unreachable machine %s" % monitored_machine)
         self.state.unreachable_machines.append((monitored_machine, monitor))
 
     def _machine_doctor(self):
@@ -501,6 +526,11 @@ class ClusterSitter(object):
             logger.info("Begin machine doctor run.  Unreachables: %s"
                         % (self.state.unreachable_machines))
             try:
+                # TODO - Break out these three actions into sub-functions
+
+                """
+                Try and fix unreachable machines
+                """
                 for machine, monitor in self.state.unreachable_machines:
                     logger.info("Attempting to redeploy to %s" %
                                 machine)
@@ -532,7 +562,8 @@ class ClusterSitter(object):
                         # We were able to successfully reploy to the machine
                         logger.info("Successful redeploy of %s!" % machine)
                     else:
-                        logger.info("Redeploy failed!  Decomissioning %s" % machine)
+                        logger.info(
+                            "Redeploy failed!  Decomissioning %s" % machine)
                         # Decomission time!
                         # For now just assume its dead, johnny.
                         self.state.machines_by_zone[
@@ -543,6 +574,9 @@ class ClusterSitter(object):
 
                     self.state.unreachable_machines.remove((machine, monitor))
 
+                """
+                Turn off any overflowed jobs
+                """
                 for jobname, zone_overflow in self.state.job_overflow.items():
                     for zone, count in zone_overflow.items():
                         if count <= 0:
@@ -562,10 +596,29 @@ class ClusterSitter(object):
                             for task in machine.get_running_tasks():
                                 if task['name'] == jobname:
                                     ClusterEventManager.handle(
-                                        "Stopping %s on %s" % (jobname, str(machine)))
+                                        "Stopping %s on %s" % (jobname,
+                                                               str(machine)))
                                     machine.datamanager.stop_task(jobname)
                                     decomissioned += 1
                                     break
+
+                """
+                Enforce idle machine limits
+                """
+                if self.state.max_idle_per_zone != -1:
+                    logger.info("Enforcing an idle limit")
+                    idle_limit = self.state.max_idle_per_zone
+                    self.state.max_idle_per_zone = -1
+                    for zone, machines in self.state.idle_machines.items():
+                        provider = self.state.provider_by_zone[zone]
+                        logger.info("%s > %s?" % (len(machines), idle_limit))
+                        if len(machines) > idle_limit:
+                            decomission_targets = [
+                                m for m in machines[idle_limit:]]
+                            for machine in decomission_targets:
+                                logger.info("Decomissioning %s" % str(machine))
+                                provider.decomission(machine)
+                                # Now remove it from monitoring etc.
 
             except:
                 # Der?  Not sure what this could be...
@@ -577,7 +630,8 @@ class ClusterSitter(object):
             sleep_time = self.stats_poll_interval - \
                 time_spent.seconds
             logger.info(
-                "Finished Machine Doctor run.  Time_spent: %s, sleep_time: %s" % (
+                "Finished Machine Doctor run. " +
+                "Time_spent: %s, sleep_time: %s" % (
                     time_spent,
                     sleep_time))
 
