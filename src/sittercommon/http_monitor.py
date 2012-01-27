@@ -76,9 +76,9 @@ class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             except:
                 pass
 
-            logfiles[k] = {'url': "/logfile?name=%s" % v,
+            logfiles[k] = simplejson.dumps({'url': "/logfile?name=%s" % v,
                            'location': v,
-                           'size': size}
+                           'size': size})
 
         if 'nohtml' in args:
             return self._format_dict(logfiles, args)

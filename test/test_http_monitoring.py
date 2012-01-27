@@ -1,10 +1,11 @@
-import tasksitter.main as main
-import os
+import json
 import random
 import simplejson
 import time
 import unittest
 import urllib2
+
+import tasksitter.main as main
 
 
 class HTTPMonitoringTests(unittest.TestCase):
@@ -127,9 +128,10 @@ class HTTPMonitoringTests(unittest.TestCase):
                               output_format="flat",
                               stop_server=False)
 
-        filename = data["stdout.0"]
+        filename = json.loads(data["stdout.0"])['url']
+
         log_data = self.make_call(
-            'http://localhost:%s/logfile?name=%s&nohtml=1' % (
+            'http://localhost:%s%s&nohtml=1' % (
                 self.port, filename))
         self.stop_http_server()
 
