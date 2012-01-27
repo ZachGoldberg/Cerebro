@@ -39,7 +39,7 @@ class MachineData(object):
                 import traceback
                 logger.warn("Failed to connect to %s:%s" % (
                         self.hostname, port))
-                logger.warn(traceback.format_exc())
+                logger.warn(traceback.format_exc().splitlines()[-1])
                 port += 1
                 if port > self.starting_port + 15:
                     self.url = ""

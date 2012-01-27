@@ -60,7 +60,7 @@ class MachineMonitor:
         while True:
             start_time = datetime.now()
             try:
-                logger.info("Processing add queue %s at %s" % (self.add_queue,
+                logger.debug("Processing add queue %s at %s" % (self.add_queue,
                                                                self.number))
                 while len(self.add_queue) > 0:
                     machine = self.add_queue[-1]
@@ -68,8 +68,8 @@ class MachineMonitor:
                     self.monitored_machines.append(machine)
                     self.add_queue.remove(machine)
 
-                logger.info("Finished processing add queue")
-                logger.info(
+                logger.debug("Finished processing add queue")
+                logger.debug(
                     "Beggining machine monitoring poll for %s at %s" % (
                         [str(a) for a in self.monitored_machines],
                         self.number))
@@ -82,18 +82,21 @@ class MachineMonitor:
                         except:
                             val = False
                             import traceback
-                            # todo Log instead
                             traceback.print_exc()
                             logger.error(traceback.format_exc())
 
                         if not val:
                             self.pull_failures[machine] += 1
+                            logger.info(
+                                "Detected a pull failure for %s, total: %s" % (
+                                    machine, self.pull_failures[machine]))
+
                         else:
                             self.pull_failures[machine] = 0
                     else:
                         self.initialize_machines([machine])
 
-                logger.info("Pull Failures: %s" % (
+                logger.debug("Pull Failures: %s" % (
                         [(m.hostname, count) for m, count in \
                              self.pull_failures.items()]))
 
@@ -117,7 +120,7 @@ class MachineMonitor:
             time_spent = datetime.now() - start_time
             sleep_time = self.clustersitter.stats_poll_interval - \
                 time_spent.seconds
-            logger.info(
+            logger.debug(
                 "Finished poll run for %s.  Time_spent: %s, sleep_time: %s" % (
                     [str(a) for a in self.monitored_machines],
                     time_spent,

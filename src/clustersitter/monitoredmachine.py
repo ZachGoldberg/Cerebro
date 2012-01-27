@@ -53,7 +53,7 @@ class HasMachineSitter(object):
                                     path)
 
     def _api_get_stats(self):
-        logger.info("Get stats for %s" % str(self))
+        logger.debug("Get stats for %s" % str(self))
         tasks = None
         try:
             tasks = self.datamanager.reload()
@@ -68,7 +68,7 @@ class HasMachineSitter(object):
         else:
             self.loaded = False
 
-        logger.info("Get stats for %s result: %s" % (str(self),
+        logger.debug("Get stats for %s result: %s" % (str(self),
                                                      self.loaded))
         return self.loaded
 

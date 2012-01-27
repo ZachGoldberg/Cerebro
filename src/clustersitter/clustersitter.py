@@ -77,6 +77,7 @@ class ClusterState(object):
         self.job_file = "%s/jobs.json" % self.sitter.log_location
         self.repair_jobs = []
         self.max_idle_per_zone = -1
+        self.loggers = []
 
     def add_job(self, job):
         logger.info("Add Job: %s" % job.name)
@@ -130,7 +131,7 @@ class ClusterState(object):
         job_fill = {}
         #!MACHINEASSUMPTION! Should be cpu_count not machine_count
         # Fill out a mapping of [job][task] -> machine_count
-        logger.info("Calculating job fill for jobs: %s" % self.jobs)
+        logger.debug("Calculating job fill for jobs: %s" % self.jobs)
         for job in self.jobs:
             job_fill[job.name] = {}
 
@@ -149,16 +150,16 @@ class ClusterState(object):
                     job_fill[task['name']][zone] += 1
 
         self.job_fill = job_fill
-        logger.info("Calculated job fill: %s" % self.job_fill)
+        logger.debug("Calculated job fill: %s" % self.job_fill)
 
     def calculate_job_refill(self):
-        logger.info("Calculating job refill for jobs: %s" % self.jobs)
+        logger.debug("Calculating job refill for jobs: %s" % self.jobs)
         # Now see if we need to add any new machines to any jobs
         for job in self.jobs:
             if job.name in self.job_fill:
                 job.refill(self, self.sitter)
 
-        logger.info("Calculated job refill: %s" % self.job_fill)
+        logger.debug("Calculated job refill: %s" % self.job_fill)
 
     def calculate_idle_machines(self):
         idle_machines = {}
@@ -179,7 +180,7 @@ class ClusterState(object):
         # The DICT swap must be atomic, or else another
         # thread could get a bad value during calculation.
         self.idle_machines = idle_machines
-        logger.info("Calculated idle machines: %s" % str(self.idle_machines))
+        logger.debug("Calculated idle machines: %s" % str(self.idle_machines))
 
     def calculate_job_overfill(self):
         # TODO we really should just do the calculating here
@@ -190,7 +191,7 @@ class ClusterState(object):
             job_overflow[job.name] = zone_overflow
 
         self.job_overflow = job_overflow
-        logger.info("Calculated job overflow: %s" % self.job_overflow)
+        logger.debug("Calculated job overflow: %s" % self.job_overflow)
 
     def _calculator(self):
         while True:
@@ -239,6 +240,8 @@ class ClusterSitter(object):
         self.http_monitor.add_handler('/remove_job', self.api_remove_job)
         self.http_monitor.add_handler('/update_idle_limit',
                                       self.api_enforce_idle)
+        self.http_monitor.add_handler('/update_logging_level',
+                                      self.api_update_logging_level)
 
         # Do lots of logging configuration
         modules = [sys.modules[__name__],
@@ -272,6 +275,7 @@ class ClusterSitter(object):
             handler.setFormatter(formatter)
             module.logger.addHandler(all_file)
             module.logger.addHandler(handler)
+            self.state.loggers.append(module.logger)
 
         socket.setdefaulttimeout(2)
 
@@ -285,6 +289,15 @@ class ClusterSitter(object):
                 return "Missing Field %s" % field
 
         return
+
+    def api_update_logging_level(self, args):
+        # Default level is INFO
+        level = args.get('level', 20)
+        for logger in self.state.loggers:
+            logger.setLevel(level)
+
+        logger.info('Updated logging level to %s' % level)
+        return "Level set to %s" % level
 
     def api_enforce_idle(self, args):
         # Really naive right now, a global # of
@@ -530,7 +543,7 @@ class ClusterSitter(object):
         """
         while True:
             start_time = datetime.now()
-            logger.info("Begin machine doctor run.  Unreachables: %s"
+            logger.debug("Begin machine doctor run.  Unreachables: %s"
                         % (self.state.unreachable_machines))
             try:
                 # TODO - Break out these three actions into sub-functions
@@ -637,7 +650,7 @@ class ClusterSitter(object):
             time_spent = datetime.now() - start_time
             sleep_time = self.stats_poll_interval - \
                 time_spent.seconds
-            logger.info(
+            logger.debug(
                 "Finished Machine Doctor run. " +
                 "Time_spent: %s, sleep_time: %s" % (
                     time_spent,

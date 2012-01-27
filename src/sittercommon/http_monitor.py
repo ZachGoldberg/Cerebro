@@ -122,7 +122,11 @@ class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
         args['engine'] = self.engine
 
-        self.wfile.write(self.handlers[urldata.path](args))
+        try:
+            self.wfile.write(self.handlers[urldata.path](args))
+        except:
+            import traceback
+            self.wfile.write(traceback.format_exc())
 
         return
 
