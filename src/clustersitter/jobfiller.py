@@ -59,14 +59,17 @@ class JobFillerState(StateMachine):
 
 
 class JobFiller(object):
-    def __init__(self, num_cores, job, zone, idle_machines=[],
-                 raw_machines=[]):
+    def __init__(self, num_cores, job, zone, idle_machines=None,
+                 raw_machines=None):
         self.num_cores = num_cores
         self.job = job
         self.zone = zone
-        self.machines = idle_machines
+        self.machines = idle_machines or []
         self.state = JobFillerState()
         self.thread = None
+
+        if not raw_machines:
+            raw_machines = []
 
         for machine in self.machines:
             machine.state = MachineDeploymentState()

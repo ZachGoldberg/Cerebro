@@ -211,4 +211,5 @@ class HTTPMonitor(object):
             self,
             self.new_handlers, x, y, z)
         self.httpd = SocketServer.TCPServer(('', self.port), handler)
+        self.httpd.timeout = 1
         self.httpd.serve_forever(poll_interval=0.1)
