@@ -143,8 +143,9 @@ class JobFiller(object):
         return True
 
     def run_create_resources(self):
-        #!MACHINEASSUMPTION! Should calculate core (input_machines.num_cores).
         if len(self.machines) < self.num_cores:
+            #!MACHINEASSUMPTION! Should calculate machines/cores
+            # (input_machines.num_cores).
             new_machine_count = self.num_cores - len(self.machines)
             # Then spin some up!
             if self.launch_machines(new_machine_count):
