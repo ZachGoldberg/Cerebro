@@ -20,10 +20,16 @@ class DeploymentRecipe(object):
 
         self.post_callback = post_callback
         self.options = options
+        self.connected = False
+        self.connect()
+
+    def connect(self):
+        if self.connected:
+            return
+
         self.client = paramiko.SSHClient()
         self.client.set_missing_host_key_policy(
             paramiko.AutoAddPolicy())
-        self.connected = False
 
         for key in self.keys:
             try:

@@ -1,5 +1,7 @@
 import logging
 import threading
+import time
+from datetime import datetime, timedelta
 
 from deploymentrecipe import MachineSitterRecipe
 from monitoredmachine import MonitoredMachine
@@ -156,44 +158,65 @@ class JobFiller(object):
     def deploy_monitoring_code(self):
         # TODO Parallelize this somehow
         for machine in self.machines:
-            while machine.state.get_state() <= 2:
-                machine.state.set_state(2)
-                recipe = self.job.sitter.build_recipe(
-                    MachineSitterRecipe,
-                    machine,
-                    post_callback=None,
-                    options=None)
+            recipe = self.job.sitter.build_recipe(
+                MachineSitterRecipe,
+                machine,
+                post_callback=None,
+                options=None)
 
-                val = recipe.deploy()
-                if val:
-                    machine.state.set_state(3)
-                else:
-                    logger.warn(
-                        "Couldn't deploy monitoring code to %s?" % (
-                            str(machine)))
+            self._do_recipe_deployment(2, 3, machine,
+                                       recipe)
         self.state.next()
+
+    def _do_recipe_deployment(self, old_state,
+                              new_state,
+                              machine,
+                              recipe):
+        # We'll try and deploy to a machine
+        # for a total of 2 minutes.  This is random
+        # and probably a terrible way to limit
+        # how many times we try and deploy, but
+        # I can't think of something better right now.  *shrug*.
+        start_time = datetime.now()
+        while machine.state.get_state() <= old_state:
+            machine.state.set_state(2)
+            recipe.connect()
+            val = recipe.deploy()
+            if val:
+                machine.state.set_state(new_state)
+            else:
+                logger.warn(
+                    "Couldn't deploy monitoring code to %s?" % (
+                        str(machine)))
+
+                if datetime.now() - start_time > timedelta(minutes=2):
+                    machine.state.set_state(new_state)
+                    logger.error("Giving up deploying to %s" % str(
+                            machine))
+
+                    raise Exception("Failed to deploy!")
+
+                time.sleep(1)
 
     def deploy_job_code(self):
         # TODO Parallelize this somehow
         for machine in self.machines:
             while machine.state.get_state() <= 3:
                 machine.state.set_state(3)
-                val = True
-                if self.job.deployment_recipe:
-                    recipe = self.job.sitter.build_recipe(
-                        self.job.deployment_recipe,
-                        machine,
-                        post_callback=None,
-                        options=self.job.recipe_options)
 
-                    val = recipe.deploy()
-
-                if val:
+                if not self.job.deployment_recipe:
                     machine.state.set_state(4)
-                else:
-                    logger.warn(
-                        "Couldn't deploy job code to %s?" % (
-                            str(machine)))
+                    continue
+                
+                recipe = self.job.sitter.build_recipe(
+                    self.job.deployment_recipe,
+                    machine,
+                    post_callback=None,
+                    options=self.job.recipe_options)
+
+                self._do_recipe_deployment(3, 4,
+                                           machine,
+                                           recipe)
 
         self.state.next()
 

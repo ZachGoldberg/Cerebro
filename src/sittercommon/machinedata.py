@@ -30,6 +30,8 @@ class MachineData(object):
                 req = requests.get("http://%s:%s" % (self.hostname,
                                                      port),
                                    timeout=2)
+                if not req.content:
+                    raise Exception("No content recieved!")
 
                 found = True
                 self.portnum = port

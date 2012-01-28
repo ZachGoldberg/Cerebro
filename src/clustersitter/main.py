@@ -50,8 +50,10 @@ def main(sys_args=None):
     args = parse_args(sys_args)
 
     if not os.getenv('AWS_ACCESS_KEY_ID'):
-        os.putenv('AWS_ACCESS_KEY_ID', args.aws_access_key)
-        os.putenv('AWS_SECRET_ACCESS_KEY', args.aws_secret_key)
+        if args.aws_access_key:
+            os.putenv('AWS_ACCESS_KEY_ID', args.aws_access_key)
+        if args.aws_secret_key:
+            os.putenv('AWS_SECRET_ACCESS_KEY', args.aws_secret_key)
 
     if args.daemon:
         daemonize()

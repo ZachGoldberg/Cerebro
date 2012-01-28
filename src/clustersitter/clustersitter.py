@@ -552,8 +552,8 @@ class ClusterSitter(object):
                 Try and fix unreachable machines
                 """
                 for machine, monitor in self.state.unreachable_machines:
-                    logger.info("Attempting to redeploy to %s" %
-                                machine)
+                    ClusterEventManager.handle("Attempting to redeploy to %s" %
+                                               machine)
 
                     # Build a 'fake' job for the doctor to run
                     job = ProductionJob(
