@@ -374,6 +374,8 @@ th
       <tr>
         <td>
           <a href='${machine['url']}'>${machine['hostname']}</a>
+          <br>
+          <i>${machine['dns_name']}</i>
         </td>
         <td> ${machine['zone']} </td>
         <td> ${machine['cpus']}x
@@ -520,6 +522,10 @@ th
       </li>
       <li>
         Keys: ${data['keys']}
+      </li>
+      <li>
+        DNS Provider Config:
+        <pre><?py import json; dns_provider_config = json.dumps(data['dns_provider_config'], indent=4) ?>${dns_provider_config}</pre>
       </li>
       <li>
         Providers:

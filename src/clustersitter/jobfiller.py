@@ -1,4 +1,5 @@
 import logging
+import socket
 import threading
 import time
 from datetime import datetime, timedelta
@@ -56,7 +57,8 @@ class JobFillerState(StateMachine):
          2: 'DeployingJobCode',
          3: 'LaunchingTasks',
          4: 'AddingtoMonitoring',
-         5: 'Done'
+         5: 'EnsureDNS',
+         6: 'Done'
          }
 
 
@@ -108,11 +110,11 @@ class JobFiller(object):
         self.thread.start()
 
     def is_done(self):
-        return self.state.get_state() == 5
+        return self.state.get_state() == 6
 
     def run(self, fail_on_error=False):
         logger.info("Starting JobFiller")
-        while self.state.get_state() != 5:
+        while self.state.get_state() != 6:
             state = self.state.get_state()
             logger.info("Running State: %s" % str(self.state))
 
@@ -127,6 +129,8 @@ class JobFiller(object):
                     self.launch_tasks()
                 elif state == 4:
                     self.add_to_monitoring()
+                elif state == 5:
+                    self.ensure_dns()
             except:
                 import traceback
                 traceback.print_exc()
@@ -155,6 +159,43 @@ class JobFiller(object):
                     "Couldn't launch machines for %s?" % self.job.name)
         else:
             self.state.next()
+
+    def ensure_dns(self):
+        basename = self.job.dns_basename
+        provider = self.job.sitter.dns_provider
+        if not basename or not provider:
+            self.state.next()
+            return
+
+        records = provider.get_records(hostName=basename)
+        # Find out what records exist underneath this basename
+        # and ensure the machine objects have them
+        record_by_ip = {}
+        used_prefixes = []
+        for record in records:
+            record_by_ip[record['value']] = record['record']
+            pieces = record['record'].split('.')
+            if pieces[0].isdigit():
+                used_prefixes.append(int(pieces[0]))
+
+        for machine in self.machines:
+            ip = socket.gethostbyname(machine.config.hostname)
+            if ip in record_by_ip:
+                machine.config.dns_name = record_by_ip[ip]
+            else:
+                # We need a new name!  Get the first valid one
+                new_prefix = None
+                for i in range(len(self.machines)):
+                    if i not in used_prefixes:
+                        new_prefix = i
+                machine.config.dns_name = "%s.%s" % (i, basename)
+                provider.add_record(ip,
+                                    machine.config.dns_name)
+                logger.info("Assigning %s to %s" % (
+                        machine.config.dns_name,
+                        ip))
+
+        self.state.next()
 
     def deploy_monitoring_code(self):
         # TODO Parallelize this somehow
@@ -208,7 +249,7 @@ class JobFiller(object):
                 if not self.job.deployment_recipe:
                     machine.state.set_state(4)
                     continue
-                
+
                 recipe = self.job.sitter.build_recipe(
                     self.job.deployment_recipe,
                     machine,

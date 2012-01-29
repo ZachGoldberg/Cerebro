@@ -123,7 +123,11 @@ class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         args['engine'] = self.engine
 
         try:
-            self.wfile.write(self.handlers[urldata.path](args))
+            output = self.handlers[urldata.path](args)
+            if isinstance(output, dict):
+                self.wfile.write(self._format_dict(output, args))
+            else:
+                self.wfile.write(output)
         except:
             import traceback
             self.wfile.write(traceback.format_exc())

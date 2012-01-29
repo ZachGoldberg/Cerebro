@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 class ProductionJob(object):
     def __init__(self,
+                 dns_basename,
                  task_configuration,
                  deployment_layout,
                  deployment_recipe,
@@ -24,6 +25,7 @@ class ProductionJob(object):
           recipe_options -- any options to pass to the recipe
         """
         # The config to pass to a machinesitter / tasksitter
+        self.dns_basename = dns_basename or ""
         self.task_configuration = task_configuration
         self.name = task_configuration['name']
         self.deployment_recipe = deployment_recipe
@@ -126,7 +128,11 @@ class ProductionJob(object):
             required_new_machine_count = max(
                 (idle_required - len(idle_available)), 0)
 
-            logger.info(
+            do_log = logger.debug
+            if idle_required > 0:
+                do_log = logger.info
+
+            do_log(
                 ("Calculated job requirements for %s in %s: " % (self.name,
                                                                  zone)) +
                 "Currently Active: %s " % (state.job_fill[self.name][zone]) +

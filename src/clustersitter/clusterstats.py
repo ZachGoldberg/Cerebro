@@ -13,8 +13,11 @@ class ClusterStats(StatsCollector):
         engine = args['engine']
         data = self.get_metadata()
         data.update(self.get_live_data())
-        return engine.render('cluster_overview.html', {'data': data,
-                                                       'pagewidth': 1300})
+        if "nohtml" not in args:
+            return engine.render('cluster_overview.html', {'data': data,
+                                                           'pagewidth': 1300})
+        else:
+            return data
 
     def get_live_data(self):
         data = {}
@@ -28,7 +31,7 @@ class ClusterStats(StatsCollector):
                      'job_fill',
                      'providers',
                      'unreachable_machines',
-                     'idle_machines'
+                     'idle_machines',
                      ]
 
         for key in dumpables:
@@ -55,6 +58,7 @@ class ClusterStats(StatsCollector):
                 machine_data['mem'] = machine.config.mem
                 machine_data['url'] = machine.datamanager.url
                 machine_data['disk'] = machine.config.disk
+                machine_data['dns_name'] = machine.config.dns_name
                 machine_data['hostname'] = machine.hostname
                 machine_data['tasks'] = machine.get_tasks()
                 machine_data['running_tasks'] = machine.get_running_tasks()
@@ -132,6 +136,7 @@ class ClusterStats(StatsCollector):
         data['clustersitter_pid'] = os.getpid()
         data['log_location'] = self.harness.log_location
         data['provider_config'] = self.harness.provider_config
+        data['dns_provider_config'] = self.harness.dns_provider_config
         data['username'] = self.harness.user
         data['keys'] = self.harness.keys
         data['launch_time'] = self.harness.launch_time

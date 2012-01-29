@@ -88,6 +88,12 @@ def main(sys_args=None):
             },
         }
 
+    dns_provider_config = {
+        'class': 'dreamhost:DreamhostDNS',
+        'username': 'zgold550@gmail.com',
+        'api_key': '5Y8PAWC6KXSLWUGD',
+        }
+
     for az in ['b', 'c', 'd']:
         provider_config['aws']['us-east-1%s' % az] = \
             provider_config['aws']['us-east-1a']
@@ -100,6 +106,7 @@ def main(sys_args=None):
 
     sitter = ClusterSitter(daemon=args.daemon,
                            provider_config=provider_config,
+                           dns_provider_config=dns_provider_config,
                            keys=keys, user=args.username,
                            log_location="/mnt/data/clustersitter")
     sitter.start()

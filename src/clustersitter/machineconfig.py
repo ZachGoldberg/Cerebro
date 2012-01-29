@@ -10,6 +10,7 @@ class MachineConfig(object):
         self.login_name = None
         self.login_key = None
         self.data = data
+        self.dns_name = None
 
     def __str__(self):
         return self.hostname

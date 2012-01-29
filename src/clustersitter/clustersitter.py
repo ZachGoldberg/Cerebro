@@ -10,14 +10,15 @@ import requests
 from datetime import datetime
 from logging import FileHandler
 
-import providers.aws
 import deploymentrecipe
+import dreamhost
 import eventmanager
 import jobfiller
 import machineconfig
 import machinemonitor
 import monitoredmachine
 import productionjob
+import providers.aws
 import sittercommon.machinedata
 
 from clusterstats import ClusterStats
@@ -34,19 +35,6 @@ from sittercommon import logmanager
 from sittercommon.machinedata import MachineData
 
 logger = logging.getLogger(__name__)
-
-"""
-We have 3 kinds of data
-1) Historical Performance Data
- -- This is monstrous, and timeseries based.  It makes sense
-   to put this in some kind of RRDTool
-
-2) Cluster Metadata -- what tasks go where
- -- Super critical,  pretty small.  Store in config and memory
-
-3) Event level data -- what happpened
-  -- Store in Django (SQL or Mongo)
-"""
 
 """
 In an ideal world this is written such that we always speak
@@ -205,6 +193,7 @@ class ClusterState(object):
 class ClusterSitter(object):
     def __init__(self, log_location, daemon,
                  provider_config,
+                 dns_provider_config,
                  keys=None, user=None,
                  starting_port=30000):
         self.worker_thread_count = 2
@@ -212,6 +201,7 @@ class ClusterSitter(object):
         self.keys = keys
         self.user = user
         self.provider_config = provider_config
+        self.dns_provider_config = dns_provider_config
         self.log_location = log_location
         self.launch_time = datetime.now()
         self.start_state = "Not Started"
@@ -226,6 +216,13 @@ class ClusterSitter(object):
         self.logmanager = logmanager.LogManager(stdout_location=log_location,
                                                 stderr_location=log_location)
         self.logmanager.set_harness(self)
+
+        self.dns_provider = None
+        if 'class' in dns_provider_config:
+            (module, cls) = dns_provider_config['class'].split(':')
+            self.dns_provider = getattr(__import__(module, globals(),
+                                                   locals()), cls)(
+                dns_provider_config)
 
         # In seconds
         self.stats_poll_interval = 2
@@ -316,7 +313,8 @@ class ClusterSitter(object):
 
     def api_add_job(self, args):
         check = self._api_check(args,
-                                ['task_configuration',
+                                ['dns_basename',
+                                 'task_configuration',
                                  'deployment_layout',
                                  'deployment_recipe',
                                  'recipe_options',
@@ -325,6 +323,7 @@ class ClusterSitter(object):
             return check
 
         if self.state.add_job(ProductionJob(
+                args['dns_basename'],
                 args['task_configuration'],
                 args['deployment_layout'],
                 args['deployment_recipe'],
@@ -455,6 +454,21 @@ class ClusterSitter(object):
                 monitor[0].add_machines(
                     monitored_machines[start_index:end_index])
 
+        # Ensure we have up to date DNS names for each machine
+        records = self.dns_provider.get_records()
+        record_by_ip = {}
+        for record in records:
+            record_by_ip[record['value']] = record['record']
+
+        for machine in monitored_machines:
+            if not machine.config.dns_name:
+                ip = socket.gethostbyname(machine.config.hostname)
+                if ip in record_by_ip:
+                    machine.config.dns_name = record_by_ip[ip]
+                    logger.info("Found name %s for %s" % (
+                            machine.config.dns_name,
+                            ip))
+
     def start(self):
         self.http_monitor.start()
         logger.info("Cluster Sitter Monitor started at " + \
@@ -557,6 +571,7 @@ class ClusterSitter(object):
 
                     # Build a 'fake' job for the doctor to run
                     job = ProductionJob(
+                        "",
                         {'name': 'Machine Doctor Redeployer'},
                         {
                             machine.config.shared_fate_zone: {
