@@ -161,39 +161,63 @@ class JobFiller(object):
             self.state.next()
 
     def ensure_dns(self):
-        basename = self.job.dns_basename
+        basename = "%s.%s" % (self.zone, self.job.dns_basename)
         provider = self.job.sitter.dns_provider
         if not basename or not provider:
             self.state.next()
             return
+
+        num_machines_total = self.job.get_num_required_machines_in_zone(
+            self.zone)
 
         records = provider.get_records(hostName=basename)
         # Find out what records exist underneath this basename
         # and ensure the machine objects have them
         record_by_ip = {}
         used_prefixes = []
+        records_for_basename = []
         for record in records:
-            record_by_ip[record['value']] = record['record']
+            if record['record'] == basename:
+                records_for_basename.append(record['value'])
+
             pieces = record['record'].split('.')
-            if pieces[0].isdigit():
+            if pieces[0].isdigit() and pieces[1:] == basename:
                 used_prefixes.append(int(pieces[0]))
+                record_by_ip[record['value']] = record['record']
 
         for machine in self.machines:
             ip = socket.gethostbyname(machine.config.hostname)
+            # Ensure 2 things:
+            # 1) x.basename exists for this machine
+            # 2) basename includes this machine's IP as an a record
+
+            # Part 1
             if ip in record_by_ip:
                 machine.config.dns_name = record_by_ip[ip]
             else:
                 # We need a new name!  Get the first valid one
                 new_prefix = None
-                for i in range(len(self.machines)):
+
+                for i in range(num_machines_total):
                     if i not in used_prefixes:
                         new_prefix = i
-                machine.config.dns_name = "%s.%s" % (i, basename)
-                provider.add_record(ip,
-                                    machine.config.dns_name)
+                        used_prefixes.append(i)
+                        break
+
+                machine.config.dns_name = "%s.%s" % (new_prefix,
+                                                     basename)
                 logger.info("Assigning %s to %s" % (
                         machine.config.dns_name,
                         ip))
+                provider.add_record(ip,
+                                    machine.config.dns_name)
+
+            # Part 2
+            if ip not in records_for_basename:
+                logger.info("Adding %s to %s" % (
+                        ip, basename))
+                provider.add_record(ip,
+                                    basename)
 
         self.state.next()
 
