@@ -1,4 +1,5 @@
 -- Job filler should advance the state of each machine independently
+-- Consider if we need the jobs persistence code.
 
 -- General event framework
  - Machine Deployed

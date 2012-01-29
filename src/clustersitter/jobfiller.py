@@ -207,15 +207,13 @@ class JobFiller(object):
                 machine.config.dns_name = "%s.%s" % (new_prefix,
                                                      basename)
                 logger.info("Assigning %s to %s" % (
-                        machine.config.dns_name,
-                        ip))
+                        machine.config.dns_name, ip))
                 provider.add_record(ip,
                                     machine.config.dns_name)
 
             # Part 2
             if ip not in records_for_basename:
-                logger.info("Adding %s to %s" % (
-                        ip, basename))
+                logger.info("Adding %s to %s" % (ip, basename))
                 provider.add_record(ip,
                                     basename)
 
