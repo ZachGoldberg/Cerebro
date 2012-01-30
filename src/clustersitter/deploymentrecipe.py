@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 class DeploymentRecipe(object):
     def __init__(self, hostname, username, keys,
                  post_callback=None, options=None,
-                 logger=None):
+                 given_logger=None):
         self.hostname = hostname
         self.username = username
 
@@ -22,6 +22,10 @@ class DeploymentRecipe(object):
         self.post_callback = post_callback
         self.options = options
         self.logger = logger
+
+        if given_logger:
+            self.logger = given_logger
+
         self.connected = False
         self.connect()
 
