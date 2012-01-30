@@ -243,7 +243,7 @@ class JobFiller(object):
         # I can't think of something better right now.  *shrug*.
         start_time = datetime.now()
         while machine.state.get_state() <= old_state:
-            machine.state.set_state(2)
+            machine.state.set_state(old_state)
             recipe.connect()
             val = recipe.deploy()
             if val:
