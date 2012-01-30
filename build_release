@@ -1,0 +1,11 @@
+#!/bin/bash
+VERSION=`git rev-list --all | wc -l`-`git rev-parse --short HEAD`-`date +%s`
+echo $VERSION
+./bin/buildout
+rm -rf /tmp/checkout
+git clone . /tmp/checkout/
+cd /tmp/checkout
+git reset --hard origin/master
+cd -
+./bin/buildout-source-release file:///tmp/checkout buildout.cfg -n tasksitter-$VERSION
+echo "Release created, file: tasksitter-$VERSION.tgz"
