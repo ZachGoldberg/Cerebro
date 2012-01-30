@@ -27,15 +27,6 @@ def parse_args(args):
                         action="store_true",
                         help='Daemonize and split from launching shell')
 
-    parser.add_argument("--aws-access-key", dest="aws_access_key")
-
-    parser.add_argument("--aws-secret-key", dest="aws_secret_key")
-
-    parser.add_argument("--key-files", dest="keyfiles",
-                        required=True,
-                        help="A comma separated list of SSH key files to " \
-                        "use to access machines in the cluster")
-
     parser.add_argument("--login-user", dest="username",
                         default="ubuntu", help="User to login as")
 
@@ -49,11 +40,9 @@ def main(sys_args=None):
 
     args = parse_args(sys_args)
 
-    if not os.getenv('AWS_ACCESS_KEY_ID'):
-        if args.aws_access_key:
-            os.putenv('AWS_ACCESS_KEY_ID', args.aws_access_key)
-        if args.aws_secret_key:
-            os.putenv('AWS_SECRET_ACCESS_KEY', args.aws_secret_key)
+    settings_module = os.getenv('CLUSTERSITTER_SETTINGS', 'settings')
+    __import__(settings_module, globals(), locals())
+    settings = sys.modules[settings_module]
 
     if args.daemon:
         daemonize()
@@ -63,59 +52,12 @@ def main(sys_args=None):
         format='%(asctime)s %(name)s:%(levelname)s %(message)s')
     logging.getLogger().handlers[0].setLevel(logging.ERROR)
 
-    keys = args.keyfiles.split(',')
-
-    provider_config = {
-        'aws': {
-            'us-east-1a': {
-                '32b_image_id': 'ami-8b78afe2',
-                '64b_image_id': 'ami-eb915a82',
-                'key_name': 'WiFastAWS',
-                'security_groups': ['clustersitter'],
-                },
-            'us-west-2a': {
-                '32b_image_id': 'ami-da41ccea',
-                '64b_image_id': 'ami-ce4bc6fe',
-                'key_name': 'WiFastAWSus-west-2',
-                'security_groups': ['clustersitter'],
-                },
-            'us-west-1a': {
-                '32b_image_id': 'ami-7dd48a38',
-                '64b_image_id': 'ami-15d48a50',
-                'key_name': 'WiFastAWSus-west-1',
-                'security_groups': ['clustersitter'],
-                }
-            },
-        }
-
-    dns_provider_config = {
-        'class': 'dreamhost:DreamhostDNS',
-        'username': 'zgold550@gmail.com',
-        'api_key': '5Y8PAWC6KXSLWUGD',
-        }
-
-    for az in ['b', 'c', 'd']:
-        provider_config['aws']['us-east-1%s' % az] = \
-            provider_config['aws']['us-east-1a']
-
-        provider_config['aws']['us-west-2%s' % az] = \
-            provider_config['aws']['us-west-2a']
-
-        provider_config['aws']['us-west-1%s' % az] = \
-            provider_config['aws']['us-west-1a']
-
     sitter = ClusterSitter(daemon=args.daemon,
-                           provider_config=provider_config,
-                           dns_provider_config=dns_provider_config,
-                           keys=keys, user=args.username,
-                           log_location="/mnt/data/clustersitter")
+                           provider_config=settings.provider_config,
+                           dns_provider_config=settings.dns_provider_config,
+                           keys=settings.keys, user=settings.login_user,
+                           log_location=settings.log_location)
     sitter.start()
-
-    localhost = MachineConfig("localhost",
-                              "zg-workstation",
-                              6, 16000)
-
-    sitter.add_machines([localhost])
 
     # wait forever
     os.system("tail -f -n 100 %s" % (sitter.logfiles[0]))
