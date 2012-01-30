@@ -39,7 +39,7 @@
             }
         },
         "recipe_options": {
-            "release_dir": "/home/zgoldberg/workspace/wifast/releases/"
+            "release_dir": "/opt/wifast/releases/"
         },
         "persistent": false,
         "task_configuration": {
@@ -47,7 +47,7 @@
             "name": "Redis",
             "auto_start": true,
             "ensure_alive": true,
-            "command": "/home/ubuntu/workspace/wifast/bin/redis-server",
+            "command": "/opt/wifast/bin/redis-server",
             "uid": 0,
             "restart": true,
             "max_restarts": -1
