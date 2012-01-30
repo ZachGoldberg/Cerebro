@@ -142,12 +142,17 @@ class MachineSitterRecipe(DeploymentRecipe):
             return False
 
         newest = max(filelist, key=lambda x: os.stat(release_dir + x).st_mtime)
+        remote_dir = "/home/ubuntu/clustersitter/"
+        newdirname = newest.replace(".tgz", "")
 
         try:
             self.sudo("apt-get update")
 
+            # Add a symlink to /opt/tasksitter
+            self.sudo("rm /opt/tasksitter/")
+            self.sudo("ln -s %s/%s /opt/tasksitter" % (remote_dir, newdirname))
+
             # Now create the remote directory
-            remote_dir = "/home/ubuntu/clustersitter/"
             self.run("mkdir -p %s" % remote_dir)
 
             self.sudo("hostname %s" % self.hostname)
@@ -166,7 +171,7 @@ class MachineSitterRecipe(DeploymentRecipe):
             # but it does for some reason
             self.sudo("apt-get install -y python-dev")
 
-            newdirname = newest.replace(".tgz", "")
+
             self.run("cd %s/%s && python2.7 install.py -N" % (
                     remote_dir,
                     newdirname))

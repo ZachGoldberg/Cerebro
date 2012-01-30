@@ -31,6 +31,7 @@ class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
         paths = [
             'templates',
+            '/opt/tasksitter/templates/',
             os.path.join(
                 os.getenv('HOME'),
                 'workspace',

@@ -38,7 +38,9 @@ def main(sys_args=None):
         jobs = json.load(open(args.job_config))
     except:
         print "Error opening config file %s" % args.job_config
-
+        import traceback
+        traceback.print_exc()
+        return
     for job in jobs:
         post_job(args.clustersitter_url, job)
 

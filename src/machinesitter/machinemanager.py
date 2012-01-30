@@ -85,10 +85,10 @@ class MachineManager(object):
 
     def remote_stop_task(self, args):
         if not 'task_name' in args:
-            return "Error"
+            return "Error, no task name provided"
 
         if not args['task_name'] in self.tasks:
-            return "Error"
+            return "Error, unknown task"
 
         task = self.tasks[args['task_name']]
         if not task.was_started:
