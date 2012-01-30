@@ -14,6 +14,7 @@ class DeploymentRecipe(object):
                  given_logger=None, dns_hostname=None):
         self.hostname = hostname
         self.username = username
+        self.dns_hostname = dns_hostname
 
         self.keys = keys
         if not isinstance(self.keys, list):
