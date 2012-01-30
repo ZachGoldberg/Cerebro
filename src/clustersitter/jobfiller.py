@@ -276,8 +276,7 @@ class JobFiller(object):
                     self.job.deployment_recipe,
                     machine,
                     post_callback=None,
-                    options=self.job.recipe_options,
-                    given_logger=logger)
+                    options=self.job.recipe_options)
 
                 self._do_recipe_deployment(3, 4,
                                            machine,

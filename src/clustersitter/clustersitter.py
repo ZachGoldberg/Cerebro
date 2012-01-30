@@ -391,7 +391,8 @@ class ClusterSitter(object):
                 return getattr(module, export)
 
     def build_recipe(self, recipe_class, machine,
-                     post_callback=None, options=None):
+                     post_callback=None, options=None,
+                     given_logger=None):
         username = self.user
         keys = self.keys
         if machine.config.login_name:
@@ -408,7 +409,8 @@ class ClusterSitter(object):
                           username,
                           keys,
                           post_callback=post_callback,
-                          options=options)
+                          options=options,
+                          given_logger=given_logger)
 
     def get_next_port(self):
         works = None
