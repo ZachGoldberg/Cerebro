@@ -192,10 +192,23 @@ class ClusterState(object):
 
     def _calculator(self):
         while True:
-            self.calculate_idle_machines()
-            self.calculate_job_fill()
-            self.calculate_job_refill()
-            self.calculate_job_overfill()
+            def run_job(job, name):
+                # Since all state is accessed and shared there
+                # are all sorts of race conditions if a calculator
+                # is running and a job is added or removed.
+                # If one calculator run crashes because of this
+                # thats OK.
+                try:
+                    job()
+                except:
+                    import traceback
+                    logger.warn("Crash in %s" % name)
+                    logger.warn(traceback.format_exc())
+
+            run_job(self.calculate_idle_machines, "Calculate Idle Machines")
+            run_job(self.calculate_job_fill(), "Calculate Job Fill")
+            run_job(self.calculate_job_refill(), "Calculate Job ReFill")
+            run_job(self.calculate_job_overfill(), "Calculate Job OverFill")
             time.sleep(self.sitter.stats_poll_interval)
 
 

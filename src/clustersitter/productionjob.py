@@ -82,7 +82,7 @@ class ProductionJob(object):
         for zone in self.get_shared_fate_zones():
             zone_overflow[zone] = 0
             required = self.get_num_required_machines_in_zone(zone)
-            active = state.job_fill[self.name][zone]
+            active = state.job_fill.get(self.name, {}).get(zone, 0)
 
             if active > required:
                 zone_overflow[zone] += (active - required)
