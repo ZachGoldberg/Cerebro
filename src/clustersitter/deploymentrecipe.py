@@ -45,6 +45,9 @@ class DeploymentRecipe(object):
                                     timeout=10)
                 self.sftp = self.client.open_sftp()
                 self.connected = True
+                self.logger.info("Connected to %s@%s with %s" % (
+                        self.username, self.hostname, key
+                        ))
                 break
             except:
                 self.logger.warn("Couldnt ssh into %s@%s with %s" % (
@@ -85,13 +88,16 @@ class DeploymentRecipe(object):
         if remote_hash:
             remote_hash = remote_hash[0].split(' ')[0]
             self.logger.info("Calculated remote hash: %s", remote_hash)
+
+        val = True
         if local_hash != remote_hash:
             self.logger.info(
                 "Hashes differ.  Uploading %s to %s" % (local, remote))
+            val = self.sftp.put(local, remote)
         else:
             self.logger.info("Hashes equal, not reuploading")
 
-        return self.sftp.put(local, remote)
+        return val
 
     def sudo(self, cmd):
         return self.run("sudo bash -c '%s'" % cmd)
