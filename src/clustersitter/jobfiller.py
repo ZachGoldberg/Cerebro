@@ -53,11 +53,11 @@ class JobFillerState(StateMachine):
     states = {
         -1: 'Error',
          0: 'CreatingResources',
-         1: 'DeployingMonitoringCode',
-         2: 'DeployingJobCode',
-         3: 'LaunchingTasks',
-         4: 'AddingtoMonitoring',
-         5: 'EnsureDNS',
+         1: 'EnsureDNS',
+         2: 'DeployingMonitoringCode',
+         3: 'DeployingJobCode',
+         4: 'LaunchingTasks',
+         5: 'AddingtoMonitoring',
          6: 'Done'
          }
 
@@ -122,15 +122,15 @@ class JobFiller(object):
                 if state == 0:
                     self.run_create_resources()
                 elif state == 1:
-                    self.deploy_monitoring_code()
-                elif state == 2:
-                    self.deploy_job_code()
-                elif state == 3:
-                    self.launch_tasks()
-                elif state == 4:
-                    self.add_to_monitoring()
-                elif state == 5:
                     self.ensure_dns()
+                elif state == 2:
+                    self.deploy_monitoring_code()
+                elif state == 3:
+                    self.deploy_job_code()
+                elif state == 4:
+                    self.launch_tasks()
+                elif state == 5:
+                    self.add_to_monitoring()
             except:
                 import traceback
                 traceback.print_exc()
@@ -208,8 +208,13 @@ class JobFiller(object):
                                                      basename)
                 logger.info("Assigning %s to %s" % (
                         machine.config.dns_name, ip))
-                provider.add_record(ip,
-                                    machine.config.dns_name)
+                ret = provider.add_record(ip,
+                                          machine.config.dns_name)
+
+                if not provider.valid_response(ret):
+                    logger.error("Couldn't assign DNS for %s: %s" % (
+                            machine.config.dns_name,
+                            str(ret)))
 
             # Part 2
             if ip not in records_for_basename:

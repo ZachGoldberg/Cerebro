@@ -410,7 +410,8 @@ class ClusterSitter(object):
                           keys,
                           post_callback=post_callback,
                           options=options,
-                          given_logger=given_logger)
+                          given_logger=given_logger,
+                          dns_hostname=machine.config.dns_name)
 
     def get_next_port(self):
         works = None

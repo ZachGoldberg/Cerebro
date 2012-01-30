@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 class DeploymentRecipe(object):
     def __init__(self, hostname, username, keys,
                  post_callback=None, options=None,
-                 given_logger=None):
+                 given_logger=None, dns_hostname=None):
         self.hostname = hostname
         self.username = username
 
@@ -155,7 +155,11 @@ class MachineSitterRecipe(DeploymentRecipe):
             # Now create the remote directory
             self.run("mkdir -p %s" % remote_dir)
 
-            self.sudo("hostname %s" % self.hostname)
+            hostname = self.hostname
+            if self.dns_hostname:
+                hostname = self.dns_hostname
+
+            self.sudo("hostname %s" % hostname)
 
             # Upload the release
             self.put(release_dir + newest, remote_dir)
@@ -170,7 +174,6 @@ class MachineSitterRecipe(DeploymentRecipe):
             # TODO - The actual release shouldn't need this,
             # but it does for some reason
             self.sudo("apt-get install -y python-dev")
-
 
             self.run("cd %s/%s && python2.7 install.py -N" % (
                     remote_dir,

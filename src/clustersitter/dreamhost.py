@@ -19,20 +19,23 @@ class DreamhostDNS(DNSProvider):
 
         return self.connection.IsConnected()
 
+    def valid_response(self, response):
+        return not (response[0] == False or response[1] == 'error')
+
     def add_record(self, data, hostName, type="A", TTL=3600, domainName=None):
         self._connect()
 
         # Dreamhost doesn't allow us to use TTLs
-        self.connection.dns.add_record(value=data,
-                                       type=type,
-                                       record=hostName)
+        return self.connection.dns.add_record(value=data,
+                                              type=type,
+                                              record=hostName)
 
     def remove_record(self, data, hostName, type="A", domainName=None):
         self._connect()
 
-        self.connection.dns.remove_record(record=hostName,
-                                          value=data,
-                                          type=type)
+        return self.connection.dns.remove_record(record=hostName,
+                                                 value=data,
+                                                 type=type)
 
     def get_records(self, hostName=None, type="A", domainName=None):
         self._connect()

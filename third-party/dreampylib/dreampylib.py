@@ -191,8 +191,8 @@ class DreampyLib(object):
 if __name__ == '__main__':
 
     # Dreamhost test API account:
-    user = 'apitest@dreamhost.com'
-    key  = '6SHU5P2HLDAYECUM'
+    user = 'zgold550@gmail.com'
+    key  = '5Y8PAWC6KXSLWUGD'
 
     # Set this to true to enable debugging
     DEBUG = True
@@ -210,15 +210,13 @@ if __name__ == '__main__':
         # For instance, list the available commands:
         print 'Available commands:\n ',
         listOfCommands = connection.AvailableCommands()
-	import pdb
-	pdb.set_trace()
         print '\n  '.join(listOfCommands[0])
 
         # Even if defaultReturnType is 'dict', you can get the last result as a list, too.
 
-        print type(connection.dreamhost_ps.list_size_history(ps = 'ps7093'))
-        print type(connection.ResultList())
+	ret = connection.dns.add_record(value="1.2.3.4", type="a", record="foo.wifast.com")
 
+	import pdb; pdb.set_trace()
 
         #print connection.mysql.list_dbs()
     else:
