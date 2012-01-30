@@ -1,3 +1,7 @@
+-- Speedup time to release
+  - Find a way to make builds faster!
+  - Find a way to not have to recompile things on install.
+
 -- Job filler should advance the state of each machine independently
 -- Consider if we need the jobs persistence code.
 -- Remove DNS names as part of the decomissioning process
