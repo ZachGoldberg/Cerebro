@@ -74,6 +74,15 @@ class ClusterState(object):
                 logger.warn("Tried to add a job with an unknown SFZ %s" % zone)
                 return False
 
+        # Ensure we can find the job's recipe
+        if (job.deployment_recipe and
+            not self.sitter._get_recipe_class(job.deployment_recipe)):
+            logger.warn(
+                "Tried to add a job with an invalid recipe class: %s" % (
+                    job.deployment_recipe))
+
+            return False
+
         # Ensure we don't already have a job with this name,
         # if we do, replace it
         for existing_job in self.jobs:
@@ -219,9 +228,9 @@ class ClusterSitter(object):
 
         self.dns_provider = None
         if 'class' in dns_provider_config:
-            (module, cls) = dns_provider_config['class'].split(':')
-            self.dns_provider = getattr(__import__(module, globals(),
-                                                   locals()), cls)(
+            (module, clsname) = dns_provider_config['class'].split(':')
+            clz = self._get_recipe_class(module, find_func=clsname)
+            self.dns_provider = getattr(clz, clsname)(
                 dns_provider_config)
 
         # In seconds
@@ -346,6 +355,41 @@ class ClusterSitter(object):
 
     # ----------- END API ----------
 
+    def _get_recipe_class(self, recipe_class, find_func="run_deploy"):
+        if isinstance(recipe_class, type):
+            return recipe_class
+
+        recipe_cls = None
+        if isinstance(recipe_class, basestring):
+            try:
+                recipe_cls = __import__(recipe_class,
+                                          globals(),
+                                          locals())
+            except:
+                # Odd?
+                logger.warn("Not sure what %s is..." % recipe_class)
+        else:
+            logger.warn("Not sure what %s is..." % recipe_class)
+            return None
+
+        if hasattr(recipe_cls, find_func):
+            return recipe_cls
+
+        exports = dir(recipe_cls)
+        for export in exports:
+            if hasattr(getattr(recipe_cls, export), find_func):
+                return getattr(recipe_cls, export)
+
+        try:
+            module = sys.modules[recipe_class]
+        except:
+            return None
+
+        exports = dir(module)
+        for export in exports:
+            if hasattr(getattr(module, export), find_func):
+                return getattr(module, export)
+
     def build_recipe(self, recipe_class, machine,
                      post_callback=None, options=None):
         username = self.user
@@ -356,30 +400,15 @@ class ClusterSitter(object):
         if machine.config.login_key:
             keys.append(machine.config.login_key)
 
-        if isinstance(recipe_class, str):
-            try:
-                recipe_class = __import__(recipe_class)
-            except:
-                # Odd?
-                logger.warn("Not sure what %s is..." % recipe_class)
+        recipe_cls = self._get_recipe_class(recipe_class)
+        if not recipe_cls:
+            return None
 
-        if isinstance(recipe_class, type):
-            return recipe_class(machine.config.hostname,
-                         username,
-                         keys,
-                         post_callback=post_callback,
-                         options=options)
-        else:
-            # Its probably a module, find a proper type within
-            exports = dir(recipe_class)
-            for export in exports:
-                if hasattr(getattr(recipe_class, export), "run_deploy"):
-                    return getattr(recipe_class, export)(
-                        machine.config.hostname,
-                        username,
-                        keys,
-                        post_callback=post_callback,
-                        options=options)
+        return recipe_cls(machine.config.hostname,
+                          username,
+                          keys,
+                          post_callback=post_callback,
+                          options=options)
 
     def get_next_port(self):
         works = None

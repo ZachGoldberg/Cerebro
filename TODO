@@ -1,6 +1,7 @@
 -- Job filler should advance the state of each machine independently
 -- Consider if we need the jobs persistence code.
-
+-- Remove DNS names as part of the decomissioning process
+-- Need to be able to express that two tasks must run on the same machine
 -- General event framework
  - Machine Deployed
  - Machine Terminated

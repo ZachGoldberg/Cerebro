@@ -10,7 +10,8 @@ logger = logging.getLogger(__name__)
 
 class DeploymentRecipe(object):
     def __init__(self, hostname, username, keys,
-                 post_callback=None, options=None):
+                 post_callback=None, options=None,
+                 logger=None):
         self.hostname = hostname
         self.username = username
 
@@ -20,6 +21,7 @@ class DeploymentRecipe(object):
 
         self.post_callback = post_callback
         self.options = options
+        self.logger = logger
         self.connected = False
         self.connect()
 
@@ -41,13 +43,13 @@ class DeploymentRecipe(object):
                 self.connected = True
                 break
             except:
-                logger.warn("Couldnt ssh into %s@%s with %s" % (
+                self.logger.warn("Couldnt ssh into %s@%s with %s" % (
                         self.username, self.hostname, key
                         ))
                 continue
 
     def run(self, cmd):
-        logger.info("Running %s on %s" % (cmd, self.hostname))
+        self.logger.info("Running %s on %s" % (cmd, self.hostname))
         output = self.client.exec_command(cmd)
         stdout = output[1]
         stderr = output[2]
@@ -57,9 +59,9 @@ class DeploymentRecipe(object):
             if not line:
                 break
 
-            logger.info("Output from (%s): %s" % (cmd, line.strip()))
+            self.logger.info("Output from (%s): %s" % (cmd, line.strip()))
             stdout_log.append(line)
-        logger.info("Stderr from (%s): %s" % (cmd, stderr.readlines()))
+        self.logger.info("Stderr from (%s): %s" % (cmd, stderr.readlines()))
         return stdout_log
 
     def put(self, local, remote):
@@ -71,18 +73,19 @@ class DeploymentRecipe(object):
                 ['md5sum', local]).split(' ')[0]
         except subprocess.CalledProcessError:
             import traceback
-            logger.error(traceback.format_exc())
+            self.logger.error(traceback.format_exc())
             return
 
-        logger.info("Calculated local hash: %s", local_hash)
+        self.logger.info("Calculated local hash: %s", local_hash)
         remote_hash = self.run("md5sum %s" % remote)
         if remote_hash:
             remote_hash = remote_hash[0].split(' ')[0]
-            logger.info("Calculated remote hash: %s", remote_hash)
+            self.logger.info("Calculated remote hash: %s", remote_hash)
         if local_hash != remote_hash:
-            logger.info("Uploading %s to %s" % (local, remote))
+            self.logger.info(
+                "Hashes differ.  Uploading %s to %s" % (local, remote))
         else:
-            logger.info("Hashes equal, not reuploading")
+            self.logger.info("Hashes equal, not reuploading")
 
         return self.sftp.put(local, remote)
 
@@ -91,14 +94,14 @@ class DeploymentRecipe(object):
 
     def deploy(self):
         if not self.connected:
-            logger.warn(
+            self.logger.warn(
                 "Couldn't do deployment: SSH Not connected." +
                 "For AWS machines this may be normal, as it can be up to" +
                 "2 minutes after they spawn before we can login")
 
             return False
 
-        logger.info("Begin deployment on %s" % self.hostname)
+        self.logger.info("Begin deployment on %s" % self.hostname)
         # 2 tries
         try:
             retval = self.run_deploy()
@@ -107,10 +110,10 @@ class DeploymentRecipe(object):
                 retval = self.run_deploy()
             except:
                 import traceback
-                logger.error(traceback.format_exc())
+                self.logger.error(traceback.format_exc())
                 return False
 
-        logger.info("Calling post-deply callback for %s" % self.hostname)
+        self.logger.info("Calling post-deply callback for %s" % self.hostname)
         if self.post_callback:
             self.post_callback()
 
@@ -125,12 +128,14 @@ class MachineSitterRecipe(DeploymentRecipe):
         filelist = filter(lambda x: not os.path.isdir(x), filelist)
         filelist = filter(lambda x: "tgz" in x, filelist)
         if not filelist:
-            logger.error("No releases found!")
+            self.logger.error("No releases found!")
             return False
 
         newest = max(filelist, key=lambda x: os.stat(release_dir + x).st_mtime)
 
         try:
+            self.sudo("apt-get update")
+
             # Now create the remote directory
             remote_dir = "/home/ubuntu/clustersitter/"
             self.run("mkdir -p %s" % remote_dir)
