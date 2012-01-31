@@ -24,6 +24,7 @@ class DreamhostDNS(DNSProvider):
             return response and not (
                 response[0] == False or response[1] == 'error')
         except:
+            print response
             return False
 
     def add_record(self, data, hostName, type="A", TTL=3600, domainName=None):

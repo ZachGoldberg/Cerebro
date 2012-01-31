@@ -2,6 +2,7 @@ import logging
 import threading
 import time
 
+from eventmanager import ClusterEventManager
 from jobfiller import JobFiller
 
 logger = logging.getLogger(__name__)
@@ -92,6 +93,26 @@ class ProductionJob(object):
     def refill(self, state, sitter):
         self.sitter = sitter
 
+        new_machines = False
+        while self.sitter.machines_in_queue():
+            new_machines = True
+            # We want to ensure any machines recently added to monitoring
+            # have had a chance to load their data, incase they are
+            # running this job
+            logger.info("Waiting for machine monitors to load machine data"
+                        "before filling jobs")
+            time.sleep(0.5)
+
+        if new_machines:
+            # If we had to wait for new machines that means that
+            # there are new machines, and we need to recalculate
+            # job fill before it is safe to do refill.  The next
+            # pass should be OK.
+            logger.info("Waiting for next jobfill to be calculated before"
+                        "doing a refill")
+
+            return
+
         while not self.name in state.job_fill:
             # 1) Assume this job has already been added to state.jobs
             # 2) Want to ensure calculator has run at least once to find out
@@ -155,6 +176,10 @@ class ProductionJob(object):
                 usable_machines.extend(idle_available)
 
             if idle_required > 0:
+                ClusterEventManager.handle(
+                    "New JobFiller: %s, %s, %s, %s" % (
+                        idle_required, zone, str(self), usable_machines))
+
                 filler = JobFiller(idle_required, self,
                                    zone, usable_machines)
                 filler.start_fill()

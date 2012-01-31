@@ -218,7 +218,7 @@ class ClusterSitter(object):
                  dns_provider_config,
                  keys=None, user=None,
                  starting_port=30000):
-        self.worker_thread_count = 2
+        self.worker_thread_count = 4
         self.daemon = daemon
         self.keys = keys
         self.user = user
@@ -368,6 +368,13 @@ class ClusterSitter(object):
 
     # ----------- END API ----------
 
+    def machines_in_queue(self):
+        for monitor, thread in self.state.monitors:
+            if monitor.processing_new_machines():
+                return True
+
+        return False
+
     def _get_recipe_class(self, recipe_class, find_func="run_deploy"):
         if isinstance(recipe_class, type):
             return recipe_class
@@ -447,6 +454,25 @@ class ClusterSitter(object):
 
         for monitor in self.state.monitors:
             monitor[0].remove_machine(machine)
+
+    def decomission_machine(self, machine):
+        self.remove_machine(machine)
+        provider = self.state.provider_by_zone[machine.config.shared_fate_zone]
+
+        ClusterEventManager.handle(
+            "Decomissioning %s" % str(machine))
+
+        provider.decomission(machine)
+        if machine.config.dns_name:
+            self.dns_provider.remove_record(data=machine.config.ip,
+                                            hostName=machine.config.dns_name)
+
+            # Strip off the leading number, e.g.
+            # 12.bar.mydomain.com -> bar.mydomain.com
+            root_name = '.'.join(machine.config.dns_name.split('.')[1:])
+
+            self.dns_provider.remove_record(data=machine.config.ip,
+                                            hostName=root_name)
 
     def add_machines(self, machines):
         if not machines:
@@ -696,10 +722,7 @@ class ClusterSitter(object):
                             decomission_targets = [
                                 m for m in machines[idle_limit:]]
                             for machine in decomission_targets:
-                                ClusterEventManager.handle(
-                                    "Decomissioning %s" % str(machine))
-                                self.remove_machine(machine)
-                                provider.decomission(machine)
+                                self.decomission_machine(machine)
 
             except:
                 # Der?  Not sure what this could be...

@@ -17,6 +17,8 @@ class MachineData(object):
         self._find_portnum()
         self.tasks = {}
         self.metadata = {}
+        logger.info("New Machinedata: %s:%s" % (self.hostname,
+                                                self.portnum))
 
     def _find_portnum(self):
         found = False

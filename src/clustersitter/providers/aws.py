@@ -73,13 +73,15 @@ class AmazonEC2(MachineProvider):
     @classmethod
     def config_from_instance(cls, instance):
         perf = cls.instance_types[instance.instance_type]
+        ip = socket.gethostbyname(instance.public_dns_name)
         return MachineConfig(instance.public_dns_name,
                              "aws-%s" % instance.placement,
                              cpus=perf[0],
                              mem=perf[1],
                              disk=perf[2],
                              bits=perf[3],
-                             data=instance
+                             data=instance,
+                             ip=ip
                              )
 
     def _get_image_by_type(self, zone, instance_type):

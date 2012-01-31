@@ -25,6 +25,8 @@ class MachineMonitor:
     def remove_machine(self, monitored_machine):
         if monitored_machine in self.monitored_machines:
             self.monitored_machines.remove(monitored_machine)
+            if monitored_machine in self.pull_failures:
+                del self.pull_failures[monitored_machine]
 
     def add_machines(self, monitored_machines):
         self.add_queue.extend(monitored_machines)
@@ -53,6 +55,16 @@ class MachineMonitor:
 
     def __str__(self):
         return ",".join([str(m) for m in self.monitored_machines])
+
+    def processing_new_machines(self):
+        if self.add_queue:
+            return True
+
+        for machine in self.monitored_machines:
+            if not machine.has_loaded_data():
+                return True
+
+        return False
 
     def start(self):
         self.initialize_machines(self.monitored_machines)

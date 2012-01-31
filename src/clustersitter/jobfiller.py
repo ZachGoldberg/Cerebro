@@ -139,7 +139,7 @@ class JobFiller(object):
                     return False
 
         # We're done, so clear the deployment states
-        for machine in self.machines:
+        for machinedata in self.machines:
             machine.state = None
 
         ClusterEventManager.handle("Completed Filling: %s" % str(self))
@@ -187,6 +187,7 @@ class JobFiller(object):
 
         for machine in self.machines:
             ip = socket.gethostbyname(machine.config.hostname)
+            machine.config.ip = ip
             # Ensure 2 things:
             # 1) x.basename exists for this machine
             # 2) basename includes this machine's IP as an a record
