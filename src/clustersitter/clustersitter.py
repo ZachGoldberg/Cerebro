@@ -12,6 +12,7 @@ from logging import FileHandler
 
 import deploymentrecipe
 import dreamhost
+import dynect
 import eventmanager
 import jobfiller
 import machineconfig
@@ -271,7 +272,8 @@ class ClusterSitter(object):
                    deploymentrecipe,
                    sittercommon.machinedata,
                    jobfiller,
-                   eventmanager]
+                   eventmanager,
+                   dynect]
 
         formatter = logging.Formatter(
             '%(asctime)s - %(name)s:%(threadName)s'
@@ -526,6 +528,8 @@ class ClusterSitter(object):
                     monitored_machines[start_index:end_index])
 
         # Ensure we have up to date DNS names for each machine
+        logger.info("Loading DNS Records...")
+
         records = self.dns_provider.get_records()
         record_by_ip = {}
         for record in records:

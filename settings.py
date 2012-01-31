@@ -48,10 +48,11 @@ for az in ['b', 'c', 'd']:
     provider_config['aws']['us-west-1%s' % az] = \
         provider_config['aws']['us-west-1a']
 
-
 # DNS Provider configuration
 dns_provider_config = {
-    'class': 'dreamhost:DreamhostDNS',
-    'username': 'zgold550@gmail.com',
-    'api_key': '5Y8PAWC6KXSLWUGD',
+    'class': 'dynect:Dynect',
+    'customername': 'wifast',
+    'username': 'apiuser',
+    'password': 'qwe123',
+    'default_domain': 'wifast.com'
     }
