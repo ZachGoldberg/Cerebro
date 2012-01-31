@@ -139,7 +139,7 @@ class JobFiller(object):
                     return False
 
         # We're done, so clear the deployment states
-        for machinedata in self.machines:
+        for machine in self.machines:
             machine.state = None
 
         ClusterEventManager.handle("Completed Filling: %s" % str(self))
