@@ -206,9 +206,9 @@ class ClusterState(object):
                     logger.warn(traceback.format_exc())
 
             run_job(self.calculate_idle_machines, "Calculate Idle Machines")
-            run_job(self.calculate_job_fill(), "Calculate Job Fill")
-            run_job(self.calculate_job_refill(), "Calculate Job ReFill")
-            run_job(self.calculate_job_overfill(), "Calculate Job OverFill")
+            run_job(self.calculate_job_fill, "Calculate Job Fill")
+            run_job(self.calculate_job_refill, "Calculate Job ReFill")
+            run_job(self.calculate_job_overfill, "Calculate Job OverFill")
             time.sleep(self.sitter.stats_poll_interval)
 
 

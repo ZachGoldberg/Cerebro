@@ -6,6 +6,7 @@ import time
 from boto import ec2
 
 from clustersitter.machineconfig import MachineConfig
+from clustersitter.eventmanager import ClusterEventManager
 from machineprovider import MachineProvider
 
 logger = logging.getLogger(__name__)
@@ -97,8 +98,11 @@ class AmazonEC2(MachineProvider):
         # TODO if this fails decomission the machines and return false
         aws_placement = zone.replace('aws-', '')
         conn = self.connection_by_zone[aws_placement]
+
+        # TODO detect this better
         instance_type = 'm1.small'
-        logger.info("Spinning up %s amazon instances..." % cpus)
+        ClusterEventManager.handle(
+            "Spinning up %s amazon instances..." % cpus)
         reservation = None
         try:
             reservation = conn.run_instances(
