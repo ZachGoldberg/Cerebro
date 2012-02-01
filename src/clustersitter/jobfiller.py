@@ -188,7 +188,7 @@ class JobFiller(object):
                 records_for_basename.append(record['value'])
 
             pieces = record['record'].split('.')
-            if pieces[0].isdigit() and pieces[1:] == basename:
+            if pieces[0].isdigit() and '.'.join(pieces[1:]) == basename:
                 used_prefixes.append(int(pieces[0]))
                 record_by_ip[record['value']] = record['record']
 
