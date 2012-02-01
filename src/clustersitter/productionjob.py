@@ -1,6 +1,7 @@
 import logging
 import threading
 import time
+from datetime import datetime, timedelta
 
 from eventmanager import ClusterEventManager
 from jobfiller import JobFiller
@@ -99,7 +100,7 @@ class ProductionJob(object):
             # We want to ensure any machines recently added to monitoring
             # have had a chance to load their data, incase they are
             # running this job
-            logger.info("Waiting for machine monitors to load machine data"
+            logger.info("Waiting for machine monitors to load machine data f"
                         "before filling jobs")
             time.sleep(0.5)
 

@@ -71,6 +71,7 @@ class JobFiller(object):
         self.machines = idle_machines or []
         self.state = JobFillerState()
         self.thread = None
+        self.end_time = None
 
         if not raw_machines:
             raw_machines = []
@@ -144,6 +145,7 @@ class JobFiller(object):
 
         ClusterEventManager.handle("Completed Filling: %s" % str(self))
         logger.info("Job Filler: Done!")
+        self.end_time = datetime.now()
         return True
 
     def run_create_resources(self):

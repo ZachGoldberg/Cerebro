@@ -665,6 +665,7 @@ class ClusterSitter(object):
                     self.state.repair_jobs.append(job)
 
                     # Run in thread for now
+                    # TODO run not in doctor thread
                     filler = JobFiller(1, job, machine.config.shared_fate_zone,
                                        raw_machines=[machine])
 
