@@ -214,6 +214,12 @@ class JobFiller(object):
                         used_prefixes.append(i)
                         break
 
+                if not new_prefix:
+                    # This only happens if the state of DNS
+                    # records somehow doesn't match the state
+                    # of this job, which shouldn't happen
+                    new_prefix = max(used_prefixes) + 1
+
                 machine.config.dns_name = "%s.%s" % (new_prefix,
                                                      basename)
                 logger.info("Assigning %s to %s" % (
