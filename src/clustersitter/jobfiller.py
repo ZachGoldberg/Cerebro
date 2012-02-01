@@ -210,7 +210,7 @@ class JobFiller(object):
                 logger.info("Assigning %s to %s" % (
                         machine.config.dns_name, ip))
 
-                if notprovider.add_record(ip,
+                if not provider.add_record(ip,
                                           machine.config.dns_name):
                     logger.error("Couldn't assign DNS for %s: %s" % (
                             machine.config.dns_name,
