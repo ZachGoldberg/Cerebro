@@ -3,6 +3,7 @@
   - Find a way to not have to recompile things on install.
 
 -- Move jobfiller timeout to be state level
+-- Move decomissioning into its own thread
 
 -- Job filler should advance the state of each machine independently
 -- Consider if we need the jobs persistence code.

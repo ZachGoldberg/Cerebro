@@ -19,21 +19,32 @@ class Dynect(DNSProvider):
                                       self.default_domain)
 
     def add_record(self, data, hostName, type="A", TTL=3600, domainName=None):
-        ret = self.client.addRecord(data=data,
-                                    type=type,
-                                    hostName=hostName,
-                                    TTL=TTL,
-                                    domainName=domainName)
+        try:
+            ret = self.client.addRecord(data=data,
+                                        type=type,
+                                        hostName=hostName,
+                                        TTL=TTL,
+                                        domainName=domainName)
+        except:
+            import traceback
+            logger.error(traceback.format_exc())
+            return False
+
         if not ret:
             logger.warn(self.client.get_errors())
 
         return ret
 
     def remove_record(self, data, hostName, type="A", domainName=None):
-        ret = self.client.deleteRecord(data=data,
-                                       type=type,
-                                       hostName=hostName,
-                                       domainName=domainName)
+        try:
+            ret = self.client.deleteRecord(data=data,
+                                           type=type,
+                                           hostName=hostName,
+                                           domainName=domainName)
+        except:
+            import traceback
+            logger.error(traceback.format_exc())
+            return False
 
         if not ret:
             logger.warn(self.client.get_errors())
@@ -42,9 +53,15 @@ class Dynect(DNSProvider):
 
     def get_records(self, hostName=None, type="A", domainName=None):
         logger.debug("Get Records for %s" % hostName)
-        records = self.client.getRecords(hostName=hostName,
-                                         type=type,
-                                         domainName=domainName)
+        try:
+            records = self.client.getRecords(hostName=hostName,
+                                             type=type,
+                                             domainName=domainName)
+        except:
+            import traceback
+            logger.error(traceback.format_exc())
+            return []
+
         if not records:
             return []
 
