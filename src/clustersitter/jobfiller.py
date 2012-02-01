@@ -170,7 +170,14 @@ class JobFiller(object):
         num_machines_total = self.job.get_num_required_machines_in_zone(
             self.zone)
 
-        records = provider.get_records(hostName=basename)
+        try:
+            records = provider.get_records(hostName=basename)
+        except:
+            import traceback
+            logger.error("Couldn't download records for %s" % basename)
+            logger.error(traceback.format_exc())
+            records = []
+
         # Find out what records exist underneath this basename
         # and ensure the machine objects have them
         record_by_ip = {}
