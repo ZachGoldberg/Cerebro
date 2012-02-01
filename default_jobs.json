@@ -3,7 +3,7 @@
         "dns_basename": "donothing.wifast.com",
         "deployment_recipe": null,
         "deployment_layout": {
-            "aws-us-west-1c": {
+            "aws-us-west-2a": {
                 "mem": 50,
                 "cpu": 0
             },
@@ -35,7 +35,7 @@
             },
             "aws-us-west-2a": {
                 "mem": 50,
-                "cpu": 1
+                "cpu": 0
             }
         },
         "recipe_options": {

@@ -4,6 +4,8 @@
 
 -- Move jobfiller timeout to be state level
 -- Move decomissioning into its own thread
+-- Consider having one long lived thread that does DNS enforcement
+
 
 -- Job filler should advance the state of each machine independently
 -- Consider if we need the jobs persistence code.

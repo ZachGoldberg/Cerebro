@@ -141,6 +141,7 @@ class MachineData(object):
                     except:
                         # Http server might not be up yet
                         time.sleep(0.01)
+                        logger.warn("Couldn't update task")
 
         self.tasks = new_tasks
         return self.tasks

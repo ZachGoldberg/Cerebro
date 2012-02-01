@@ -342,6 +342,19 @@ class JobFiller(object):
         if machines_to_add:
             self.job.sitter.add_machines(machines_to_add, update_dns=False)
 
+        # Now wait for the machines to actually be monitored
+        for machine in self.machines:
+            ready = False
+            while not ready:
+                loaded_data = machine.has_loaded_data()
+                has_task = self.job.name in machine.get_tasks()
+                ready = loaded_data and has_task
+                if not ready:
+                    logger.debug("Waiting for machine to be actually monitored...")
+                    time.sleep(0.1)
+                else:
+                    logger.debug("%s has our task, good to go!" % machine)
+
         self.state.next()
 
     def launch_machines(self, new_machine_count):
