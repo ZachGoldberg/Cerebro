@@ -266,6 +266,8 @@ class ClusterSitter(object):
                                       self.api_enforce_idle)
         self.http_monitor.add_handler('/update_logging_level',
                                       self.api_update_logging_level)
+        self.http_monitor.add_handler('/update_job',
+                                      self.api_update_job)
 
         # Do lots of logging configuration
         modules = [sys.modules[__name__],
@@ -338,6 +340,24 @@ class ClusterSitter(object):
             return "Invalid limit"
 
         return "Limit set"
+
+    def api_update_job(self, args):
+        check = self._api_check(args,
+                                ['job_name'])
+
+        job_name = args.job_name
+        job = None
+        for state_job in self.jobs:
+            if state_job.name == job_name:
+                job = state_job
+                break
+
+        if not job:
+            return "Error updating job: %s doesn't exist" % job_name
+
+        job.do_update_deployment(self.state, args.get('version'))
+        # Now build a deployment recipe for this job
+        #
 
     def api_add_job(self, args):
         check = self._api_check(args,
@@ -661,6 +681,7 @@ class ClusterSitter(object):
                                 'cpu': machine.config.cpus
                                 }
                             }, None)
+
                     job.sitter = self
                     self.state.repair_jobs.append(job)
 

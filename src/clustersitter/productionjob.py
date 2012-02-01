@@ -78,6 +78,28 @@ class ProductionJob(object):
             'persistent': self.persistent
             }
 
+    def do_update_deployment(self, state, version=None):
+        """
+        1. Find all machines running this job
+        2. Build a JobFiller with all those machines
+        3. Run the JobFiller, making sure the version is being
+           passed to the deployment recipe
+        """
+        self.recipe_options['version'] = version
+
+        for zone, machines in state.machines_by_zone.items():
+            job_machines = []
+            for machine in machines:
+                tasks = machine.get_running_tasks()
+                if self.name in tasks:
+                    job_machines.append(machine)
+
+            filler = JobFiller(len(job_machines), self,
+                           zone, job_machines)
+
+            filler.start_fill()
+            self.fillers[zone].append(filler)
+
     def get_zone_overflow(self, state):
         zone_overflow = {}
 
