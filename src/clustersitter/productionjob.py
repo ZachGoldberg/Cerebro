@@ -108,10 +108,10 @@ class ProductionJob(object):
             # there are new machines, and we need to recalculate
             # job fill before it is safe to do refill.  The next
             # pass should be OK.
-            logger.info("Waiting for next jobfill to be calculated before"
+            logger.info("Waiting for next jobfill to be calculated before "
                         "doing a refill")
 
-            return
+            return False
 
         while not self.name in state.job_fill:
             # 1) Assume this job has already been added to state.jobs
@@ -121,10 +121,11 @@ class ProductionJob(object):
                          "filling jobs")
             time.sleep(0.5)
 
-        # Clear out finished fillers
+        # Clear out finished fillers after 5 minutes
         for zone, fillers in self.fillers.items():
             for filler in fillers:
-                if filler.is_done():
+                now = datetime.now()
+                if filler.is_done() and now - filler.end_time > timespan(minutes=5):
                     self.fillers[zone].remove(filler)
 
         #!MACHINEASSUMPTION!
@@ -184,4 +185,5 @@ class ProductionJob(object):
                                    zone, usable_machines)
                 filler.start_fill()
                 self.fillers[zone].append(filler)
-                # TODO -- Should delete finished fillers
+
+        return True

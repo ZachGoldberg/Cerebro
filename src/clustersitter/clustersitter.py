@@ -155,7 +155,11 @@ class ClusterState(object):
         # Now see if we need to add any new machines to any jobs
         for job in self.jobs:
             if job.name in self.job_fill:
-                job.refill(self, self.sitter)
+                if not job.refill(self, self.sitter):
+                    # refill returning false means
+                    # we need to wait for another calculation run before
+                    # we can keep working.
+                    break
 
         logger.debug("Calculated job refill: %s" % self.job_fill)
 
