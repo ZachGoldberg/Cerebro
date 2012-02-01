@@ -212,19 +212,16 @@ class JobFiller(object):
 
                 if not provider.add_record(ip,
                                           machine.config.dns_name):
-                    logger.error("Couldn't assign DNS for %s: %s" % (
-                            machine.config.dns_name,
-                            str(ret)))
+                    logger.error("Couldn't assign DNS for %s" % (
+                            machine.config.dns_name))
 
             # Part 2
             if ip not in records_for_basename:
                 logger.info("Adding %s to %s" % (ip, basename))
-                ret = None
                 if not provider.add_record(ip, basename):
-                    logger.error("Couldn't assign DNS for %s -> %s: %s" % (
+                    logger.error("Couldn't assign DNS for %s -> %s" % (
                             ip,
-                            basename,
-                            str(ret)))
+                            basename))
 
         self.state.next()
 

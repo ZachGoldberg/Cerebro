@@ -24,6 +24,8 @@ class Dynect(DNSProvider):
                                     hostName=hostName,
                                     TTL=TTL,
                                     domainName=domainName)
+        if not ret:
+            logger.warn(self.client.get_errors())
 
         return ret
 
@@ -32,6 +34,9 @@ class Dynect(DNSProvider):
                                        type=type,
                                        hostName=hostName,
                                        domainName=domainName)
+
+        if not ret:
+            logger.warn(self.client.get_errors())
 
         return ret
 
