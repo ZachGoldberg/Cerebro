@@ -340,7 +340,7 @@ class JobFiller(object):
                 machines_to_add.append(machine)
 
         if machines_to_add:
-            self.job.sitter.add_machines(machines_to_add)
+            self.job.sitter.add_machines(machines_to_add, update_dns=False)
 
         self.state.next()
 

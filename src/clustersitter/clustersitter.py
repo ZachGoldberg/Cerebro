@@ -476,7 +476,7 @@ class ClusterSitter(object):
             self.dns_provider.remove_record(data=machine.config.ip,
                                             hostName=root_name)
 
-    def add_machines(self, machines):
+    def add_machines(self, machines, update_dns=True):
         if not machines:
             return
 
@@ -526,6 +526,9 @@ class ClusterSitter(object):
             if start_index != end_index:
                 monitor[0].add_machines(
                     monitored_machines[start_index:end_index])
+
+        if not update_dns:
+            return
 
         # Ensure we have up to date DNS names for each machine
         logger.info("Loading DNS Records...")
