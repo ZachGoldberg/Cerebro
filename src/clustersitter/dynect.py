@@ -19,28 +19,40 @@ class Dynect(DNSProvider):
                                       self.default_domain)
 
     def add_record(self, data, hostName, type="A", TTL=3600, domainName=None):
-        return self.client.addRecord(data=data,
-                                     type=type,
-                                     hostName=hostName,
-                                     TTL=TTL,
-                                     domainName=domainName)
+        ret = self.client.addRecord(data=data,
+                                    type=type,
+                                    hostName=hostName,
+                                    TTL=TTL,
+                                    domainName=domainName)
+
+        return ret
 
     def remove_record(self, data, hostName, type="A", domainName=None):
-        return self.client.deleteRecord(data=data,
-                                        type=type,
-                                        hostName=hostName,
-                                        domainName=domainName)
+        ret = self.client.deleteRecord(data=data,
+                                       type=type,
+                                       hostName=hostName,
+                                       domainName=domainName)
+
+        return ret
 
     def get_records(self, hostName=None, type="A", domainName=None):
         logger.debug("Get Records for %s" % hostName)
         records = self.client.getRecords(hostName=hostName,
                                          type=type,
                                          domainName=domainName)
+        if not records:
+            return []
 
         if not hostName:
             return records
 
-        records = [r for r in records if hostName in r['record']]
+        def get_record(record):
+            if r.get('record', '') == None:
+                return ''
+
+            return r.get('record', '')
+
+        records = [r for r in records if hostName in get_record(r['record'])]
 
         if type == "*":
             return records
