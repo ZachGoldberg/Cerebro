@@ -214,7 +214,7 @@ class JobFiller(object):
                         used_prefixes.append(i)
                         break
 
-                if not new_prefix:
+                if new_prefix == None:
                     # This only happens if the state of DNS
                     # records somehow doesn't match the state
                     # of this job, which shouldn't happen
