@@ -126,7 +126,7 @@ class ProductionJob(object):
         for zone, fillers in self.fillers.items():
             for filler in fillers:
                 now = datetime.now()
-                if filler.is_done() and now - filler.end_time > timespan(minutes=5):
+                if filler.is_done() and now - filler.end_time > timedelta(minutes=5):
                     self.fillers[zone].remove(filler)
 
         #!MACHINEASSUMPTION!

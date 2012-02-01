@@ -58,7 +58,8 @@ class JobFillerState(StateMachine):
          3: 'DeployingJobCode',
          4: 'LaunchingTasks',
          5: 'AddingtoMonitoring',
-         6: 'Done'
+         6: 'EnsureBaseDNS',
+         7: 'Done'
          }
 
 
@@ -111,11 +112,11 @@ class JobFiller(object):
         self.thread.start()
 
     def is_done(self):
-        return self.state.get_state() == 6
+        return self.state.get_state() == 7
 
     def run(self, fail_on_error=False):
         logger.info("Starting JobFiller")
-        while self.state.get_state() != 6:
+        while self.state.get_state() != 7:
             state = self.state.get_state()
             logger.info("Running State: %s" % str(self.state))
 
@@ -132,6 +133,8 @@ class JobFiller(object):
                     self.launch_tasks()
                 elif state == 5:
                     self.add_to_monitoring()
+                elif state == 6:
+                    self.ensure_dns(do_basename=True)
             except:
                 import traceback
                 traceback.print_exc()
@@ -162,7 +165,7 @@ class JobFiller(object):
         else:
             self.state.next()
 
-    def ensure_dns(self):
+    def ensure_dns(self, do_basename=False):
         basename = "%s.%s" % (self.zone, self.job.dns_basename)
         provider = self.job.sitter.dns_provider
         if not basename or not provider:
@@ -231,12 +234,19 @@ class JobFiller(object):
                             machine.config.dns_name))
 
             # Part 2
-            if ip not in records_for_basename:
-                logger.info("Adding %s to %s" % (ip, basename))
-                if not provider.add_record(ip, basename):
-                    logger.error("Couldn't assign DNS for %s -> %s" % (
-                            ip,
-                            basename))
+            if do_basename:
+                """
+                We should only add to the basename once the machine
+                is up and running.  Otherwise we're effectively adding
+                this machine 'to the pool' before its ready, potentially
+                causing problems.
+                """
+                if ip not in records_for_basename:
+                    logger.info("Adding %s to %s" % (ip, basename))
+                    if not provider.add_record(ip, basename):
+                        logger.error("Couldn't assign DNS for %s -> %s" % (
+                                ip,
+                                basename))
 
         self.state.next()
 
