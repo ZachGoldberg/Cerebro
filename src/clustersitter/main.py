@@ -33,6 +33,26 @@ def parse_args(args):
     return parser.parse_args(args=args)
 
 
+def daemonize():
+    pid = os.fork()
+    if pid > 0:
+        sys.exit(0)
+
+    os.setsid()
+    os.chdir("/")
+
+    pid = os.fork()
+    if pid > 0:
+        sys.exit(0)
+
+    os.umask(0)
+    sys.stdout.flush()
+    sys.stderr.flush()
+    sys.stdin.close()
+
+    print "Sitter PID: %s" % os.getpid()
+
+
 def main(sys_args=None):
 
     if not sys_args:
