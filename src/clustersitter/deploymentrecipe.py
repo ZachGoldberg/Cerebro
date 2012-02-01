@@ -157,9 +157,9 @@ class MachineSitterRecipe(DeploymentRecipe):
             self.run("mkdir -p %s" % remote_dir)
 
             if self.dns_hostname:
-                self.sudo("hostname %s" % self.dns_hostname.replace(".", "-"))
+                self.sudo("hostname %s" % self.dns_hostname)
             else:
-                self.sudo("hostname %s" % self.hostname.replace(".", "-"))
+                self.sudo("hostname %s" % self.hostname)
 
             # Upload the release
             self.put(release_dir + newest, remote_dir)
