@@ -99,6 +99,8 @@ class ProductionJob(object):
                 filler = JobFiller(len(job_machines), self,
                                    zone, job_machines)
 
+                logger.info(
+                    "Starting job filler for code update for %s" % self.name)
                 filler.start_fill()
                 if not zone in self.fillers:
                     self.fillers[zone] = []
