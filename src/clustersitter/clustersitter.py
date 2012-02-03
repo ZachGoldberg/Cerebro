@@ -345,7 +345,7 @@ class ClusterSitter(object):
         check = self._api_check(args,
                                 ['job_name'])
 
-        job_name = args.job_name
+        job_name = args['job_name']
         job = None
         for state_job in self.jobs:
             if state_job.name == job_name:
