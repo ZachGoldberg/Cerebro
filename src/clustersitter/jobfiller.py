@@ -91,15 +91,7 @@ class JobFiller(object):
                                           self.zone, self.job)
 
     def num_remaining(self):
-        if self.state.get_state() < 3:
-            return self.num_cores
-        else:
-            count = 0
-            for machine in self.machines:
-                if not machine.state or machine.state.get_state() != 6:
-                    count += 1
-
-            return count
+        return self.num_cores
 
     def start_fill(self):
         self.thread = threading.Thread(
