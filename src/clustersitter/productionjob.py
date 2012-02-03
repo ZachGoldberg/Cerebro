@@ -58,7 +58,7 @@ class ProductionJob(object):
         Return the total number of machines needed in this zone
         """
         #!MACHINEASSUMPTION!
-        return self.deployment_layout[zone]['num_machines']
+        return self.deployment_layout.get(zone, {}).get('num_machines', 0)
 
     def get_name(self):
         return self.task_configuration['name']
@@ -94,11 +94,15 @@ class ProductionJob(object):
                 if self.name in tasks:
                     job_machines.append(machine)
 
-            filler = JobFiller(len(job_machines), self,
-                           zone, job_machines)
+            if job_machines:
+                filler = JobFiller(len(job_machines), self,
+                                   zone, job_machines)
 
-            filler.start_fill()
-            self.fillers[zone].append(filler)
+                filler.start_fill()
+                if not zone in self.fillers:
+                    self.fillers[zone] = []
+
+                self.fillers[zone].append(filler)
 
     def get_zone_overflow(self, state):
         zone_overflow = {}
