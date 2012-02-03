@@ -357,7 +357,7 @@ class ClusterSitter(object):
 
         job.do_update_deployment(self.state, args.get('version'))
         # Now build a deployment recipe for this job
-        #
+        return "Job update initiated"
 
     def api_add_job(self, args):
         check = self._api_check(args,

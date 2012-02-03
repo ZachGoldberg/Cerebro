@@ -91,7 +91,8 @@ class ProductionJob(object):
             job_machines = []
             for machine in machines:
                 tasks = machine.get_running_tasks()
-                if self.name in tasks:
+                names = [task['name'] for task in tasks]
+                if self.name in names:
                     job_machines.append(machine)
 
             if job_machines:
