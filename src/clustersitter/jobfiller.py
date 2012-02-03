@@ -160,7 +160,7 @@ class JobFiller(object):
     def ensure_dns(self, do_basename=False):
         basename = "%s.%s" % (self.zone, self.job.dns_basename)
         provider = self.job.sitter.dns_provider
-        if not basename or not provider:
+        if not self.job.dns_basename or not provider:
             self.state.next()
             return
 
