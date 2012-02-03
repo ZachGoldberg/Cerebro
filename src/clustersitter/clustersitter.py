@@ -709,7 +709,8 @@ class ClusterSitter(object):
                             machine.config.shared_fate_zone].remove(machine)
                         ClusterEventManager.handle(
                             "Decomissioning %s" % machine)
-                        # TODO: Write machine decomission logic
+
+                        self.decomission_machine(machine)
 
                     self.state.unreachable_machines.remove((machine, monitor))
 
