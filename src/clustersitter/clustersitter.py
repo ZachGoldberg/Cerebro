@@ -347,7 +347,7 @@ class ClusterSitter(object):
 
         job_name = args['job_name']
         job = None
-        for state_job in self.jobs:
+        for state_job in self.state.jobs:
             if state_job.name == job_name:
                 job = state_job
                 break
