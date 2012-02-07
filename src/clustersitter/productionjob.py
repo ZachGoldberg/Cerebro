@@ -66,6 +66,9 @@ class ProductionJob(object):
         if not self.linked_job:
             return self.deployment_layout.get(zone, {}).get('num_machines', 0)
 
+        elif not self.linked_job_entity:
+            return 0
+
         return self.linked_job_entity.deployment_layout.get(
             zone, {}).get('num_machines', 0)
 
