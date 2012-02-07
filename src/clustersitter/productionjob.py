@@ -174,6 +174,8 @@ class ProductionJob(object):
                 filler.start_fill()
                 self.fillers[zone].append(filler)
 
+        return True
+
     def refill(self, state, sitter):
         self.sitter = sitter
 
