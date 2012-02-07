@@ -94,6 +94,11 @@ class HTTPMonitoringTests(unittest.TestCase):
         self.assertTrue("sleep" in data["command"])
         self.assertTrue("violated_CPU Constraint (0.2)" in data)
 
+        self.assertTrue("file_version" in data)
+        self.assertTrue("launch_location" in data)
+        self.assertTrue("dir_version" in data)
+        print data
+
     def test_logs_list_json(self):
         data = self.run_check(['--cpu=.2', "--ensure-alive",
                                '--command', 'id',

@@ -2,6 +2,7 @@
 A class which knows how to pull information out of a process harness
 and process.  Exposes a simple interface to get all this information.
 """
+import os
 import socket
 import threading
 
@@ -51,11 +52,24 @@ class StatsCollector(object):
         """
         Return fixed metadata about the child process
         """
+        # Collect version data
+        version_file = os.path.join(self.harness.launch_location, 'VERSION')
+        file_version = None
+        if os.path.exists(version_file):
+            filedata = open(version_file)
+            file_version = filedata.read()
+            filedata.close()
+
+        dir_version = os.path.basename(self.harness.launch_location)
+
         data = {'child_pid': self.harness.child_proc.pid,
                 'task_start_time': str(self.harness.task_start),
                 'max_restarts': self.harness.max_restarts,
                 'command': self.harness.command,
                 'restart': self.harness.restart,
+                'file_version': file_version,
+                'dir_version': dir_version,
+                'launch_location': self.harness.launch_location,
                 'constraints': ','.join(
                 [str(c) for c in self.harness.constraints])
                 }
