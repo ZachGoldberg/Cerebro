@@ -33,6 +33,7 @@ class ProductionJob(object):
         self.dns_basename = dns_basename or ""
         self.task_configuration = task_configuration
         self.linked_job = linked_job
+        self.linked_job_object = None
         self.name = task_configuration['name']
         self.deployment_recipe = deployment_recipe
         self.recipe_options = recipe_options or {}
@@ -62,7 +63,11 @@ class ProductionJob(object):
         Return the total number of machines needed in this zone
         """
         #!MACHINEASSUMPTION!
-        return self.deployment_layout.get(zone, {}).get('num_machines', 0)
+        if not self.linked_job:
+            return self.deployment_layout.get(zone, {}).get('num_machines', 0)
+
+        return self.linked_job_entity.deployment_layout.get(
+            zone, {}).get('num_machines', 0)
 
     def get_name(self):
         return self.task_configuration['name']
@@ -125,6 +130,19 @@ class ProductionJob(object):
 
         return zone_overflow
 
+    def find_linked_job(self, state):
+        if self.linked_job_entity:
+            return self.linked_job_entity
+
+        linked_job = None
+        for job in state.jobs:
+            if job.name == self.linked_job:
+                linked_job = job
+                break
+
+        self.linked_job_entity = linked_job
+        return self.linked_job_entity
+
     def ensure_on_linked_job(self, state, sitter):
         """
         1. Ensure the linked job exists, if not bail out
@@ -135,11 +153,7 @@ class ProductionJob(object):
         that spawns new machines.  We should always just be populating
         existing machines.
         """
-        linked_job = None
-        for job in state.jobs:
-            if job.name == self.linked_job:
-                linked_job = job
-                break
+        linked_job = self.find_linked_job()
 
         if not linked_job:
             logger.warn("Couldn't find linked job (%s) for %s!" % (
