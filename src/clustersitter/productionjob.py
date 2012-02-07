@@ -66,10 +66,10 @@ class ProductionJob(object):
         if not self.linked_job:
             return self.deployment_layout.get(zone, {}).get('num_machines', 0)
 
-        elif not self.linked_job_entity:
+        elif not self.linked_job_object:
             return 0
 
-        return self.linked_job_entity.deployment_layout.get(
+        return self.linked_job_object.deployment_layout.get(
             zone, {}).get('num_machines', 0)
 
     def get_name(self):
@@ -134,8 +134,8 @@ class ProductionJob(object):
         return zone_overflow
 
     def find_linked_job(self, state):
-        if self.linked_job_entity:
-            return self.linked_job_entity
+        if self.linked_job_object:
+            return self.linked_job_object
 
         linked_job = None
         for job in state.jobs:
@@ -143,8 +143,8 @@ class ProductionJob(object):
                 linked_job = job
                 break
 
-        self.linked_job_entity = linked_job
-        return self.linked_job_entity
+        self.linked_job_object = linked_job
+        return self.linked_job_object
 
     def ensure_on_linked_job(self, state, sitter):
         """
