@@ -156,7 +156,7 @@ class ProductionJob(object):
         that spawns new machines.  We should always just be populating
         existing machines.
         """
-        linked_job = self.find_linked_job()
+        linked_job = self.find_linked_job(state)
 
         if not linked_job:
             logger.warn("Couldn't find linked job (%s) for %s!" % (
