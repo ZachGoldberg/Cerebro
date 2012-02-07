@@ -95,14 +95,14 @@ class AmazonEC2(MachineProvider):
         Ideally what we do now is figure out
         what instance_type combination best fills
         this request.  For simplicity for now
-        we'll just spin up one m1.small per cpu.
+        we'll just spin up one m1.large per cpu.
         """
         # TODO if this fails decomission the machines and return false
         aws_placement = zone.replace('aws-', '')
         conn = self.connection_by_zone[aws_placement]
 
         # TODO detect this better
-        instance_type = 'm1.small'
+        instance_type = 'm1.large'
         ClusterEventManager.handle(
             "Spinning up %s amazon instances..." % cpus)
         reservation = None

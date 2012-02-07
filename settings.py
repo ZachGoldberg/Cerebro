@@ -25,7 +25,7 @@ provider_config = {
             },
         'us-west-2a': {
             '32b_image_id': 'ami-d862efe8',
-            '64b_image_id': 'ami-ce4bc6fe',
+            '64b_image_id': 'ami-dc62efec',
             'key_name': 'WiFastAWSus-west-2',
             'security_groups': ['clustersitter'],
             },
