@@ -83,6 +83,7 @@ class ClusterStats(StatsCollector):
             job_data['deployment_layout'] = job.deployment_layout
             job_data['deployment_recipe'] = job.deployment_recipe
             job_data['recipe_options'] = job.recipe_options
+            job_data['linked_job'] = job.linked_job
             fillers = []
             for filler_list in job.fillers.values():
                 for filler in filler_list:
