@@ -15,23 +15,27 @@ class ProductionJob(object):
                  task_configuration,
                  deployment_layout,
                  deployment_recipe,
-                 recipe_options={},
+                 recipe_options=None,
                  persistent=False,
+                 linked_job=None,
                  ):
         """
         Args:
-          task_configuration -- JSON representing options to pass to a tasksitter
+          task_configuration: JSON representing options to pass to a tasksitter
           to launch the job
-          deployment_layout -- How many CPUS/Memory per shared fate zone,  dict
-          deployment_recipe -- A python class which knows how to deploy this task
-          recipe_options -- any options to pass to the recipe
+          deployment_layout: How many CPUS/Memory per shared fate zone,  dict
+          deployment_recipe: A python class which knows how to deploy this task
+          recipe_options: any options to pass to the recipe
+          linked_job: Specify the name of another job.  This job will
+          be placed on the same machine.
         """
         # The config to pass to a machinesitter / tasksitter
         self.dns_basename = dns_basename or ""
         self.task_configuration = task_configuration
+        self.linked_job = linked_job
         self.name = task_configuration['name']
         self.deployment_recipe = deployment_recipe
-        self.recipe_options = recipe_options
+        self.recipe_options = recipe_options or {}
         self.sitter = None
         self.currently_spawning = {}
         self.persistent = persistent
@@ -75,7 +79,8 @@ class ProductionJob(object):
             'deployment_layout': self.deployment_layout,
             'deployment_recipe': self.deployment_recipe,
             'recipe_options': self.recipe_options,
-            'persistent': self.persistent
+            'persistent': self.persistent,
+            'linked_job': self.linked_job,
             }
 
     def do_update_deployment(self, state, version=None):
@@ -120,6 +125,55 @@ class ProductionJob(object):
 
         return zone_overflow
 
+    def ensure_on_linked_job(self, state, sitter):
+        """
+        1. Ensure the linked job exists, if not bail out
+        2. Ensure that this job is running on each machine
+        that the linked job is on.  If not, create a job filler for
+        those machines and this job.
+        Note: As a linked job we should never create a job filler
+        that spawns new machines.  We should always just be populating
+        existing machines.
+        """
+        linked_job = None
+        for job in state.jobs:
+            if job.name == self.linked_job:
+                linked_job = job
+                break
+
+        if not linked_job:
+            logger.warn("Couldn't find linked job (%s) for %s!" % (
+                    self.linked_job, str(self)))
+            # Returning False stops all other jobs this cycle, which
+            # we don't want to do.
+            return True
+
+        for zone in linked_job.get_shared_fate_zones():
+            machines_to_fill = []
+            machines = state.job_fill_machines[linked_job.name][zone]
+
+            for machine in machines:
+                task_names = [
+                    task['name'] for task in machine.get_running_tasks()]
+
+                if not self.name in task_names:
+                    machines_to_fill.append(machine)
+
+            current_fillers = self.fillers[zone]
+            currently_spawning = 0
+            for filler in current_fillers:
+                currently_spawning += filler.num_remaining()
+
+            if not currently_spawning and len(machines_to_fill) > 0:
+                ClusterEventManager.handle(
+                    "New JobFiller for Linked Job: %s, %s, %s, %s" % (
+                        machines_to_fill, zone, str(self), self.linked_job))
+
+                filler = JobFiller(len(machines_to_fill), self,
+                                   zone, machines_to_fill)
+                filler.start_fill()
+                self.fillers[zone].append(filler)
+
     def refill(self, state, sitter):
         self.sitter = sitter
 
@@ -155,8 +209,14 @@ class ProductionJob(object):
         for zone, fillers in self.fillers.items():
             for filler in fillers:
                 now = datetime.now()
-                if filler.is_done() and now - filler.end_time > timedelta(minutes=5):
+                if (filler.is_done() and
+                    now - filler.end_time > timedelta(minutes=5)):
                     self.fillers[zone].remove(filler)
+
+        # If we have a linked job then bypass all the normal logic
+        # and just piggyback on those machines
+        if self.linked_job:
+            return self.ensure_on_linked_job(state, sitter)
 
         #!MACHINEASSUMPTION!
         # Step 1: Ensure we have enough machines in each SFZ

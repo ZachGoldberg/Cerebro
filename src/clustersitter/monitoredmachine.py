@@ -42,12 +42,6 @@ class HasMachineSitter(object):
 
         return self.datamanager.portnum
 
-    def _api_run_request(self, request):
-        """
-        Explicitly run the async object
-        """
-        #result = async.map(request)
-
     def _api_get_endpoint(self, path):
         return "%s/%s" % (self.datamanager.url,
                                     path)
@@ -131,7 +125,7 @@ class MonitoredMachine(HasMachineSitter):
         # and then make the call
         if self.is_initialized():
             logger.info("Starting a task %s on %s" % (job.name, str(self)))
-            self._api_run_request(self._api_start_task(job))
+            self._api_start_task(job)
 
     def initialize(self):
         return self._api_identify_sitter()

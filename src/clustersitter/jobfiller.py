@@ -77,13 +77,15 @@ class JobFiller(object):
         if not raw_machines:
             raw_machines = []
 
+        self.machine_states = {}
+
         for machine in self.machines:
-            machine.state = MachineDeploymentState()
-            machine.state.set_state(3)
+            self.machine_states[machine] = MachineDeploymentState()
+            self.machine_states[machine].set_state(3)
 
         for machine in raw_machines:
-            machine.state = MachineDeploymentState()
-            machine.state.set_state(1)
+            self.machine_states[machine] = MachineDeploymentState()
+            self.machine_states[machine].set_state(1)
             self.machines.append(machine)
 
     def __str__(self):
@@ -91,7 +93,10 @@ class JobFiller(object):
                                           self.zone, self.job)
 
     def num_remaining(self):
-        return self.num_cores
+        if self.is_done():
+            return 0
+        else:
+            return self.num_cores
 
     def start_fill(self):
         self.thread = threading.Thread(
@@ -133,10 +138,6 @@ class JobFiller(object):
                 logger.error(traceback.format_exc())
                 if fail_on_error:
                     return False
-
-        # We're done, so clear the deployment states
-        for machine in self.machines:
-            machine.state = None
 
         ClusterEventManager.handle("Completed Filling: %s" % str(self))
         logger.info("Job Filler: Done!")
@@ -265,19 +266,20 @@ class JobFiller(object):
         # how many times we try and deploy, but
         # I can't think of something better right now.  *shrug*.
         start_time = datetime.now()
-        while machine.state.get_state() <= old_state:
-            machine.state.set_state(old_state)
+
+        while self.machine_states[machine].get_state() <= old_state:
+            self.machine_states[machine].set_state(old_state)
             recipe.connect()
             val = recipe.deploy()
             if val:
-                machine.state.set_state(new_state)
+                self.machine_states[machine].set_state(new_state)
             else:
                 logger.warn(
                     "Couldn't deploy monitoring code to %s?" % (
                         str(machine)))
 
                 if datetime.now() - start_time > timedelta(minutes=2):
-                    machine.state.set_state(new_state)
+                    self.machine_states[machine].set_state(new_state)
                     logger.error("Giving up deploying to %s" % str(
                             machine))
 
@@ -288,11 +290,11 @@ class JobFiller(object):
     def deploy_job_code(self):
         # TODO Parallelize this somehow
         for machine in self.machines:
-            while machine.state.get_state() <= 3:
-                machine.state.set_state(3)
+            while self.machine_states[machine].get_state() <= 3:
+                self.machine_states[machine].set_state(3)
 
                 if not self.job.deployment_recipe:
-                    machine.state.set_state(4)
+                    self.machine_states[machine].set_state(4)
                     continue
 
                 recipe = self.job.sitter.build_recipe(
@@ -311,8 +313,8 @@ class JobFiller(object):
     def launch_tasks(self):
         # TODO Parallelize this somehow
         for machine in self.machines:
-            while machine.state.get_state() <= 4:
-                machine.state.set_state(4)
+            while self.machine_states[machine].get_state() <= 4:
+                self.machine_states[machine].set_state(4)
                 machine.initialize()
                 val = machine.start_task(self.job)
 
@@ -326,7 +328,7 @@ class JobFiller(object):
                 tasks = machine.get_running_tasks()
                 task_names = [task['name'] for task in tasks]
                 if self.job.name in task_names:
-                    machine.state.set_state(5)
+                    self.machine_states[machine].set_state(5)
                 else:
                     logger.warn(
                         "Tried to start %s on %s but failed?" % (
@@ -380,7 +382,7 @@ class JobFiller(object):
         machines = [MonitoredMachine(m) for m in machineconfigs]
 
         for machine in machines:
-            machine.state = MachineDeploymentState()
+            self.machine_states[machine] = MachineDeploymentState()
 
         self.machines.extend(machines)
 

@@ -79,6 +79,14 @@ def main(sys_args=None):
                            log_location=settings.log_location)
     sitter.start()
 
+    if False:
+        # For testing.
+        localhost = MachineConfig("localhost", "localhost",
+                                  1, 1)
+
+        sitter.state.zones.append("localhost")
+        sitter.add_machines([localhost], False)
+
     # wait forever
     os.system("tail -f -n 100 %s" % (sitter.logfiles[0]))
     while True:

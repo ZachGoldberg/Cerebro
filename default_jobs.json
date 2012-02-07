@@ -3,13 +3,9 @@
         "dns_basename": "donothing.wifast.com",
         "deployment_recipe": null,
         "deployment_layout": {
-            "aws-us-west-2a": {
+	    "localhost": {
                 "mem": 50,
-                "cpu": 0
-            },
-            "aws-us-east-1b": {
-                "mem": 50,
-                "cpu": 0
+                "cpu": 1
             }
         },
         "recipe_options": {},
@@ -19,7 +15,30 @@
             "name": "Do Nothing",
             "auto_start": true,
             "ensure_alive": true,
-            "command": "perl -pe 'while(1){sleep(1);}'",
+            "command": "/usr/bin/donothing",
+            "uid": 0,
+            "restart": true,
+            "max_restarts": -1
+        }
+    },
+    {
+        "dns_basename": "donothing2.wifast.com",
+        "deployment_recipe": null,
+        "deployment_layout": {
+	    "localhost": {
+                "mem": 50,
+                "cpu": 1
+            }
+        },
+        "recipe_options": {},
+        "persistent": true,
+	"linked_job": "Do Nothing",
+        "task_configuration": {
+            "allow_exit": false,
+            "name": "Do Nothing 2",
+            "auto_start": true,
+            "ensure_alive": true,
+            "command": "/usr/bin/donothing 2",
             "uid": 0,
             "restart": true,
             "max_restarts": -1

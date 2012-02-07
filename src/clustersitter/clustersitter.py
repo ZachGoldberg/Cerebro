@@ -57,6 +57,7 @@ class ClusterState(object):
         self.provider_by_zone = {}
         self.jobs = []
         self.job_fill = {}
+        self.job_fill_machines = {}
         self.providers = {}
         self.job_overflow = {}
         self.unreachable_machines = []
@@ -127,14 +128,17 @@ class ClusterState(object):
         # them idle
 
         job_fill = {}
+        job_fill_machines = {}
         #!MACHINEASSUMPTION! Should be cpu_count not machine_count
         # Fill out a mapping of [job][task] -> machine_count
         logger.debug("Calculating job fill for jobs: %s" % self.jobs)
         for job in self.jobs:
             job_fill[job.name] = {}
+            job_fill_machines[job.name] = {}
 
             for zone in job.get_shared_fate_zones():
                 job_fill[job.name][zone] = 0
+                job_fill_machines[job.name][zone] = []
 
         # Actually do the counting
         for zone, machines in self.machines_by_zone.items():
@@ -146,8 +150,10 @@ class ClusterState(object):
                         continue
 
                     job_fill[task['name']][zone] += 1
+                    job_fill_machines[task['name']][zone].append(machine)
 
         self.job_fill = job_fill
+        self.job_fill_machines = job_fill_machines
         logger.debug("Calculated job fill: %s" % self.job_fill)
 
     def calculate_job_refill(self):
@@ -376,7 +382,8 @@ class ClusterSitter(object):
                 args['deployment_layout'],
                 args['deployment_recipe'],
                 args['recipe_options'],
-                args['persistent'])):
+                args['persistent'],
+                args.get('linked_job'))):
             return "Job Added"
         else:
             return "Error adding job, see logs"
