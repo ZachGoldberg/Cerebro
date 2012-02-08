@@ -109,8 +109,13 @@ class ProductionJob(object):
                     job_machines.append(machine)
 
             if job_machines:
-                filler = JobFiller(len(job_machines), self,
-                                   zone, job_machines)
+                filler = JobFiller(
+                    len(job_machines),
+                    self,
+                    zone,
+                    job_machines,
+                    reboot_task=True
+                    )
 
                 logger.info(
                     "Starting job filler for code update for %s" % self.name)

@@ -27,6 +27,15 @@ class HasMachineSitter(object):
         else:
             return False
 
+    def _api_stop_task(self, job):
+        if job.name in self.datamanager.tasks:
+            val = self.datamanager.stop_task(
+                self.datamanager.tasks[job.name])
+            logger.info("Stop task %s result: %s" % (job.name, val))
+            return val
+        else:
+            return False
+
     def _api_identify_sitter(self):
         logger.info("Attempting to find a machinesitter at %s" % (
                 self.hostname))
@@ -120,12 +129,14 @@ class MonitoredMachine(HasMachineSitter):
                     task["running"] == "True"]
 
     def start_task(self, job):
-        # If the machine is up and initalized, make the API call
-        # Otherwise, spawn a thread to wait for the machine to be up
-        # and then make the call
         if self.is_initialized():
             logger.info("Starting a task %s on %s" % (job.name, str(self)))
             self._api_start_task(job)
+
+    def stop_task(self, job):
+        if self.is_initialized():
+            logger.info("Stopping a task %s on %s" % (job.name, str(self)))
+            self._api_stop_task(job)
 
     def initialize(self):
         return self._api_identify_sitter()

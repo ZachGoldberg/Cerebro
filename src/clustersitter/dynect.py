@@ -18,7 +18,7 @@ class Dynect(DNSProvider):
                                       self.password,
                                       self.default_domain)
 
-    def add_record(self, data, hostName, type="A", TTL=3600, domainName=None):
+    def add_record(self, data, hostName, type="A", TTL=300, domainName=None):
         try:
             ret = self.client.addRecord(data=data,
                                         type=type,

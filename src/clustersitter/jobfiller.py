@@ -65,7 +65,7 @@ class JobFillerState(StateMachine):
 
 class JobFiller(object):
     def __init__(self, num_cores, job, zone, idle_machines=None,
-                 raw_machines=None):
+                 raw_machines=None, reboot_task=False):
         self.num_cores = num_cores
         self.job = job
         self.zone = zone
@@ -73,6 +73,7 @@ class JobFiller(object):
         self.state = JobFillerState()
         self.thread = None
         self.end_time = None
+        self.reboot_task = reboot_task
 
         if not raw_machines:
             raw_machines = []
@@ -316,6 +317,9 @@ class JobFiller(object):
             while self.machine_states[machine].get_state() <= 4:
                 self.machine_states[machine].set_state(4)
                 machine.initialize()
+                if self.reboot_task:
+                    machine.stop_task(self.job)
+
                 val = machine.start_task(self.job)
 
                 if not val:
