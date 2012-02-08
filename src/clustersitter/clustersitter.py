@@ -87,11 +87,26 @@ class ClusterState(object):
 
         # Ensure we don't already have a job with this name,
         # if we do, replace it
+        found_existing_job = False
         for existing_job in self.jobs:
             if existing_job.name == job.name:
-                self.jobs.remove(existing_job)
+                found_existing_job = True
+                # Rather than wholesale replace the object we will
+                # simply update the 'configured' fields, this way
+                # existing state aka job fillers are not lost
+                fields = ['dns_basename',
+                          'task_configuration',
+                          'deployment_layout',
+                          'deployment_recipe',
+                          'recipe_options',
+                          'persistent',
+                          'linked_job']
+                for field in fields:
+                    setattr(existing_job, field, getattr(job, field))
 
-        self.jobs.append(job)
+        if not found_existing_job:
+            self.jobs.append(job)
+
         self.persist_jobs()
         return True
 

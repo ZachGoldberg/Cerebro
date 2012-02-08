@@ -250,6 +250,8 @@ class ProductionJob(object):
                 now = datetime.now()
                 if (filler.is_done() and
                     now - filler.end_time > timedelta(minutes=5)):
+                    logger.info("Removing a filler from %s for %s" % (
+                            zone, self.name))
                     self.fillers[zone].remove(filler)
 
         # If we have a linked job then bypass all the normal logic
@@ -312,7 +314,7 @@ class ProductionJob(object):
 
                 filler = JobFiller(idle_required, self,
                                    zone, usable_machines)
-                filler.start_fill()
                 self.fillers[zone].append(filler)
+                filler.start_fill()
 
         return True
