@@ -724,10 +724,13 @@ class ClusterSitter(object):
                 """
                 Turn off any overflowed jobs
                 """
+                did_overflow_reduction = False
                 for jobname, zone_overflow in self.state.job_overflow.items():
                     for zone, count in zone_overflow.items():
                         if count <= 0:
                             continue
+
+                        did_overflow_reduction = True
 
                         ClusterEventManager.handle(
                             "Detected job overflow:" +
@@ -748,6 +751,16 @@ class ClusterSitter(object):
                                     machine.datamanager.stop_task(jobname)
                                     decomissioned += 1
                                     break
+
+                # If we turned off any processess for overflow then we
+                # should force an overflow recalculation.  This is to
+                # avoid the case of the machinedoctor doing another
+                # full loop before the calculator thread has run.  If
+                # that happens we might do another round of
+                # decomissioning when we haven't yet taken into
+                # account the decomissioning we already did
+                if did_overflow_reduction:
+                    self.state.calculate_job_overfill()
 
                 """
                 Enforce idle machine limits
