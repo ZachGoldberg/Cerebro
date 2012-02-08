@@ -194,6 +194,13 @@ class ProductionJob(object):
             for filler in current_fillers:
                 currently_spawning += filler.num_remaining()
 
+            # Also check the linked job for active job fillers
+            # we don't want to start a filler here if the linked job
+            # is also actively filling, it should be sequential.
+            current_fillers = linked_job.fillers[zone]
+            for filler in current_fillers:
+                currently_spawning += filler.num_remaining()
+
             if not currently_spawning and len(machines_to_fill) > 0:
                 ClusterEventManager.handle(
                     "New JobFiller for Linked Job: %s, %s, %s, %s" % (
