@@ -49,3 +49,7 @@ Cluster Sitter Details:
  -- Presently knows how to spinup/teardown AWS instances, though implementing
  other cloud providers should be pretty straightforward as there is a
  pretty minimal interface to the 'providers'.
+
+-- Linked jobs: When job A is linked to job B job A will be placed on
+   every and only the machines job A is placed on.  Job B will also be
+   rebooted whenever job A is updated.

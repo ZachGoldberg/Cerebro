@@ -32,7 +32,7 @@
         },
         "recipe_options": {},
         "persistent": true,
-	"linked_job": "Do Nothing",
+        "linked_job": "Do Nothing",
         "task_configuration": {
             "allow_exit": false,
             "name": "Do Nothing 2",
