@@ -273,7 +273,7 @@ class ClusterSitter(object):
                 dns_provider_config)
 
         # In seconds
-        self.stats_poll_interval = 2
+        self.stats_poll_interval = 5
 
         self.stats = ClusterStats(self)
         self.http_monitor = http_monitor.HTTPMonitor(self.stats,
