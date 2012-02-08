@@ -138,6 +138,14 @@ class ProductionJob(object):
 
         return zone_overflow
 
+    def find_dependent_jobs(self):
+        dependent_jobs = []
+        for job in self.sitter.state.jobs:
+            if job.linked_job == self.name:
+                dependent_jobs.append(job)
+
+        return dependent_jobs
+
     def find_linked_job(self, state):
         if self.linked_job_object:
             return self.linked_job_object

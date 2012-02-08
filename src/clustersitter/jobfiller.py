@@ -59,7 +59,8 @@ class JobFillerState(StateMachine):
          4: 'LaunchingTasks',
          5: 'AddingtoMonitoring',
          6: 'EnsureBaseDNS',
-         7: 'Done'
+         7: 'Reboot Dependent Jobs',
+         8: 'Done'
          }
 
 
@@ -110,11 +111,11 @@ class JobFiller(object):
         self.thread.start()
 
     def is_done(self):
-        return self.state.get_state() == 7
+        return self.state.get_state() == 8
 
     def run(self, fail_on_error=False):
         logger.info("Starting JobFiller")
-        while self.state.get_state() != 7:
+        while self.state.get_state() != 8:
             state = self.state.get_state()
             logger.info("Running State: %s" % str(self.state))
 
@@ -133,6 +134,8 @@ class JobFiller(object):
                     self.add_to_monitoring()
                 elif state == 6:
                     self.ensure_dns(do_basename=True)
+                elif state == 7:
+                    self.reboot_dependent_jobs()
             except:
                 import traceback
                 traceback.print_exc()
@@ -308,6 +311,21 @@ class JobFiller(object):
                 self._do_recipe_deployment(3, 4,
                                            machine,
                                            recipe)
+
+        self.state.next()
+
+    def reboot_dependent_jobs(self):
+        if not self.reboot_task:
+            self.state.next()
+            return
+
+        jobs = self.job.find_dependent_jobs()
+        for machine in self.machines:
+            task_names = [task['name'] for task in machine.get_running_tasks()]
+            for job in jobs:
+                if job.name in task_names:
+                    machine.stop_task(job)
+                    machine.start_task(job)
 
         self.state.next()
 
