@@ -530,6 +530,14 @@ class ClusterSitter(object):
             self.dns_provider.remove_record(data=machine.config.ip,
                                             hostName=root_name)
 
+        # Now look for other dangling records pointing to this machine
+        # and delete those too.
+        records = self.dns_provider.get_records()
+        for record in records:
+            if record['value'] == machine.config.ip:
+                self.dns_provider.remove_record(data=machine.config.ip,
+                                                hostName=record['record'])
+
     def add_machines(self, machines, update_dns=True):
         if not machines:
             return

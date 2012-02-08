@@ -1,3 +1,6 @@
+-- When decomissioning a machine remove ALL dns records that point to
+   it.
+
 -- Speedup time to release
   - Find a way to make builds faster!
   - Find a way to not have to recompile things on install.
