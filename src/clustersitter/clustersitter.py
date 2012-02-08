@@ -216,8 +216,7 @@ class ClusterState(object):
         self.job_overflow = job_overflow
         logger.debug("Calculated job overflow: %s" % self.job_overflow)
 
-    def _calculator(self):
-        while True:
+    def _calculate(self):
             def run_job(job, name):
                 # Since all state is accessed and shared there
                 # are all sorts of race conditions if a calculator
@@ -235,6 +234,10 @@ class ClusterState(object):
             run_job(self.calculate_job_fill, "Calculate Job Fill")
             run_job(self.calculate_job_refill, "Calculate Job ReFill")
             run_job(self.calculate_job_overfill, "Calculate Job OverFill")
+
+    def _calculator(self):
+        while True:
+            self._calculate()
             time.sleep(self.sitter.stats_poll_interval)
 
 
@@ -510,7 +513,12 @@ class ClusterSitter(object):
         ClusterEventManager.handle(
             "Decomissioning %s" % str(machine))
 
-        provider.decomission(machine)
+        if not provider.decomission(machine):
+            # If we can't decomission it then perhaps its locked
+            # and we should leave well enough alone at this point,
+            # just remove it from monitoring etc.
+            return
+
         if machine.config.dns_name:
             self.dns_provider.remove_record(data=machine.config.ip,
                                             hostName=machine.config.dns_name)
@@ -775,7 +783,10 @@ class ClusterSitter(object):
                 # decomissioning when we haven't yet taken into
                 # account the decomissioning we already did
                 if did_overflow_reduction:
-                    self.state.calculate_job_overfill()
+                    # Wait two intervals to ensure the machinemonitors
+                    # have had time to pickup and record the change
+                    time.sleep(2 * self.stats_poll_interval)
+                    self.state._calculate()
 
                 """
                 Enforce idle machine limits

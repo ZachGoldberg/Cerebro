@@ -31,7 +31,10 @@ class Dynect(DNSProvider):
             return False
 
         if not ret:
-            logger.warn(self.client.get_errors())
+            logger.warn("Couldn't add %s to %s: %s" % (
+                    data,
+                    hostName,
+                    self.client.get_errors()))
 
         return ret
 
@@ -47,7 +50,10 @@ class Dynect(DNSProvider):
             return False
 
         if not ret:
-            logger.warn(self.client.get_errors())
+            logger.warn("Couldn't delete %s from %s: %s" % (
+                    data,
+                    hostName,
+                    self.client.get_errors()))
 
         return ret
 
