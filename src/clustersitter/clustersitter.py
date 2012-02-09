@@ -541,6 +541,9 @@ class ClusterSitter(object):
                 self.dns_provider.remove_record(data=machine.config.ip,
                                                 hostName=record['record'])
 
+        ClusterEventManager.handle(
+            "Decomissioning of %s complete!" % str(machine))
+
     def add_machines(self, machines, update_dns=True):
         if not machines:
             return
