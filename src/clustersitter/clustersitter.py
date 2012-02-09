@@ -776,10 +776,18 @@ class ClusterSitter(object):
 
                             for task in machine.get_running_tasks():
                                 if task['name'] == jobname:
-                                    ClusterEventManager.handle(
-                                        "Stopping %s on %s" % (jobname,
-                                                               str(machine)))
-                                    machine.datamanager.stop_task(jobname)
+                                    while jobname in [
+                                        t['name'] for t in \
+                                            machine.get_running_tasks()]:
+
+                                        ClusterEventManager.handle(
+                                            "Stopping %s on %s" % (
+                                                jobname,
+                                                str(machine)))
+
+                                        machine.datamanager.stop_task(jobname)
+                                        machine.datamanager.reload()
+
                                     decomissioned += 1
                                     break
 
@@ -791,9 +799,6 @@ class ClusterSitter(object):
                 # decomissioning when we haven't yet taken into
                 # account the decomissioning we already did
                 if did_overflow_reduction:
-                    # Wait two intervals to ensure the machinemonitors
-                    # have had time to pickup and record the change
-                    time.sleep(2 * self.stats_poll_interval)
                     self.state._calculate()
 
                 """
