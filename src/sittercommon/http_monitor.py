@@ -171,6 +171,10 @@ class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         return
 
 
+class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
+    pass
+
+
 class HTTPMonitor(object):
     def __init__(self, stats, harness, port):
         self.port = int(port)
@@ -227,6 +231,6 @@ class HTTPMonitor(object):
         handler = lambda x, y, z: HTTPMonitorHandler(
             self,
             self.new_handlers, x, y, z)
-        self.httpd = SocketServer.TCPServer(('', self.port), handler)
+        self.httpd = ThreadedTCPServer(('', self.port), handler)
         self.httpd.timeout = 1
         self.httpd.serve_forever(poll_interval=0.1)
