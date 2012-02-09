@@ -130,14 +130,33 @@ class HTTPMonitoringTests(unittest.TestCase):
                                '--command', 'echo -n "hello"; sleep 10',
                                '--stdout-location', '/tmp/'],
                               path="logs",
-                              output_format="flat",
+                              output_format="json",
                               stop_server=False)
 
-        filename = json.loads(data["stdout.0"])['url']
+        filename = data["stdout.0"]['url']
 
         log_data = self.make_call(
             'http://localhost:%s%s&nohtml=1' % (
                 self.port, filename))
+        self.stop_http_server()
+
+        self.assertEquals(log_data, "hello")
+
+    def test_download_log_file_by_name(self):
+        data = self.run_check(['--cpu=.2', "--ensure-alive",
+                               '--command', 'echo -n "hello"; sleep 10',
+                               '--stdout-location', '/tmp/'],
+                              path="logs",
+                              output_format="json",
+                              stop_server=False)
+
+        print data
+
+        filename = data["stdout.0"]['url']
+
+        log_data = self.make_call(
+            'http://localhost:%s/logfile?logname=stdout.0&nohtml=1' % (
+                self.port))
         self.stop_http_server()
 
         self.assertEquals(log_data, "hello")

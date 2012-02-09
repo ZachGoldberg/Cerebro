@@ -63,8 +63,16 @@ class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     def _get_logfile(self, args):
         # @TODO This is a bit of a security problem...
+        filename = args.get('name')
+        if not filename:
+            if not 'logname' in args:
+                return "No filename specified"
+
+            logfiles = self.monitor.get_logs()
+            filename = logfiles[args['logname']]
+
         try:
-            return open(args['name']).read()
+            return open(filename).read()
         except IOError:
             return "File not found"
 
