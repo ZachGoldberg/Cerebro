@@ -1,10 +1,15 @@
 import os
+import re
 import threading
 
 from tenjin.helpers import *
 
 from eventmanager import ClusterEventManager
 from tasksitter.stats_collector import StatsCollector
+
+
+def strip_html(text):
+    return re.sub('<[^<]+?>', '', text)
 
 
 class ClusterStats(StatsCollector):
@@ -61,6 +66,25 @@ class ClusterStats(StatsCollector):
                 machine_data['dns_name'] = machine.config.dns_name
                 machine_data['hostname'] = machine.hostname
                 machine_data['tasks'] = machine.get_tasks()
+                for task in machine_data['tasks'].values():
+                    # task is running
+                    if 'monitoring' in task:
+                        filenum = int(task.get('num_task_starts', 1))
+
+                        # Counting starts at 0
+                        filenum -= 1
+
+                        files = ["stdout", "stderr"]
+                        for filename in files:
+                            link = strip_html(
+                                "%s/logfile?logname=%s.%s" % (
+                                    task['monitoring'],
+                                    filename,
+                                    filenum))
+
+                            task[filename] = "<a href='%s'>%s</a>" % (
+                                link, filename)
+
                 machine_data['running_tasks'] = machine.get_running_tasks()
                 machine_data['is_in_deployment'] = machine.is_in_deployment()
                 machine_data['number'] = machine.machine_number
