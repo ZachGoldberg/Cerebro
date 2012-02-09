@@ -535,6 +535,9 @@ class ClusterSitter(object):
         records = self.dns_provider.get_records()
         for record in records:
             if record['value'] == machine.config.ip:
+                logger.info("Removing %s from %s" % (
+                        machine.config.ip,
+                        record['record']))
                 self.dns_provider.remove_record(data=machine.config.ip,
                                                 hostName=record['record'])
 
