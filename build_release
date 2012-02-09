@@ -9,5 +9,5 @@ cd /tmp/checkout
 git reset --hard origin/master
 cd -
 ./bin/buildout-source-release file:///tmp/checkout buildout.cfg -n tasksitter-$VERSION
-mv tasksitter-$VERSION releases/
+mv tasksitter-$VERSION.tgz releases/
 echo "Release created, file: tasksitter-$VERSION.tgz"
