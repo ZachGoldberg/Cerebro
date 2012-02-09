@@ -75,7 +75,7 @@ class CPUConstraint(Constraint):
         Calculate child CPU usage and see if it violates the constraint.
         """
         child_proc.update_usage(deep=True)
-        print child_proc.cpu_usage, self.value
+
         if child_proc.cpu_usage > float(self.value):
             print "CPU Limit Exceeded"
             return True
@@ -99,7 +99,7 @@ class MemoryConstraint(Constraint):
     def check_violation(self, child_proc):
         """ Check for using too much Memory"""
         child_proc.update_usage(deep=True)
-        print child_proc.mem_usage, self.value
+
         if child_proc.mem_usage[1] > self.value:
             print "Memory Limit Exceeded"
             return True
