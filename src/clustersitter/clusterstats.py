@@ -165,5 +165,6 @@ class ClusterStats(StatsCollector):
         data['username'] = self.harness.user
         data['keys'] = self.harness.keys
         data['launch_time'] = self.harness.launch_time
+        data['launch_location'] = self.harness.launch_location
         data['start_state'] = self.harness.start_state
         return data

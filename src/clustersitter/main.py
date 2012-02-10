@@ -64,6 +64,8 @@ def main(sys_args=None):
     __import__(settings_module, globals(), locals())
     settings = sys.modules[settings_module]
 
+    launch_location = os.getcwd()
+
     if args.daemon:
         daemonize()
 
@@ -76,7 +78,8 @@ def main(sys_args=None):
                            provider_config=settings.provider_config,
                            dns_provider_config=settings.dns_provider_config,
                            keys=settings.keys, user=settings.login_user,
-                           log_location=settings.log_location)
+                           log_location=settings.log_location,
+                           launch_location=launch_location)
     sitter.start()
 
     if False:

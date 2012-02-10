@@ -246,7 +246,8 @@ class ClusterSitter(object):
                  provider_config,
                  dns_provider_config,
                  keys=None, user=None,
-                 starting_port=30000):
+                 starting_port=30000,
+                 launch_location=None):
         self.worker_thread_count = 4
         self.daemon = daemon
         self.keys = keys
@@ -254,6 +255,7 @@ class ClusterSitter(object):
         self.provider_config = provider_config
         self.dns_provider_config = dns_provider_config
         self.log_location = log_location
+        self.launch_location = launch_location
         self.launch_time = datetime.now()
         self.start_state = "Not Started"
 
@@ -482,7 +484,8 @@ class ClusterSitter(object):
                           post_callback=post_callback,
                           options=options,
                           given_logger=given_logger,
-                          dns_hostname=machine.config.dns_name)
+                          dns_hostname=machine.config.dns_name,
+                          launch_location=self.launch_location)
 
     def get_next_port(self):
         works = None

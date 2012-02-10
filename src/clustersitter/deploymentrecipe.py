@@ -11,11 +11,12 @@ logger = logging.getLogger(__name__)
 class DeploymentRecipe(object):
     def __init__(self, hostname, username, keys,
                  post_callback=None, options=None,
-                 given_logger=None, dns_hostname=None):
+                 given_logger=None, dns_hostname=None,
+                 launch_location=None):
         self.hostname = hostname
         self.username = username
         self.dns_hostname = dns_hostname
-
+        self.launch_location = launch_location
         self.keys = keys
         if not isinstance(self.keys, list):
             self.keys = [self.keys]
@@ -134,7 +135,7 @@ class DeploymentRecipe(object):
 class MachineSitterRecipe(DeploymentRecipe):
     def run_deploy(self):
         # Find the newest build to upload
-        release_dir = os.getcwd() + "/releases/"
+        release_dir = self.launch_location + "/releases/"
         filelist = os.listdir(release_dir)
         filelist = filter(lambda x: not os.path.isdir(x), filelist)
         filelist = filter(lambda x: "tgz" in x, filelist)
