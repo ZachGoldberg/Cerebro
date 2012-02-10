@@ -243,6 +243,10 @@ th
 	-moz-border-radius: ;
 }
 
+ul
+{
+    padding-left: 25px;
+}
 </style>
 </head>
 <body>
@@ -392,25 +396,22 @@ th
     <?py for machine in data['machines']: ?>
       <tr>
         <td valign='top'>
+          <a href='${machine['url']}'><b>${machine['hostname']}</b></a>
+          <a name='${machine['obj']}'>
           <ul>
             <li>
-              Hostname: 
-              <a href='${machine['url']}'>${machine['hostname']}</a>
-              <a name='${machine['obj']}'>
+              <b>DNS Name</b> <i>${machine['dns_name']}</i>
             </li>
             <li>
-              DNS Name:          <i>${machine['dns_name']}</i>
+              <b>Zone</b> ${machine['zone']}
             </li>
             <li>
-              Zone: ${machine['zone']}
-            </li>
-            <li>
-              Performance: ${machine['cpus']}x
+              <b>Performance</b> ${machine['cpus']}x
           ${machine['bits']}-bit ${machine['mem']}MB -
           ${machine['disk']}GB
               </li>
             <li>
-              Status: 
+              <b>Status</b>
               <?py if machine['is_in_deployment']: ?>
               In Deployment,
               <?py #endif ?>
@@ -434,31 +435,28 @@ th
             <tr>
             <?py for taskname, task in machine['tasks'].items(): ?>
             <td valign='top'>
-              <ul>
+              <?py if 'stats_page' in task: ?>
+              <b><a href='${task['stats_page']}'>${taskname}</a></b>
+              <?py else: ?>
+              <b>${taskname}</b>
+              <?py #endif ?>
+	      <ul>
+                <?py if 'stats_page' in task: ?>
                 <li>
-                  <?py if 'stats_page' in task: ?>
-                  <b><a href='${task['stats_page']}'>${taskname}</a></b>
-                  <?py else: ?>
-                  <b>${taskname}</b>
-                  <?py #endif ?>
-                  <ul>
-                    <?py if 'stats_page' in task: ?>
-                    <li>
-                      <a href="${task['logs_page']}">Logs</a>
-                    </li>
-                    <?py #endif ?>
-                    <?py for key, val in task.items(): ?>
-                    <li>${key}: #{val}</li>
-                    <?py #endfor ?>
-                  </ul>
+                  <a href="${task['logs_page']}">Logs</a>
                 </li>
-              </ul>
-              <?py #endfor ?>
+                <?py #endif ?>
+                <?py for key, val in task.items(): ?>
+                <li>${key}: #{val}</li>
+                <?py #endfor ?>
+	      </ul>
+	    </td>
+            <?py #endfor ?>
             </tr>
           </table>
         </td>
       </tr>
-    <?py #endfor ?>
+      <?py #endfor ?>
     </table>
     </p>
     <h2>Machine Monitors</h2>
@@ -511,72 +509,78 @@ th
       </table>
     </p>
     <h2>Events</h2>
-    <ul>
-    <?py for event in data['events']: ?>
-    <li>${event}</li>
-    <?py #endfor ?>
-    </ul>
+    <p>
+      <ul>
+	<?py for event in data['events']: ?>
+	<li>${event}</li>
+	<?py #endfor ?>
+      </ul>
+    </p>
     <h2>Cerebro Thread Status</h2>
-    <ul>
-      <?py for name in data['std_threads']: ?>
-      <li>
-        ${name}:
-        <?py if data['threads'][name]: ?>
-        <font color='#0A0'>OK</font>
-        <?py else: ?>
-        <font color='#A00'>Missing</font>
-        <?py #endif ?>
-      </li>
-      <?py #endfor ?>
-      <?py for name in data['other_threads']: ?>
-      <li>
-        ${name}: <font color='#0A0'>OK</font>
-      </li>
-      <?py #endfor ?>
-    </ul>
+    <p>
+      <ul>
+	<?py for name in data['std_threads']: ?>
+	<li>
+          ${name}:
+          <?py if data['threads'][name]: ?>
+          <font color='#0A0'>OK</font>
+          <?py else: ?>
+          <font color='#A00'>Missing</font>
+          <?py #endif ?>
+	</li>
+	<?py #endfor ?>
+	<?py for name in data['other_threads']: ?>
+	<li>
+          ${name}: <font color='#0A0'>OK</font>
+	</li>
+	<?py #endfor ?>
+      </ul>
+    </p>
     <h2>Metadata</h2>
-    <ul>
-      <li>
-        Load Average: ${data['load_one_min']} ${data['load_five_min']}
-        ${data['load_fifteen_min']}
+    <p>
+      <ul>
+	<li>
+          Load Average: ${data['load_one_min']} ${data['load_five_min']}
+          ${data['load_fifteen_min']}
         </li>
-      <li>
-        Cerebro PID: ${data['clustersitter_pid']}
-      </li>
-      <li>
-        Log Location: ${data['log_location']}
-      </li>
-      <li>
-        Launch Time: ${data['launch_time']}
-      </li>
-      <li>
-        Launch Location: ${data['launch_location']}
-      </li>
-      <li>
-        Starting State: ${data['start_state']}
-      </li>
-      <li>
-        Username: ${data['username']}
-      </li>
-      <li>
-        Keys: ${data['keys']}
-      </li>
-      <li>
-        DNS Provider Config:
-        <pre><?py import json; dns_provider_config = json.dumps(data['dns_provider_config'], indent=4) ?>${dns_provider_config}</pre>
-      </li>
-      <li>
-        Providers:
-        <?py for provider in data['providers'].keys(): ?>
-        ${provider}
-        <?py #endfor ?>
-      </li>
-      <li>
-        Provider Config:
-        <?py import json; provider_config = json.dumps(data['provider_config'], indent=4) ?>
-        <pre>${provider_config}</pre>
-      </li>
-    </ul>
+	<li>
+          Cerebro PID: ${data['clustersitter_pid']}
+	</li>
+	<li>
+          Log Location: ${data['log_location']}
+	</li>
+	<li>
+          Launch Time: ${data['launch_time']}
+	</li>
+	<li>
+          Launch Location: ${data['launch_location']}
+	</li>
+	<li>
+          Starting State: ${data['start_state']}
+	</li>
+	<li>
+          Username: ${data['username']}
+	</li>
+	<li>
+          Keys: ${data['keys']}
+	</li>
+	<li>
+          DNS Provider Config:
+          <pre><?py import json; dns_provider_config = json.dumps(data['dns_provider_config'], indent=4) ?>${dns_provider_config}</pre>
+	</li>
+	<li>
+          Providers:
+          <?py for provider in data['providers'].keys(): ?>
+          ${provider}
+          <?py #endfor ?>
+	</li>
+	<li>
+          Provider Config:
+          <?py import json; provider_config = json.dumps(data['provider_config'], indent=4) ?>
+          <pre>${provider_config}</pre>
+	</li>
+      </ul>
+    </p>
   </div>
   <div id='bottom'>
   </div>
