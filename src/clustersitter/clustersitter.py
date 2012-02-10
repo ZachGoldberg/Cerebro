@@ -324,6 +324,7 @@ class ClusterSitter(object):
             logfile = "%s/%s.log" % (self.log_location,
                                                  name)
             self.logfiles.append(logfile)
+            self.logmanager.add_logfile(name, logfile)
             handler = FileHandler(logfile)
             handler.setFormatter(formatter)
             module.logger.addHandler(all_file)

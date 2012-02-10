@@ -133,6 +133,9 @@ class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
         try:
             output = self.handlers[urldata.path](args)
+            if not output:
+                output = "No Data"
+
             if isinstance(output, dict):
                 self.wfile.write(self._format_dict(output, args))
             else:

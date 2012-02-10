@@ -170,4 +170,6 @@ class ClusterStats(StatsCollector):
         data['launch_time'] = self.harness.launch_time
         data['launch_location'] = self.harness.launch_location
         data['start_state'] = self.harness.start_state
+        data['logfiles'] = self.harness.logmanager.get_logfile_names()
+
         return data

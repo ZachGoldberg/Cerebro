@@ -30,8 +30,8 @@ class LogManager(object):
         print "Redirecting sitter output to %s, stderr: %s" % (
             stdout_loc, stderr_loc)
 
-        self.add_logfile("machinemanager-stdout", stdout_loc)
-        self.add_logfile("machinemanager-stderr", stderr_loc)
+        self.add_logfile("stdout", stdout_loc)
+        self.add_logfile("stderr", stderr_loc)
 
         self.setup_stdout()
         self.setup_stderr()
