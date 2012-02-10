@@ -9,8 +9,6 @@
 
 -- Job filler should advance the state of each machine independently
 -- Consider if we need the jobs persistence code.
--- Remove DNS names as part of the decomissioning process
--- Need to be able to express that two tasks must run on the same machine
 -- General event framework
  - Machine Deployed
  - Machine Terminated
@@ -22,19 +20,12 @@
 
 -- Make a thirdparty for tasksitter, put pkgs there.
 
--- Pass in the deploymentrecipe logger to the DeploymentRecipes as
-   they don't properly inherit a logger right now
-
 --What happens to tasks and job fill if a machine is in POLL_FAILURES?
  - Right now nothing, the job thinks things are OK
  - First thing MachineDoctor does should be to clear the machine's
    tasks so the job will refill it elsewhere
--- Machine Doctor should use the job filler to launch machines
- - This will require a pretty non-trivial refactor of the jobfiller,
-   but should be done
 
--- API to Add jobs while clustersitter is running
--- Lots of links in HTML page, to STDOUT etc.
+-- Logs exposure in main clustersitter page
 -- Performance data in web console!
 -- Archive old JobFillers?  Delete them?
 -- machine sitter / console

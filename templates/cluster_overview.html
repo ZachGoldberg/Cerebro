@@ -316,114 +316,146 @@ th
     <h2>Running Jobs</h2>
     <?py for jobinfo in data['jobs']: ?>
     <h3>${jobinfo['name']}</h3>
-    <h4> Metadata </h4>
     <p>
-      <ul>
-        <li>
-          Deployment Recipe: ${jobinfo['deployment_recipe']}
-        </li>
-        <li>
-          Recipe Options: ${jobinfo['recipe_options']}
-        </li>
-        <li>
-          Linked Job: ${jobinfo['linked_job']}
-        </li>
-        </ul>
+      <table>
+        <tr>
+          <td valign='top'>
+            <h4> Metadata </h4>
+            <p>
+              <ul>
+                <li>
+                  Deployment Recipe: ${jobinfo['deployment_recipe']}
+                </li>
+                <li>
+                  Recipe Options: ${jobinfo['recipe_options']}
+                </li>
+                <li>
+                  Linked Job: ${jobinfo['linked_job']}
+                </li>
+              </ul>
+            </p>
+          </td>
+          <td valign='top'>
+            <h4> Task Configuration </h4>
+            <p>
+              <ul>
+                <?py for k, v in jobinfo['task_configuration'].items(): ?>
+                <li>${k}: ${v}</li>
+                <?py #endfor ?>
+              </ul>
+            </p>
+          </td>
+          <td valign='top'>
+            <h4> Deployment Layout </h4>
+            <p>
+              <ul>
+                <?py for zone in jobinfo['deployment_layout']: ?>
+                <li><b> ${zone} </b>:
+                  <!-- !MACHINEASSUMPTION -->
+                  Active Machines: ${jobinfo['fill'].get(zone, 0)},
+                  Spawning Machines: ${jobinfo['spawning'][zone]},
+                  Configured Required Machines: ${jobinfo['deployment_layout'][zone]['cpu']},
+                  Memory per Core: ${jobinfo['deployment_layout'][zone]['mem']}MB
+                </li>
+                <?py #endfor ?>
+              </ul>
+              <ul>
+                <?py for zone in jobinfo['deployment_layout']: ?>
+                <li><b> ${zone} </b>:
+                  <ul>
+                    <?py for machine in jobinfo['fill_machines'].get(zone, []): ?>
+                    <li>
+                      <a href="#${machine}">${machine}</a>
+                    </li>
+                    <?py #endfor ?>
+                  </ul>
+                </li>
+                <?py #endfor ?>
+              </ul>
+            <p>
+          </td>
+        </tr>
+      </table>
     </p>
-    <h4> Task Configuration </h4>
-    <p>
-      <ul>
-        <?py for k, v in jobinfo['task_configuration'].items(): ?>
-        <li>${k}: ${v}</li>
-        <?py #endfor ?>
-      </ul>
-    </p>
-    <h4> Deployment Layout </h4>
-    <p>
-      <ul>
-      <?py for zone in jobinfo['deployment_layout']: ?>
-      <li><b> ${zone} </b>:
-        <!-- !MACHINEASSUMPTION -->
-        Active Machines: ${jobinfo['fill'].get(zone, 0)},
-        Spawning Machines: ${jobinfo['spawning'][zone]},
-        Configured Required Machines: ${jobinfo['deployment_layout'][zone]['cpu']},
-        Memory per Core: ${jobinfo['deployment_layout'][zone]['mem']}MB
-      </li>
-      <?py #endfor ?>
-      </ul>
-    <p>
     <?py #endfor ?>
     <h2>Tracked Machines</h2>
     <p>
     <table>
       <tr>
         <th>
-          Hostname
+          Machine Metadata
         </th>
         <th>
-          Zone
-        </th>
-        <th>
-          Performance
-        </th>
-        <th>
-          Status
-        </th>
-        <th>
-          Task Status
+          Running Tasks
         </th>
       </tr>
     <?py for machine in data['machines']: ?>
       <tr>
-        <td>
-          <a href='${machine['url']}'>${machine['hostname']}</a>
-          <br>
-          <i>${machine['dns_name']}</i>
-        </td>
-        <td> ${machine['zone']} </td>
-        <td> ${machine['cpus']}x
+        <td valign='top'>
+          <ul>
+            <li>
+              Hostname: 
+              <a href='${machine['url']}'>${machine['hostname']}</a>
+              <a name='${machine['obj']}'>
+            </li>
+            <li>
+              DNS Name:          <i>${machine['dns_name']}</i>
+            </li>
+            <li>
+              Zone: ${machine['zone']}
+            </li>
+            <li>
+              Performance: ${machine['cpus']}x
           ${machine['bits']}-bit ${machine['mem']}MB -
           ${machine['disk']}GB
-        </td>
-        <td>
-          <?py if machine['is_in_deployment']: ?>
-          In Deployment,
-          <?py #endif ?>
-          <?py if machine['initialized']: ?>
-          Initialized,
-          <?py #endif ?>
-          <?py if machine['has_loaded_data']: ?>
-          Data Loaded,
-          <?py #endif ?>
-          <?py if machine['idle']: ?>
-          <font color='#A00'>Idle,</font>
-          <?py #endif ?>
-          <?py if machine['pull_failures']: ?>
-          <font color='#A00'><b>Pull Failures: ${machine['pull_failures']}</b></font>
-          <?py #endif ?>
-        </td>
-        <td>
-          <ul>
-          <?py for taskname, task in machine['tasks'].items(): ?>
-          <li>
-            <?py if 'stats_page' in task: ?>
-            <b><a href='${task['stats_page']}'>${taskname}</a></b>
-            <?py else: ?>
-            <b>${taskname}</b>
-            <?py #endif ?>
-            <ul>
-            <?py if 'stats_page' in task: ?>
+              </li>
             <li>
-              <a href="${task['logs_page']}">Logs</a>
+              Status: 
+              <?py if machine['is_in_deployment']: ?>
+              In Deployment,
+              <?py #endif ?>
+              <?py if machine['initialized']: ?>
+              Initialized,
+              <?py #endif ?>
+              <?py if machine['has_loaded_data']: ?>
+              Data Loaded,
+              <?py #endif ?>
+              <?py if machine['idle']: ?>
+              <font color='#A00'>Idle,</font>
+              <?py #endif ?>
+              <?py if machine['pull_failures']: ?>
+              <font color='#A00'><b>Pull Failures: ${machine['pull_failures']}</b></font>
+              <?py #endif ?>
             </li>
-            <?py #endif ?>
-            <?py for key, val in task.items(): ?>
-            <li>${key}: #{val}</li>
-            <?py #endfor ?>
-            </ul>
-          </li>
-          <?py #endfor ?>
           </ul>
+        </td>
+        <td>
+          <table style="border: 0px; padding: 0px">
+            <tr>
+            <?py for taskname, task in machine['tasks'].items(): ?>
+            <td valign='top'>
+              <ul>
+                <li>
+                  <?py if 'stats_page' in task: ?>
+                  <b><a href='${task['stats_page']}'>${taskname}</a></b>
+                  <?py else: ?>
+                  <b>${taskname}</b>
+                  <?py #endif ?>
+                  <ul>
+                    <?py if 'stats_page' in task: ?>
+                    <li>
+                      <a href="${task['logs_page']}">Logs</a>
+                    </li>
+                    <?py #endif ?>
+                    <?py for key, val in task.items(): ?>
+                    <li>${key}: #{val}</li>
+                    <?py #endfor ?>
+                  </ul>
+                </li>
+              </ul>
+              <?py #endfor ?>
+            </tr>
+          </table>
         </td>
       </tr>
     <?py #endfor ?>
@@ -478,6 +510,12 @@ th
         <?py #endfor ?>
       </table>
     </p>
+    <h2>Events</h2>
+    <ul>
+    <?py for event in data['events']: ?>
+    <li>${event}</li>
+    <?py #endfor ?>
+    </ul>
     <h2>Cerebro Thread Status</h2>
     <ul>
       <?py for name in data['std_threads']: ?>
@@ -495,12 +533,6 @@ th
         ${name}: <font color='#0A0'>OK</font>
       </li>
       <?py #endfor ?>
-    </ul>
-    <h2>Events</h2>
-    <ul>
-    <?py for event in data['events']: ?>
-    <li>${event}</li>
-    <?py #endfor ?>
     </ul>
     <h2>Metadata</h2>
     <ul>

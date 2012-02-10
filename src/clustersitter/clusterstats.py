@@ -57,6 +57,7 @@ class ClusterStats(StatsCollector):
 
             for machine in monitor.monitored_machines:
                 machine_data = {}
+                machine_data['obj'] = machine
                 machine_data['zone'] = machine.config.shared_fate_zone
                 machine_data['bits'] = machine.config.bits
                 machine_data['cpus'] = machine.config.cpus
@@ -121,6 +122,8 @@ class ClusterStats(StatsCollector):
 
             job_data['fillers'] = fillers
             job_data['fill'] = state.job_fill.get(job.name, {})
+            job_data['fill_machines'] = state.job_fill_machines.get(
+                job.name, {})
             job_data['spawning'] = job.currently_spawning
             jobs.append(job_data)
 
