@@ -66,7 +66,8 @@ class JobFillerState(StateMachine):
 
 class JobFiller(object):
     def __init__(self, num_cores, job, zone, idle_machines=None,
-                 raw_machines=None, reboot_task=False):
+                 raw_machines=None, reboot_task=False, post_callback=None,
+                 fail_on_error=False):
         self.num_cores = num_cores
         self.job = job
         self.zone = zone
@@ -75,6 +76,8 @@ class JobFiller(object):
         self.thread = None
         self.end_time = None
         self.reboot_task = reboot_task
+        self.post_callback = post_callback
+        self.fail_on_error = fail_on_error
 
         if not raw_machines:
             raw_machines = []
@@ -113,7 +116,7 @@ class JobFiller(object):
     def is_done(self):
         return self.state.get_state() == 8
 
-    def run(self, fail_on_error=False):
+    def run(self):
         logger.info("Starting JobFiller")
         while self.state.get_state() != 8:
             state = self.state.get_state()
@@ -140,12 +143,19 @@ class JobFiller(object):
                 import traceback
                 traceback.print_exc()
                 logger.error(traceback.format_exc())
-                if fail_on_error:
+                if self.fail_on_error:
+                    if self.post_callback:
+                        self.post_callback(success=False)
+
                     return False
 
         ClusterEventManager.handle("Completed Filling: %s" % str(self))
         logger.info("Job Filler: Done!")
         self.end_time = datetime.now()
+
+        if self.post_callback:
+            self.post_callback(success=True)
+
         return True
 
     def run_create_resources(self):

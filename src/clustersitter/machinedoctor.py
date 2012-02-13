@@ -34,11 +34,51 @@ class MachineDoctor(object):
                                            name="MachineDoctor")
         self.thread.start()
 
+    def _run(self):
+        while True:
+            start_time = datetime.now()
+            logger.debug("Begin machine doctor run.  Unreachables: %s"
+                         % (self.state.unreachable_machines))
+            try:
+                self._check_for_unreachable_machines()
+                self._turn_off_overflowed_jobs()
+                self._enforce_idle_machine_limits()
+            except:
+                # Der?  Not sure what this could be...
+                import traceback
+                traceback.print_exc()
+                logger.error(traceback.format_exc())
+
+            time_spent = datetime.now() - start_time
+            sleep_time = self.sitter.stats_poll_interval - \
+                time_spent.seconds
+            logger.debug(
+                "Finished Machine Doctor run. " +
+                "Time_spent: %s, sleep_time: %s" % (
+                    time_spent,
+                    sleep_time))
+
+            if sleep_time > 0:
+                time.sleep(sleep_time)
+
     def _check_for_unreachable_machines(self):
                 """
                 Try and fix unreachable machines
                 """
                 for machine, monitor in self.state.unreachable_machines:
+                    # Check if we've aready launched a redeploy job to
+                    # this machine, if so skip it
+                    found = False
+                    for job in self.state.repair_jobs:
+                        for fillers in job.fillers.values():
+                            for filler in fillers:
+                                for jobmachine in filler.machines:
+                                    if machine == jobmachine:
+                                        found = True
+                                        break
+                    if found:
+                        continue
+
                     ClusterEventManager.handle("Attempting to redeploy to %s" %
                                                machine)
 
@@ -56,31 +96,31 @@ class MachineDoctor(object):
                     job.sitter = self.sitter
                     self.state.repair_jobs.append(job)
 
-                    # Run in thread for now
-                    # TODO run not in doctor thread
+                    def post_filler(success):
+                        if success:
+                            logger.info("Successful redeploy of %s!" % machine)
+                        else:
+                            logger.info(
+                                "Redeploy failed! Decomissioning %s" % machine)
+
+                            # Decomission time!
+                            ClusterEventManager.handle(
+                                "Decomissioning %s" % machine)
+
+                            self.sitter.decomission_machine(machine)
+
+                        self.state.unreachable_machines.remove(
+                            (machine, monitor))
+                        self.state.repair_jobs.remove(job)
+
                     filler = JobFiller(1, job, machine.config.shared_fate_zone,
-                                       raw_machines=[machine])
+                                       raw_machines=[machine],
+                                       post_callback=post_filler,
+                                       fail_on_error=True)
 
                     job.fillers[machine.config.shared_fate_zone] = [filler]
 
-                    val = filler.run(fail_on_error=True)
-
-                    # Remove the job from the job list, now that its finished
-                    self.state.repair_jobs.remove(job)
-
-                    if val:
-                        # We were able to successfully reploy to the machine
-                        logger.info("Successful redeploy of %s!" % machine)
-                    else:
-                        logger.info(
-                            "Redeploy failed!  Decomissioning %s" % machine)
-                        # Decomission time!
-                        ClusterEventManager.handle(
-                            "Decomissioning %s" % machine)
-
-                        self.sitter.decomission_machine(machine)
-
-                    self.state.unreachable_machines.remove((machine, monitor))
+                    filler.start_fill()
 
     def _turn_off_overflowed_jobs(self):
         """
@@ -148,30 +188,3 @@ class MachineDoctor(object):
                         m for m in machines[idle_limit:]]
                     for machine in decomission_targets:
                         self.sitter.decomission_machine(machine)
-
-    def _run(self):
-        while True:
-            start_time = datetime.now()
-            logger.debug("Begin machine doctor run.  Unreachables: %s"
-                         % (self.state.unreachable_machines))
-            try:
-                self._check_for_unreachable_machines()
-                self._turn_off_overflowed_jobs()
-                self._enforce_idle_machine_limits()
-            except:
-                # Der?  Not sure what this could be...
-                import traceback
-                traceback.print_exc()
-                logger.error(traceback.format_exc())
-
-            time_spent = datetime.now() - start_time
-            sleep_time = self.sitter.stats_poll_interval - \
-                time_spent.seconds
-            logger.debug(
-                "Finished Machine Doctor run. " +
-                "Time_spent: %s, sleep_time: %s" % (
-                    time_spent,
-                    sleep_time))
-
-            if sleep_time > 0:
-                time.sleep(sleep_time)

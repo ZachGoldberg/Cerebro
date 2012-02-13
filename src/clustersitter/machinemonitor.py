@@ -118,7 +118,7 @@ class MachineMonitor:
                         del self.pull_failures[machine]
                         machine.detected_sitter_failures += 1
                         logger.warn(
-                            "Removing" +
+                            "Removing " +
                             "%s because we can't contact the sitter! " % (
                                 machine.hostname))
                         self.clustersitter._register_sitter_failure(
