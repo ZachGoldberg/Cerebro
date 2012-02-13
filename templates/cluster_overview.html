@@ -318,6 +318,14 @@ ul
     <?py #endfor ?>
     </table>
     </p>
+    <h2>Events</h2>
+    <p>
+      <ul>
+	<?py for event in data['events']: ?>
+	<li>${event}</li>
+	<?py #endfor ?>
+      </ul>
+    </p>
     <h2>Running Jobs</h2>
     <?py for jobinfo in data['jobs']: ?>
     <h3>${jobinfo['name']}</h3>
@@ -508,14 +516,6 @@ ul
         </tr>
         <?py #endfor ?>
       </table>
-    </p>
-    <h2>Events</h2>
-    <p>
-      <ul>
-	<?py for event in data['events']: ?>
-	<li>${event}</li>
-	<?py #endfor ?>
-      </ul>
     </p>
     <h2>Cerebro Thread Status</h2>
     <p>
