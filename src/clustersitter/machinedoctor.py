@@ -109,8 +109,13 @@ class MachineDoctor(object):
 
                             self.sitter.decomission_machine(machine)
 
-                        self.state.unreachable_machines.remove(
-                            (machine, monitor))
+                        # Can happen if machine is decomissioned by
+                        # somebody else while we were redeploying.
+                        if (machine, monitor) in \
+                                self.state.unreachable_machines:
+                            self.state.unreachable_machines.remove(
+                                (machine, monitor))
+
                         self.state.repair_jobs.remove(job)
 
                     filler = JobFiller(1, job, machine.config.shared_fate_zone,

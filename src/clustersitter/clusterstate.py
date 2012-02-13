@@ -191,7 +191,7 @@ class ClusterState(object):
             run_job(self.calculate_job_fill, "Calculate Job Fill")
             run_job(self.calculate_job_refill, "Calculate Job ReFill")
             run_job(self.calculate_job_overfill, "Calculate Job OverFill")
-            logger.info(self.machines_by_zone)
+
     def _calculator(self):
         while True:
             self._calculate()
