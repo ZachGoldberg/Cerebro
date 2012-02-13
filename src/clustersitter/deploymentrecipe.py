@@ -108,7 +108,7 @@ class DeploymentRecipe(object):
         if not self.connected:
             self.logger.warn(
                 "Couldn't do deployment: SSH Not connected." +
-                "For AWS machines this may be normal, as it can be up to" +
+                "For AWS machines this may be normal, as it can be up to " +
                 "2 minutes after they spawn before we can login")
 
             return False
