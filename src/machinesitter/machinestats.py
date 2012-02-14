@@ -1,5 +1,5 @@
 import os
-
+import socket
 from tasksitter.stats_collector import StatsCollector
 
 
@@ -7,23 +7,24 @@ class MachineStats(StatsCollector):
 
     def get_live_data(self):
         data = {}
+        hostname = socket.gethostname()
         for task_name, task in self.harness.tasks.items():
             running = bool(task.is_running())
             data["%s-running" % task.name] = running
             if not running:
                 data["%s-start" % task.name] = \
                     "<a href='http://%s:%s/start_task?task_name=%s'>start</a>" % (
-                    self.hostname,
+                    hostname,
                     self.harness.http_monitor.port,
                     task.name)
             else:
                 data["%s-stop" % task.name] = \
                     "<a href='http://%s:%s/stop_task?task_name=%s'>stop</a>" % (
-                    self.hostname,
+                    hostname,
                     self.harness.http_monitor.port,
                     task.name)
                 location = "http://%s:%s" % (
-                    self.hostname,
+                    hostname,
                     task.http_monitoring_port)
                 data["%s-monitoring" % task.name] = "<a href='%s'>%s</a>" % (location,
                                                                            location)
@@ -37,6 +38,7 @@ class MachineStats(StatsCollector):
 
     def get_metadata(self):
         data = {}
+        data['hostname'] = socket.gethostname()
         data['machinesitter_pid'] = os.getpid()
         data['launch_location'] = self.harness.launch_location
         data['log_location'] = self.harness.log_location
