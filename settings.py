@@ -1,7 +1,8 @@
-# You can set AWS Keys here as well
+# You can set AWS Keys here or in ENV
 #os.putenv('AWS_ACCESS_KEY_ID', XXXXXX)
 #os.putenv('AWS_SECRET_ACCESS_KEY', XXXXX)
 
+# Location for cerebro logs
 log_location="/mnt/data/clustersitter"
 
 # Keys used to login to machines

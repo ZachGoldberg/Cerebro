@@ -101,11 +101,53 @@ Cluster Sitter Details:
     to keep to a predefined limit.
 
 
-Job Configuration Format
+Providers
+ -- Cerebro uses an interface for talking to both a cloud provider and a DNS provider
+ -- Presently only AWS/EC2 is implemented as a cloud-VM provider and Dynect is the only DNS providr
+ -- The interface is sufficiently minimal (aka create_instances() or dns_add_record()/dns_delete_record())
+    that it should be very simple to expand to other providers (linode, rackspace etc.)
+
+Cerebro Configuration File:
+ # See settings.py
+
+Example Job Configuration Format
+    {
+        "dns_basename": "redis.startup.com",
+        "deployment_recipe": "mystartup.recipes.deploy",
+        "deployment_layout": {
+            "aws-us-west-2a": {
+                "mem": 500,
+                "cpu": 1
+            },
+            "aws-us-east-1b": {
+                "mem": 50,
+                "cpu": 10
+            }
+        },
+        "recipe_options": {
+            # Passed as a dictionary to your jobs
+            "release_dir": "/opt/startup/releases/"
+        },
+        "persistent": true,
+        "task_configuration":
+            {
+                # Tasksitter configuration. 
+                "allow_exit": false,
+                "name": "Portal Server",
+                "command": "/opt/wifast/run_wsgi",
+                "auto_start": false,
+                "ensure_alive": true,
+                "max_restarts": -1,
+                "restart": true,
+                "uid": 0,
+		"cpu": .5, # allow this job to use 50% of CPU
+		"mem": 1200, # Allow this job to use 1.2GB of RAM
+            }
+    },
 
 
 Deploymet Recipe Interface
-  def run_deploy():
+  def run_deploy(options):
     # API?
     logger.*()
 
