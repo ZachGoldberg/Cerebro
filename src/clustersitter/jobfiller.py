@@ -103,7 +103,7 @@ class JobFiller(object):
         else:
             return self.num_cores
 
-    def start_fill(self):
+    def start(self):
         self.thread = threading.Thread(
             target=self.run,
             name="JobFiller-%s:%s:%s" % (

@@ -119,7 +119,7 @@ class ProductionJob(object):
 
                 logger.info(
                     "Starting job filler for code update for %s" % self.name)
-                filler.start_fill()
+                filler.start()
                 if not zone in self.fillers:
                     self.fillers[zone] = []
 
@@ -208,7 +208,7 @@ class ProductionJob(object):
 
                 filler = JobFiller(len(machines_to_fill), self,
                                    zone, machines_to_fill)
-                filler.start_fill()
+                filler.start()
                 self.fillers[zone].append(filler)
 
         return True
@@ -315,6 +315,6 @@ class ProductionJob(object):
                 filler = JobFiller(idle_required, self,
                                    zone, usable_machines)
                 self.fillers[zone].append(filler)
-                filler.start_fill()
+                filler.start()
 
         return True

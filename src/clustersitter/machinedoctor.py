@@ -125,7 +125,7 @@ class MachineDoctor(object):
 
                     job.fillers[machine.config.shared_fate_zone] = [filler]
 
-                    filler.start_fill()
+                    filler.start()
 
     def _turn_off_overflowed_jobs(self):
         """
