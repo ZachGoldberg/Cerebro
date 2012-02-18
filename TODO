@@ -1,19 +1,10 @@
--- Speedup time to release
-  - Find a way to make builds faster!
-  - Find a way to not have to recompile things on install.
-
+-- Clustersitter replication and sharding?
 -- Move jobfiller timeout to be state level
 -- Move decomissioning into its own thread
 -- Consider having one long lived thread that does DNS enforcement
 
-
 -- Job filler should advance the state of each machine independently
 -- Consider if we need the jobs persistence code.
--- General event framework
- - Machine Deployed
- - Machine Terminated
- - Add timestamp, add a bit more structured data
-
 -- Abstract out monitoredmachine so we can do something like monitoredmongo ?
 -- Error reporting to UI -- what if we can't SSH into a machine, how
    is that reported?
@@ -25,31 +16,19 @@
  - First thing MachineDoctor does should be to clear the machine's
    tasks so the job will refill it elsewhere
 
--- Logs exposure in main clustersitter page
--- Performance data in web console!
--- Archive old JobFillers?  Delete them?
 -- machine sitter / console
  - Setup ENV with defaults for all child tasks
  - Configure actions in console / http
  - Configure settings in console / http
  - prettier web UI for starting/stopping tasks
 
--- cluster sitter ideas
-   - local database (or cloud hosted somehow to avoid downtime?) of
-      machines
-   - Web UI to show... everything
-
 -- For all stats sitters, look for a VERSION file and show that if available
 
 Flesh out the stats collector, show CPU usage and history etc.
-Set CPU Core Affinity
- -- (requires a subpackage 'affinity')
 Have constraints output a % instead of a bool so we can do warnings at
 thresholds
-Implement HTTP Watcher
 Implement Alerting in HTTP Interface
 Implement 'flexible' limits, aka how long a process can be in
    violation before its killed
 Add Logging instead of printing inside task sitter
   Expose task-sitter logs, too!
-fix the type= parameter for python 2.6 compatibility
