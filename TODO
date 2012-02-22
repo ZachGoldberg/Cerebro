@@ -1,4 +1,10 @@
 -- Clustersitter replication and sharding?
+-- If a machine is decomissioned, remove it from all pending jobfillers.
+  - If a jobfiller has no more machines, just stop.
+
+-- Speedup time to release
+  - Find a way to make builds faster!
+  - Find a way to not have to recompile things on install.
 -- Move jobfiller timeout to be state level
 -- Move decomissioning into its own thread
 -- Consider having one long lived thread that does DNS enforcement
