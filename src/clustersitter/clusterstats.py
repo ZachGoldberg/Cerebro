@@ -31,23 +31,20 @@ class ClusterStats(StatsCollector):
 
         state = self.harness.state
 
-        dumpables = ['machines_by_zone',
-                     'zones',
-                     'job_fill',
-                     'providers',
-                     'unreachable_machines',
-                     'idle_machines',
-                     ]
-
-        for key in dumpables:
-            data[key] = getattr(state, key)
+        data['providers'] = state.providers.keys()
+        data['machines_by_zone'] = str(state.machines_by_zone)
+        data['job_fill'] = str(state.job_fill)
+        data['idle_machines'] = str(state.idle_machines)
+        data['unreachable_machines'] = [
+            str(m) for m in state.unreachable_machines]
 
         monitors = []
         machines = []
         for monitor, thread in state.monitors:
             monitor_data = {}
-            monitor_data['monitored_machines'] = monitor.monitored_machines
-            monitor_data['add_queue'] = monitor.add_queue
+            monitor_data['monitored_machines'] = [
+                repr(m) for m in monitor.monitored_machines]
+            monitor_data['add_queue'] = [repr(m) for m in monitor.add_queue]
             monitor_data['pull_failures'] = monitor.pull_failures
             monitor_data['failure_threshold'] = monitor.failure_threshold
             monitor_data['number'] = monitor.number
@@ -57,7 +54,7 @@ class ClusterStats(StatsCollector):
 
             for machine in monitor.monitored_machines:
                 machine_data = {}
-                machine_data['obj'] = machine
+                machine_data['repr'] = repr(machine)
                 machine_data['zone'] = machine.config.shared_fate_zone
                 machine_data['bits'] = machine.config.bits
                 machine_data['cpus'] = machine.config.cpus
@@ -167,7 +164,7 @@ class ClusterStats(StatsCollector):
         data['dns_provider_config'] = self.harness.dns_provider_config
         data['username'] = self.harness.user
         data['keys'] = self.harness.keys
-        data['launch_time'] = self.harness.launch_time
+        data['launch_time'] = str(self.harness.launch_time)
         data['launch_location'] = self.harness.launch_location
         data['start_state'] = self.harness.start_state
         data['logfiles'] = self.harness.logmanager.get_logfile_names()

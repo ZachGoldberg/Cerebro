@@ -406,7 +406,7 @@ ul
       <tr>
         <td valign='top'>
           <a href='${machine['url']}'><b>${machine['hostname']}</b></a>
-          <a name='${machine['obj']}'>
+          <a name='${machine['repr']}'>
           <ul>
             <li>
               <b>DNS Name</b>${machine['dns_name']}
@@ -571,7 +571,7 @@ ul
 	</li>
 	<li>
           Providers:
-          <?py for provider in data['providers'].keys(): ?>
+          <?py for provider in data['providers']: ?>
           ${provider}
           <?py #endfor ?>
 	</li>

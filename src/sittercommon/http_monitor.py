@@ -106,11 +106,21 @@ class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         Convert a dictionary of data into an appropriate
         output format based on the query string args
         """
+        def todict(obj):
+            if isinstance(obj, dict):
+                return obj
+
+            try:
+                return obj.__dict__
+            except:
+                return str(obj)
 
         output = ""
         if "format" in args and args["format"] != "flat":
             if args['format'] == "json":
-                output = simplejson.dumps(data)
+                output = simplejson.dumps(data,
+                                          skipkeys=True,
+                                          default=todict)
             else:
                 output = "Invalid Format"
         else:
