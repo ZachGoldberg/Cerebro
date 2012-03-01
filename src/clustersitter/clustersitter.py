@@ -95,7 +95,7 @@ class ClusterSitter(object):
         self.stats = ClusterStats(self)
         self.http_monitor = http_monitor.HTTPMonitor(self.stats,
                                                      self,
-                                                     self.get_next_port())
+                                                     30000)
 
         self.http_monitor.add_handler('/overview', self.stats.overview)
         self.http_monitor.add_handler('/add_job', self.api_add_job)
