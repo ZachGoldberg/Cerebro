@@ -338,10 +338,10 @@ ul
         </th>
       </tr>
     <?py for machine in data['machines']: ?>
+      <a name='${machine['repr']}'>
       <tr>
         <td valign='top'>
           <a href='${machine['url']}'><b>${machine['hostname']}</b></a>
-          <a name='${machine['repr']}'>
           <ul>
             <li>
               <b>DNS Name</b>${machine['dns_name']}
@@ -453,9 +453,9 @@ ul
                 <?py for zone in jobinfo['deployment_layout']: ?>
                 <li><b> ${zone} </b>:
                   <ul>
-                    <?py for machine in jobinfo['fill_machines']['zone']: ?>
+                    <?py for machine in jobinfo['fill_machines'][zone]: ?>
                     <li>
-                      <a href="#${machine['name']}">${machine['name']}</a>
+                      <a href="#${machine}">${machine}</a>
                     </li>
                     <?py #endfor ?>
                   </ul>
