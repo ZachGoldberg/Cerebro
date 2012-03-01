@@ -453,9 +453,9 @@ ul
                 <?py for zone in jobinfo['deployment_layout']: ?>
                 <li><b> ${zone} </b>:
                   <ul>
-                    <?py for machine in jobinfo['fill_machines'].get(zone, []): ?>
+                    <?py for machine in jobinfo['fill_machines']['zone']: ?>
                     <li>
-                      <a href="#${machine}">${machine}</a>
+                      <a href="#${machine['name']}">${machine['name']}</a>
                     </li>
                     <?py #endfor ?>
                   </ul>
