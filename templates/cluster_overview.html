@@ -326,71 +326,6 @@ ul
 	<?py #endfor ?>
       </ul>
     </p>
-    <h2>Running Jobs</h2>
-    <?py for jobinfo in data['jobs']: ?>
-    <h3>${jobinfo['name']}</h3>
-    <p>
-      <table>
-        <tr>
-          <td valign='top'>
-            <h4> Metadata </h4>
-            <p>
-              <ul>
-                <li>
-                  Deployment Recipe: ${jobinfo['deployment_recipe']}
-                </li>
-                <li>
-                  Recipe Options: ${jobinfo['recipe_options']}
-                </li>
-                <li>
-                  Linked Job: ${jobinfo['linked_job']}
-                </li>
-              </ul>
-            </p>
-          </td>
-          <td valign='top'>
-            <h4> Task Configuration </h4>
-            <p>
-              <ul>
-                <?py for k, v in jobinfo['task_configuration'].items(): ?>
-                <li>${k}: ${v}</li>
-                <?py #endfor ?>
-              </ul>
-            </p>
-          </td>
-          <td valign='top'>
-            <h4> Deployment Layout </h4>
-            <p>
-              <ul>
-                <?py for zone in jobinfo['deployment_layout']: ?>
-                <li><b> ${zone} </b>:
-                  <!-- !MACHINEASSUMPTION -->
-                  Active Machines: ${jobinfo['fill'].get(zone, 0)},
-                  Spawning Machines: ${jobinfo['spawning'][zone]},
-                  Configured Required Machines: ${jobinfo['deployment_layout'][zone]['cpu']},
-                  Memory per Core: ${jobinfo['deployment_layout'][zone]['mem']}MB
-                </li>
-                <?py #endfor ?>
-              </ul>
-              <ul>
-                <?py for zone in jobinfo['deployment_layout']: ?>
-                <li><b> ${zone} </b>:
-                  <ul>
-                    <?py for machine in jobinfo['fill_machines'].get(zone, []): ?>
-                    <li>
-                      <a href="#${machine}">${machine}</a>
-                    </li>
-                    <?py #endfor ?>
-                  </ul>
-                </li>
-                <?py #endfor ?>
-              </ul>
-            <p>
-          </td>
-        </tr>
-      </table>
-    </p>
-    <?py #endfor ?>
     <h2>Tracked Machines</h2>
     <p>
     <table>
@@ -468,6 +403,71 @@ ul
       <?py #endfor ?>
     </table>
     </p>
+    <h2>Running Jobs</h2>
+    <?py for jobinfo in data['jobs']: ?>
+    <h3>${jobinfo['name']}</h3>
+    <p>
+      <table>
+        <tr>
+          <td valign='top'>
+            <h4> Metadata </h4>
+            <p>
+              <ul>
+                <li>
+                  Deployment Recipe: ${jobinfo['deployment_recipe']}
+                </li>
+                <li>
+                  Recipe Options: ${jobinfo['recipe_options']}
+                </li>
+                <li>
+                  Linked Job: ${jobinfo['linked_job']}
+                </li>
+              </ul>
+            </p>
+          </td>
+          <td valign='top'>
+            <h4> Task Configuration </h4>
+            <p>
+              <ul>
+                <?py for k, v in jobinfo['task_configuration'].items(): ?>
+                <li>${k}: ${v}</li>
+                <?py #endfor ?>
+              </ul>
+            </p>
+          </td>
+          <td valign='top'>
+            <h4> Deployment Layout </h4>
+            <p>
+              <ul>
+                <?py for zone in jobinfo['deployment_layout']: ?>
+                <li><b> ${zone} </b>:
+                  <!-- !MACHINEASSUMPTION -->
+                  Active Machines: ${jobinfo['fill'].get(zone, 0)},
+                  Spawning Machines: ${jobinfo['spawning'][zone]},
+                  Configured Required Machines: ${jobinfo['deployment_layout'][zone]['cpu']},
+                  Memory per Core: ${jobinfo['deployment_layout'][zone]['mem']}MB
+                </li>
+                <?py #endfor ?>
+              </ul>
+              <ul>
+                <?py for zone in jobinfo['deployment_layout']: ?>
+                <li><b> ${zone} </b>:
+                  <ul>
+                    <?py for machine in jobinfo['fill_machines'].get(zone, []): ?>
+                    <li>
+                      <a href="#${machine}">${machine}</a>
+                    </li>
+                    <?py #endfor ?>
+                  </ul>
+                </li>
+                <?py #endfor ?>
+              </ul>
+            <p>
+          </td>
+        </tr>
+      </table>
+    </p>
+    <?py #endfor ?>
     <h2>Machine Monitors</h2>
     <p>
       <table>
