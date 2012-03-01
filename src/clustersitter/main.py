@@ -82,7 +82,7 @@ def main(sys_args=None):
                            launch_location=launch_location)
     sitter.start()
 
-    if True:
+    if False:
         # For testing.
         logging.getLogger().setLevel(logging.ERROR)
         localhost = MachineConfig("localhost", "localhost",
