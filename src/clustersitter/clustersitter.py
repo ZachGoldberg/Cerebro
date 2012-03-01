@@ -164,7 +164,9 @@ class ClusterSitter(object):
         for logger in self.state.loggers:
             logger.setLevel(level)
 
-        logger.info('Updated logging level to %s' % level)
+        ClusterEventManager.handle(
+                'Updated logging level to %s' % level)
+
         return "Level set to %s" % level
 
     def api_enforce_idle(self, args):
@@ -180,6 +182,8 @@ class ClusterSitter(object):
         except:
             return "Invalid limit"
 
+        ClusterEventManager.handle(
+                'Enforce Idle Limit at %s' % int(args['idle_count_per_zone']))
         return "Limit set"
 
     def api_update_job(self, args):
@@ -198,6 +202,9 @@ class ClusterSitter(object):
 
         job.do_update_deployment(self.state, args.get('version'))
         # Now build a deployment recipe for this job
+        ClusterEventManager.handle(
+            'Update %s started' % job_name)
+
         return "Job update initiated"
 
     def api_add_job(self, args):
@@ -210,15 +217,19 @@ class ClusterSitter(object):
                                  'persistent'])
         if check:
             return check
-
-        if self.state.add_job(ProductionJob(
+        job = ProductionJob(
                 args['dns_basename'],
                 args['task_configuration'],
                 args['deployment_layout'],
                 args['deployment_recipe'],
                 args['recipe_options'],
                 args['persistent'],
-                args.get('linked_job'))):
+                args.get('linked_job'))
+
+        if self.state.add_job(job):
+            ClusterEventManager.handle(
+                "Added a job: %s" % job.get_name())
+
             return "Job Added"
         else:
             return "Error adding job, see logs"
@@ -230,6 +241,9 @@ class ClusterSitter(object):
             return check
 
         if self.state.remove_job(args['name']):
+            ClusterEventManager.handle(
+                "Removed a job: %s" % args['name'])
+
             return "Removal OK"
         else:
             return "Couldn't find job to remove"
