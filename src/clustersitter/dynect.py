@@ -28,6 +28,7 @@ class Dynect(DNSProvider):
         except:
             import traceback
             logger.error(traceback.format_exc())
+            logger.error(self.client.get_errors())
             return False
 
         if not ret:
@@ -47,6 +48,7 @@ class Dynect(DNSProvider):
         except:
             import traceback
             logger.error(traceback.format_exc())
+            logger.error(self.client.get_errors())
             return False
 
         if not ret:
@@ -66,6 +68,7 @@ class Dynect(DNSProvider):
         except:
             import traceback
             logger.error(traceback.format_exc())
+            logger.error(self.client.get_errors())
             return []
 
         if not records:
