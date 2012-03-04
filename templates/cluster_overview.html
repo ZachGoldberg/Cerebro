@@ -213,14 +213,14 @@ img
 table
 {
     border-width: 1px;
-	border-spacing: 2px;
-	border-style: solid;
-	border-color: gray;
-	border-collapse: separate;
+    border-spacing: 2px;
+    border-style: solid;
+    border-color: gray;
+    border-collapse: separate;
     padding: 2px;
     font-size: 100%;
-	font-family: "arial", "verdana", "tahoma", "georgia", "trebuchet ms";
-	color: #555;
+    font-family: "arial", "verdana", "tahoma", "georgia", "trebuchet ms";
+    color: #555;
     width: 100%;
 }
 
@@ -328,81 +328,62 @@ ul
     </p>
     <h2>Tracked Machines</h2>
     <p>
+    <?py for machine in data['machines']: ?>
+    <a name='${machine['repr']}' />
     <table>
       <tr>
-        <th>
-          Machine Metadata
-        </th>
-        <th>
-          Running Tasks
+	<th colspan='4'>
+	  <a href='${machine['url']}'><b>${machine['hostname']}</b></a> (aka ${machine['dns_name']}) in 
+	  ${machine['zone']}.  ${machine['cpus']}x ${machine['bits']}-bit ${machine['mem']}MBx${machine['disk']}GB
+	  <?py if machine['is_in_deployment']: ?>
+	  In Deployment,
+	  <?py #endif ?>
+	  <?py if machine['initialized']: ?>
+	  Initialized,
+	  <?py #endif ?>
+	  <?py if machine['has_loaded_data']: ?>
+	  Data Loaded,
+	  <?py #endif ?>
+	  <?py if machine['idle']: ?>
+	  <font color='#A00'>Idle,</font>
+	  <?py #endif ?>
+	  <?py if machine['pull_failures']: ?>
+	  <font color='#A00'><b>Pull Failures: ${machine['pull_failures']}</b></font>
+	  <?py #endif ?>
         </th>
       </tr>
-    <?py for machine in data['machines']: ?>
-      <a name='${machine['repr']}'>
+      <?py count = 0 ?>
       <tr>
-        <td valign='top'>
-          <a href='${machine['url']}'><b>${machine['hostname']}</b></a>
-          <ul>
-            <li>
-              <b>DNS Name</b>${machine['dns_name']}
-            </li>
-            <li>
-              <b>Zone</b> ${machine.get('zone')}
-            </li>
-            <li>
-              <b>Performance</b> ${machine['cpus']}x
-          ${machine['bits']}-bit ${machine['mem']}MB -
-          ${machine['disk']}GB
-              </li>
-            <li>
-              <b>Status</b>
-              <?py if machine['is_in_deployment']: ?>
-              In Deployment,
-              <?py #endif ?>
-              <?py if machine['initialized']: ?>
-              Initialized,
-              <?py #endif ?>
-              <?py if machine['has_loaded_data']: ?>
-              Data Loaded,
-              <?py #endif ?>
-              <?py if machine['idle']: ?>
-              <font color='#A00'>Idle,</font>
-              <?py #endif ?>
-              <?py if machine['pull_failures']: ?>
-              <font color='#A00'><b>Pull Failures: ${machine['pull_failures']}</b></font>
-              <?py #endif ?>
-            </li>
-          </ul>
-        </td>
-        <td>
-          <table style="border: 0px; padding: 0px">
-            <tr>
-            <?py for taskname, task in machine['tasks'].items(): ?>
-            <td valign='top'>
-              <?py if 'stats_page' in task: ?>
-              <b><a href='${task['stats_page']}'>${taskname}</a></b>
-              <?py else: ?>
-              <b>${taskname}</b>
-              <?py #endif ?>
-	      <ul>
-                <?py if 'stats_page' in task: ?>
-                <li>
-                  <a href="${task['logs_page']}">Logs</a>
-                </li>
-                <?py #endif ?>
-                <?py for key, val in task.items(): ?>
-                <li>${key}: #{val}</li>
-                <?py #endfor ?>
-	      </ul>
-	    </td>
-            <?py #endfor ?>
-            </tr>
-          </table>
-        </td>
+	<?py for taskname, task in machine['tasks'].items(): ?>
+	<?py if count % 5 == 0: ?>
+          </tr><tr>	  
+	<?py #endif ?>
+	<?py count += 1?>
+	<td valign='top'>
+	  <?py if 'stats_page' in task: ?>
+	  <b><a href='${task['stats_page']}'>${taskname}</a></b>
+	  <?py else: ?>
+	  <b>${taskname}</b>
+	  <?py #endif ?>
+	  <?py if 'stats_page' in task: ?>
+	  <a href="${task['logs_page']}">(Logs)</a>
+	  <?py #endif ?>
+	  <br>
+	  <?py keys = task.keys() ?>
+	  <?py keys.sort() ?>
+	  <ul>	   
+	    <?py for key in keys: ?>
+	    <li>
+	      <b>${key}</b>: #{task[key]}
+	    </li>
+	    <?py #endfor ?>
+	  </ul>
+	</td>
+	<?py #endfor ?>
       </tr>
-      <?py #endfor ?>
     </table>
-    </p>
+    <br>
+    <?py #endfor ?>
     <h2>Running Jobs</h2>
     <?py for jobinfo in data['jobs']: ?>
     <h3>${jobinfo['name']}</h3>
