@@ -228,7 +228,10 @@ class JobFiller(object):
                     # This only happens if the state of DNS
                     # records somehow doesn't match the state
                     # of this job, which shouldn't happen
-                    new_prefix = max(used_prefixes) + 1
+                    if used_prefixes:
+                        new_prefix = max(used_prefixes) + 1
+                    else:
+                        new_prefix = 0
 
                 machine.config.dns_name = "%s.%s" % (new_prefix,
                                                      basename)

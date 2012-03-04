@@ -18,7 +18,17 @@ class Dynect(DNSProvider):
                                       self.password,
                                       self.default_domain)
 
+    def find_domainname(self, hostName, default):
+        # NOTE!  This won't work for domains like .co.uk
+        if not hostName:
+            return default
+
+        domain_parts = hostName.split('.')
+        return ".".join(domain_parts[-2:])
+
     def add_record(self, data, hostName, type="A", TTL=300, domainName=None):
+        domainName = self.find_domainname(hostName, domainName)
+
         try:
             ret = self.client.addRecord(data=data,
                                         type=type,
@@ -40,6 +50,8 @@ class Dynect(DNSProvider):
         return ret
 
     def remove_record(self, data, hostName, type="A", domainName=None):
+        domainName = self.find_domainname(hostName, domainName)
+
         try:
             ret = self.client.deleteRecord(data=data,
                                            type=type,
@@ -60,6 +72,8 @@ class Dynect(DNSProvider):
         return ret
 
     def get_records(self, hostName=None, type="A", domainName=None):
+        domainName = self.find_domainname(hostName, domainName)
+
         logger.debug("Get Records for %s" % hostName)
         try:
             records = self.client.getRecords(hostName=hostName,
