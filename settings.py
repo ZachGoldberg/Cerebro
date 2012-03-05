@@ -3,7 +3,7 @@
 #os.putenv('AWS_SECRET_ACCESS_KEY', XXXXX)
 
 # Location for cerebro logs
-log_location="/mnt/data/clustersitter"
+log_location = "/mnt/data/clustersitter"
 
 # Keys used to login to machines
 # TODO -- should define this again inside provider_config

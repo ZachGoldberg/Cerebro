@@ -181,10 +181,18 @@ class MachineSitterRecipe(DeploymentRecipe):
             # Clear any old ones
             self.sudo("pkill -9 -f sitter")
 
+            # ensure we have the log location created
+            log_option = ""
+            if self.options.get('log_location'):
+                self.sudo("mkdir -p %s" % self.options['log_location'])
+                log_option = "--log-location=%s" % self.options['log_location']
+
             # Launch a machine sitter as root
-            self.sudo("cd %s/%s && ./bin/machinesitter --daemon" % (
+            self.sudo("cd %s/%s && ./bin/machinesitter --daemon %s" % (
                     remote_dir,
-                    newdirname))
+                    newdirname,
+                    log_option
+                    ))
         except:
             import traceback
             traceback.print_exc()

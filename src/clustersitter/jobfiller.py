@@ -267,7 +267,7 @@ class JobFiller(object):
                 MachineSitterRecipe,
                 machine,
                 post_callback=None,
-                options=None)
+                options={'log_location': self.job.sitter.log_location})
 
             self._do_recipe_deployment(2, 3, machine,
                                        recipe)

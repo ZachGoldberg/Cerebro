@@ -25,6 +25,10 @@ def parse_args(args):
     parser.add_argument('--task_definitions', dest='taskfile',
                         help='The location of the task definition file')
 
+    parser.add_argument('--log-location', dest='log_location',
+                        help='Where logs should go',
+                        default='/tmp')
+
     parser.add_argument("--daemon", dest="daemon",
                         default=False,
                         action="store_true",
@@ -69,7 +73,10 @@ def main(sys_args=None):
     if args.taskfile:
         config = simplejson.load(open(args.taskfile))
     else:
-        config = {'log_location': '/tmp/', 'task_definitions': {}}
+        config = {'task_definitions': {}}
+
+    if not 'log_location' in config:
+        config['log_location'] = args.log_location
 
     try:
         os.makedirs(config['log_location'])
