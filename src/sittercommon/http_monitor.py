@@ -16,6 +16,28 @@ import BaseHTTPServer
 from tenjin.helpers import *
 
 
+def head(filename, num_lines):
+    return file_process("head", filename, num_lines)
+
+
+def tail(filename, num_lines):
+    return file_process("tail", filename, num_lines)
+
+
+def file_process(cmd, filename, num_lines):
+    """
+    Implementing tail in python is like 50 lines of code,
+    and is pretty unreadable.  Just cop out and use something
+    we know works.
+
+    """
+    stdin, stdout = os.popen2("%s -n %s %s" % (cmd, num_lines, filename))
+    stdin.close()
+    lines = stdout.readlines()
+    stdout.close()
+    return lines
+
+
 class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     def __init__(self, monitor, new_handlers, *args, **kwargs):
@@ -71,10 +93,19 @@ class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             logfiles = self.monitor.get_logs()
             filename = logfiles[args['logname']]
 
+        filehandle = None
         try:
-            return open(filename).read()
+            filehandle = open(filename)
         except IOError:
             return "File not found"
+
+        if not args.get('head') and not args.get('tail'):
+            return filehandle.read()
+
+        if args.get('tail'):
+            return tail(filename, int(args['tail']))
+        else:
+            return head(filename, int(args['head']))
 
     def _get_logs(self, args):
         logfiles = self.monitor.get_logs()
