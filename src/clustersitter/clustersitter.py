@@ -1,22 +1,16 @@
-import json
 import logging
 import os
-import random
 import socket
 import sys
 import threading
-import time
-import requests
 from datetime import datetime
 from logging import FileHandler
 
 import clusterstate
 import deploymentrecipe
-import dreamhost
 import dynect
 import eventmanager
 import jobfiller
-import machineconfig
 import machinedoctor
 import machinemonitor
 import monitoredmachine
@@ -27,10 +21,7 @@ import sittercommon.machinedata
 
 from clusterstate import ClusterState
 from clusterstats import ClusterStats
-from deploymentrecipe import DeploymentRecipe, MachineSitterRecipe
 from eventmanager import ClusterEventManager
-from jobfiller import JobFiller
-from machineconfig import MachineConfig
 from machinedoctor import MachineDoctor
 from machinemonitor import MachineMonitor
 from monitoredmachine import MonitoredMachine
@@ -38,7 +29,6 @@ from productionjob import ProductionJob
 from providers.aws import AmazonEC2
 from sittercommon import http_monitor
 from sittercommon import logmanager
-from sittercommon.machinedata import MachineData
 
 logger = logging.getLogger(__name__)
 

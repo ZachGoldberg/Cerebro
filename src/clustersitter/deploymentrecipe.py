@@ -1,8 +1,6 @@
-import hashlib
 import logging
 import os
 import paramiko
-import time
 import subprocess
 
 logger = logging.getLogger(__name__)

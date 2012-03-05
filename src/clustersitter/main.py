@@ -11,10 +11,9 @@ endpoints as well as an API for interactions via a command line tool.
 import logging
 import os
 import sys
-import time
 
-from clustersitter import ClusterSitter, ProductionJob
-from clustersitter import MachineConfig
+from clustersitter import ClusterSitter
+from machineconfig import MachineConfig
 from sittercommon import arg_parser
 
 
