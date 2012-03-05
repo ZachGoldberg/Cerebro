@@ -64,7 +64,7 @@ class ClusterStats(StatsCollector):
                     files = ["stdout", "stderr"]
                     for filename in files:
                         link = strip_html(
-                            "%s/logfile?logname=%s.%s" % (
+                            "%s/logfile?logname=%s.%s&tail=100" % (
                                 task['monitoring'],
                                 filename,
                                 filenum))

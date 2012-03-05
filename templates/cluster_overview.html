@@ -261,7 +261,7 @@ ul
        <?py for logname, logfile in data['logfiles'].items(): ?>
        <?py if logname not in ['stdout.0', 'stderr.0']: ?>
        <li>
-         <a href='logfile?name=${logfile}'>${logname}</a>
+         <a href='logfile?name=${logfile}&tail=100'>${logname}</a>
        </li>
        <?py #endif ?>
        <?py #endfor ?>
@@ -333,7 +333,7 @@ ul
     <table>
       <tr>
 	<th colspan='4'>
-	  <a href='${machine['url']}'><b>${machine['hostname']}</b></a> (aka ${machine['dns_name']}) in 
+	  <a href='${machine['url']}'><b>${machine['hostname']}</b></a> (aka ${machine['dns_name']}) in
 	  ${machine['zone']}.  ${machine['cpus']}x ${machine['bits']}-bit ${machine['mem']}MBx${machine['disk']}GB
 	  <?py if machine['is_in_deployment']: ?>
 	  In Deployment,
@@ -356,7 +356,7 @@ ul
       <tr>
 	<?py for taskname, task in machine['tasks'].items(): ?>
 	<?py if count % 5 == 0: ?>
-          </tr><tr>	  
+          </tr><tr>
 	<?py #endif ?>
 	<?py count += 1?>
 	<td valign='top'>
@@ -371,7 +371,7 @@ ul
 	  <br>
 	  <?py keys = task.keys() ?>
 	  <?py keys.sort() ?>
-	  <ul>	   
+	  <ul>
 	    <?py for key in keys: ?>
 	    <li>
 	      <b>${key}</b>: #{task[key]}
