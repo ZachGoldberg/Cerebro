@@ -23,6 +23,7 @@ class HasMachineSitter(object):
             val = self.datamanager.start_task(
                 self.datamanager.tasks[job.name])
             logger.info("Start task %s result: %s" % (job.name, val))
+            self.datamanager.reload()
             return val
         else:
             return False
@@ -32,6 +33,7 @@ class HasMachineSitter(object):
             val = self.datamanager.stop_task(
                 self.datamanager.tasks[job.name])
             logger.info("Stop task %s result: %s" % (job.name, val))
+            self.datamanager.reload()
             return val
         else:
             return False
