@@ -149,7 +149,7 @@ class MachineSitterRecipe(DeploymentRecipe):
             self.sudo("apt-get update")
 
             # Add a symlink to /opt/tasksitter
-            self.sudo("rm /opt/tasksitter/")
+            self.sudo("rm /opt/tasksitter")
             self.sudo("ln -s %s/%s /opt/tasksitter" % (remote_dir, newdirname))
 
             # Now create the remote directory
