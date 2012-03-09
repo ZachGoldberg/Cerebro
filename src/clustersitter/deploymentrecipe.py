@@ -199,19 +199,3 @@ class MachineSitterRecipe(DeploymentRecipe):
             return False
 
         return True
-
-
-if __name__ == '__main__':
-    logger.setLevel(logging.INFO)
-    logging.basicConfig()
-    a = MachineSitterRecipe(
-        'ec2-23-20-7-213.compute-1.amazonaws.com',
-        "ubuntu",
-        "/home/zgoldberg/workspace/wifast/keys/WiFastAWSus-east-1.pem")
-
-#    a.sudo('cd /home/ubuntu/clustersitter/tasksitter-123-241e19c-1326699447 && ./bin/machinesitter --daemon')
-#    a.run("ls && sleep 1 && ls")
-#    a.sudo("cd /etc && ls")
-    a.put("/home/zgoldberg/workspace/tasksitter/buildout.cfg",
-                "/home/ubuntu/")
-#    a.deploy()

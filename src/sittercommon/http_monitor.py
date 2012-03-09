@@ -33,9 +33,9 @@ def file_process(cmd, filename, num_lines):
     """
     stdin, stdout = os.popen2("%s -n %s %s" % (cmd, num_lines, filename))
     stdin.close()
-    lines = stdout.readlines()
+    data = stdout.read()
     stdout.close()
-    return lines
+    return data
 
 
 class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
