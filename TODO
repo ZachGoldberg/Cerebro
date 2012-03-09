@@ -1,3 +1,8 @@
+Documentation TODO:
+More examples of tasks.
+Talk about deploying custom recipes
+Comparison to Supervisord
+
 -- Clustersitter replication and sharding?
 -- If a machine is decomissioned, remove it from all pending jobfillers.
   - If a jobfiller has no more machines, just stop.
