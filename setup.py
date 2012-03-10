@@ -1,13 +1,21 @@
 from distutils.core import setup
 
-setup(name='TaskSitter',
+setup(name='Cerebro',
       version='1.0',
-      description='A Process/Task Monitor',
+      description='A Cluster Management System',
       author='Zach Goldberg',
       author_email='zach@zachgoldberg.com',
-      url='zachgoldberg.com/',
-      packages=[
-        'tasksitter',
+      url='http://zachgoldberg.com/',
+      data_files=[
+        ('cerebro/templates',
+         [
+                'src/sittercommon/templates/cluster_overview.html',
+                'src/sittercommon/templates/index.html',
+                'src/sittercommon/templates/logs.html',
+                'src/sittercommon/templates/stats.html',
+                ])],
+        packages=[
+            'tasksitter',
         'machinesitter',
         'sittercommon',
         'machineconsole',
