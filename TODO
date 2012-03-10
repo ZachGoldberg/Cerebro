@@ -1,15 +1,14 @@
-Documentation TODO:
-More examples of tasks.
-Talk about deploying custom recipes
-Comparison to Supervisord
+-- Implement the "Cerebro" controller command using shovel (replacing job_cfg_update etc.)
+
+--Documentation TODO:
+-- More examples of tasks.
+-- Talk about deploying custom recipes
+-- Comparison to Supervisord
 
 -- Clustersitter replication and sharding?
 -- If a machine is decomissioned, remove it from all pending jobfillers.
   - If a jobfiller has no more machines, just stop.
 
--- Speedup time to release
-  - Find a way to make builds faster!
-  - Find a way to not have to recompile things on install.
 -- Move jobfiller timeout to be state level
 -- Move decomissioning into its own thread
 -- Consider having one long lived thread that does DNS enforcement
@@ -19,8 +18,6 @@ Comparison to Supervisord
 -- Abstract out monitoredmachine so we can do something like monitoredmongo ?
 -- Error reporting to UI -- what if we can't SSH into a machine, how
    is that reported?
-
--- Make a thirdparty for tasksitter, put pkgs there.
 
 --What happens to tasks and job fill if a machine is in POLL_FAILURES?
  - Right now nothing, the job thinks things are OK
