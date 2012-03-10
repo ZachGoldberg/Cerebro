@@ -59,7 +59,7 @@ def main(sys_args=None):
 
     args = parse_args(sys_args)
 
-    settings_module = os.getenv('CLUSTERSITTER_SETTINGS', 'settings')
+    settings_module = os.getenv('CLUSTERSITTER_SETTINGS', 'clustersitter.settings')
     __import__(settings_module, globals(), locals())
     settings = sys.modules[settings_module]
 

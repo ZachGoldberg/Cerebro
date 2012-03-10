@@ -1,4 +1,4 @@
-from distutils.core import setup
+from setuptools import setup
 
 setup(name='Cerebro',
       version='1.0',
@@ -6,6 +6,8 @@ setup(name='Cerebro',
       author='Zach Goldberg',
       author_email='zach@zachgoldberg.com',
       url='http://zachgoldberg.com/',
+      download_url='https://github.com/ZachGoldberg/Cerebro',
+      zip_safe=True,
       data_files=[
         ('cerebro/templates',
          [
@@ -13,19 +15,32 @@ setup(name='Cerebro',
                 'src/sittercommon/templates/index.html',
                 'src/sittercommon/templates/logs.html',
                 'src/sittercommon/templates/stats.html',
-                ])],
-        packages=[
-            'tasksitter',
+                ]
+         )],
+      packages=[
+        'tasksitter',
         'machinesitter',
         'sittercommon',
         'machineconsole',
-        'clustersitter'],
+        'clustersitter',
+        'clustersitter.providers',
+        ],
       package_dir={
         'tasksitter': 'src/tasksitter',
         'machinesitter': 'src/machinesitter',
         'sittercommon': 'src/sittercommon',
         'clustersitter': 'src/clustersitter',
-        'machineconsole': 'src/machineconsole'},
+        'machineconsole': 'src/machineconsole'
+        },
+      entry_points={
+        'console_scripts': [
+            'cerebrod = clustersitter.main:main',
+            'clustersitter = clustersitter.main:main',
+            'tasksitter = tasksitter.main:main',
+            'machinesitter = machinesitter.main:main',
+            'machineconsole = machineconsole.main:main',
+            ]
+        },
       install_requires=[
         'boto',
         'dynect_client',
