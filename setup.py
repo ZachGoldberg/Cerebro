@@ -18,10 +18,6 @@ setup(name='TaskSitter',
         'sittercommon': 'src/sittercommon',
         'clustersitter': 'src/clustersitter',
         'machineconsole': 'src/machineconsole'},
-      scripts=[
-        'run_tasksitter',
-        'run_machinesitter',
-        'run_machineconsole'],
       install_requires=[
         'boto',
         'dynect_client',
