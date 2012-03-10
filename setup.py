@@ -8,15 +8,9 @@ setup(name='Cerebro',
       url='http://zachgoldberg.com/',
       download_url='https://github.com/ZachGoldberg/Cerebro',
       zip_safe=True,
-      data_files=[
-        ('cerebro/templates',
-         [
-                'src/sittercommon/templates/cluster_overview.html',
-                'src/sittercommon/templates/index.html',
-                'src/sittercommon/templates/logs.html',
-                'src/sittercommon/templates/stats.html',
-                ]
-         )],
+      package_data={
+        '': ['templates/*.html'],
+         },
       packages=[
         'tasksitter',
         'machinesitter',

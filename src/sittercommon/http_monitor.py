@@ -10,6 +10,7 @@ import urlparse
 import sys
 import SocketServer
 import BaseHTTPServer
+from pkg_resources import resource_filename
 
 # A weird requirement from tenjin to have this
 # The world explodes if we don't have it
@@ -52,6 +53,7 @@ class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         self.handlers.update(new_handlers)
 
         paths = [
+            resource_filename(__name__, 'templates'),
             'templates',
             '/usr/local/cerebro/templates',
             '/opt/tasksitter/templates/',
@@ -65,6 +67,7 @@ class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             paths.append(
                 os.path.join(monitor.harness.launch_location, "templates"))
 
+        tenjin.Engine.cache = tenjin.MemoryCacheStorage()
         self.engine = tenjin.Engine(path=paths)
 
         BaseHTTPServer.BaseHTTPRequestHandler.__init__(self, *args, **kwargs)
