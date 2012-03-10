@@ -58,7 +58,7 @@ class ProductionJob(object):
     def get_shared_fate_zones(self):
         return self.deployment_layout.keys()
 
-    def get_num_required_machines_in_zone(self, zone):
+    def get_num_required_machines_in_zone(self, zone, state):
         """
         Return the total number of machines needed in this zone
         """
@@ -66,8 +66,7 @@ class ProductionJob(object):
         if not self.linked_job:
             return self.deployment_layout.get(zone, {}).get('num_machines', 0)
 
-        elif not self.linked_job_object:
-            return 0
+        self.find_linked_job(state)
 
         return self.linked_job_object.deployment_layout.get(
             zone, {}).get('num_machines', 0)
@@ -130,7 +129,7 @@ class ProductionJob(object):
 
         for zone in self.get_shared_fate_zones():
             zone_overflow[zone] = 0
-            required = self.get_num_required_machines_in_zone(zone)
+            required = self.get_num_required_machines_in_zone(zone, state)
             active = state.job_fill.get(self.name, {}).get(zone, 0)
 
             if active > required:
@@ -158,6 +157,7 @@ class ProductionJob(object):
 
         self.linked_job_object = linked_job
         return self.linked_job_object
+
 
     def ensure_on_linked_job(self, state, sitter):
         """
@@ -222,7 +222,7 @@ class ProductionJob(object):
             # We want to ensure any machines recently added to monitoring
             # have had a chance to load their data, incase they are
             # running this job
-            logger.info("Waiting for machine monitors to load machine data f"
+            logger.info("Waiting for machine monitors to load machine data "
                         "before filling jobs")
             time.sleep(0.5)
 
@@ -264,7 +264,7 @@ class ProductionJob(object):
         # Step 1a: Check for idle machines and reserve as we find them
         for zone in self.get_shared_fate_zones():
             idle_available = state.get_idle_machines_in_zone(zone)
-            total_required = self.get_num_required_machines_in_zone(zone)
+            total_required = self.get_num_required_machines_in_zone(zone, state)
             idle_required = total_required - state.job_fill[self.name][zone]
 
             current_fillers = self.fillers[zone]

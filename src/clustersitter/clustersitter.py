@@ -180,6 +180,9 @@ class ClusterSitter(object):
         check = self._api_check(args,
                                 ['job_name'])
 
+        if check:
+            return check
+
         job_name = args['job_name']
         job = None
         for state_job in self.state.jobs:
@@ -215,6 +218,11 @@ class ClusterSitter(object):
                 args['recipe_options'],
                 args['persistent'],
                 args.get('linked_job'))
+
+        if args.get('linked_job'):
+            job.find_linked_job(self.state)
+            if not job.linked_job_object:
+                return "Couldn't find linked job!"
 
         if self.state.add_job(job):
             ClusterEventManager.handle(

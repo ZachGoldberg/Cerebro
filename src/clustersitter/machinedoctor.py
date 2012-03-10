@@ -140,7 +140,7 @@ class MachineDoctor(object):
                 did_overflow_reduction = True
 
                 ClusterEventManager.handle(
-                    "Detected job overflow:" +
+                    "Detected job overflow -- " +
                     "Job: %s, Zone: %s, Count: %s" % (jobname,
                                                       zone,
                                                       count))
