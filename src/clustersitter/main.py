@@ -59,9 +59,16 @@ def main(sys_args=None):
 
     args = parse_args(sys_args)
 
-    settings_module = os.getenv('CLUSTERSITTER_SETTINGS', 'clustersitter.settings')
-    __import__(settings_module, globals(), locals())
-    settings = sys.modules[settings_module]
+    settings_module = os.getenv('CLUSTERSITTER_SETTINGS',
+                                'clustersitter.settings')
+    try:
+        __import__(settings_module)
+        settings = sys.modules[settings_module]
+    except:
+        print "Couldn't find settings module %s" % settings_module
+        print "Please set the CLUSTERSITTER_SETTINGS environmental " + \
+            "variable an appropriate clustersitter settings module"
+        sys.exit(1)
 
     launch_location = os.getcwd()
 
