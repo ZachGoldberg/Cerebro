@@ -1,12 +1,6 @@
 #!/usr/bin/python -u
 """
-This is the main file of the clustersitter application.
-
-It's job is to manage an entire fleet of machines, each running
-machine sitters and task sitters.  It reaches out across
-the cluster and monitors everything, and exposes several semantic
-interfaces (all via HTTP).  There are NAGIOS type monitoring
-endpoints as well as an API for interactions via a command line tool.
+Cerebro client tool
 """
 import json
 import sys
