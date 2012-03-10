@@ -1,3 +1,4 @@
+-- Throw giant red flags if a process reboots too frequently
 -- Implement the "Cerebro" controller command using shovel (replacing job_cfg_update etc.)
 
 --Documentation TODO:
