@@ -67,7 +67,7 @@ class HTTPMonitoringTests(unittest.TestCase):
 
     def test_basic_monitoring_flat(self):
         data = self.run_check(['--cpu=.2',
-                               '--command', 'sleep .2; ./test/spin.sh'],
+                               '--command', 'sleep .2; ./spin.sh'],
                               path="stats",
                               output_format="flat")
 
@@ -82,7 +82,7 @@ class HTTPMonitoringTests(unittest.TestCase):
 
     def test_basic_monitoring_json(self):
         data = self.run_check(['--cpu=.2',
-                               '--command', 'sleep .2; ./test/spin.sh'],
+                               '--command', 'sleep .2; ./spin.sh'],
                               path="stats")
 
         self.assertTrue("child_pid" in data)

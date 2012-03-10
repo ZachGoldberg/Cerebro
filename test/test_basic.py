@@ -95,36 +95,36 @@ class BasicTests(unittest.TestCase):
         self.run_check(["--time-limit=.5", "--command", "sleep .1"])
 
     def test_cpu_constraint(self):
-        self.run_check(["--cpu=.5", "--command", "./test/spin.sh"], 9)
+        self.run_check(["--cpu=.5", "--command", "./spin.sh"], 9)
 
     def test_cpu_constraint_redirect(self):
         self.run_check(["--cpu=.1", "--command",
-                        "bash -c './test/spin.sh 2>/dev/null'"],
+                        "bash -c './spin.sh 2>/dev/null'"],
                        9)
 
     def test_cpu_constraint_subprocess(self):
         self.run_check(["--cpu=.1", "--command",
-                        "bash -c 'bash -c \'./test/spin.sh\''"],
+                        "bash -c 'bash -c \'./spin.sh\''"],
                        9)
 
     def test_mem_constraint(self):
-        self.run_check(["--mem=3", "--command", "./test/mem.sh"],
+        self.run_check(["--mem=3", "--command", "./mem.sh"],
                        9)
 
     def test_mem_constraint_redirect_subprocess(self):
         self.run_check(["--mem=3", "--command",
-                        "bash -c 'bash -c \'./test/mem.sh\''"],
+                        "bash -c 'bash -c \'./mem.sh\''"],
                        9)
 
     def test_mem_constraint_redirect(self):
         self.run_check(["--mem=3",
-                        "--command", "./test/mem.sh 2>/dev/null"], 9)
+                        "--command", "./mem.sh 2>/dev/null"], 9)
 
     def test_restarting(self):
         filename = tempfile.mktemp()
         self.run_check(["--cpu=.5", "--restart", "--max-restarts=2",
                         "--command",
-                        "echo '1' >> %s ; ./test/spin.sh" % filename], 9)
+                        "echo '1' >> %s ; ./spin.sh" % filename], 9)
 
         lines = open(filename).readlines()
         os.unlink(filename)
