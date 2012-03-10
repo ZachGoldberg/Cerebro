@@ -100,7 +100,7 @@ class TaskManager(object):
             time.sleep(.1)
 
     def start(self):
-        args = ["%s/bin/tasksitter" % self.launch_location]
+        args = ["tasksitter"]
 
         if self.restart:
             args.append("--restart")

@@ -174,7 +174,7 @@ class MachineSitterRecipe(DeploymentRecipe):
             # but it does for some reason
             self.sudo("apt-get install -y python-dev")
 
-            self.run("cd %s/%s && python2.7 install.py -N" % (
+            self.run("cd %s/%s && python2.7 setup.py install" % (
                     remote_dir,
                     newdirname))
 
@@ -188,7 +188,7 @@ class MachineSitterRecipe(DeploymentRecipe):
                 log_option = "--log-location=%s" % self.options['log_location']
 
             # Launch a machine sitter as root
-            self.sudo("cd %s/%s && ./bin/machinesitter --daemon %s" % (
+            self.sudo("machinesitter --daemon %s" % (
                     remote_dir,
                     newdirname,
                     log_option
