@@ -132,25 +132,8 @@ class DeploymentRecipe(object):
 
 class MachineSitterRecipe(DeploymentRecipe):
     def run_deploy(self):
-        # Find the newest build to upload
-        release_dir = self.launch_location + "/releases/"
-        filelist = os.listdir(release_dir)
-        filelist = filter(lambda x: not os.path.isdir(x), filelist)
-        filelist = filter(lambda x: "tgz" in x, filelist)
-        if not filelist:
-            self.logger.error("No releases found!")
-            return False
-
-        newest = max(filelist, key=lambda x: os.stat(release_dir + x).st_mtime)
-        remote_dir = "/home/ubuntu/clustersitter/"
-        newdirname = newest.replace(".tgz", "")
-
         try:
             self.sudo("apt-get update")
-
-            # Add a symlink to /opt/tasksitter
-            self.sudo("rm /opt/tasksitter")
-            self.sudo("ln -s %s/%s /opt/tasksitter" % (remote_dir, newdirname))
 
             # Now create the remote directory
             self.run("mkdir -p %s" % remote_dir)
@@ -160,24 +143,8 @@ class MachineSitterRecipe(DeploymentRecipe):
             else:
                 self.sudo("hostname %s" % self.hostname)
 
-            self.sudo("easy_install cerebrod")
-            # Upload the release
-            self.put(release_dir + newest, remote_dir)
-
-            # Extrat it and run the installer
-            self.run("cd %s && tar -xzf %s%s" % (
-                    remote_dir,
-                    remote_dir,
-                    newest))
-
-            # Needed for pycrypto
-            # TODO - The actual release shouldn't need this,
-            # but it does for some reason
-            self.sudo("apt-get install -y python-dev")
-
-            self.run("cd %s/%s && python2.7 setup.py install" % (
-                    remote_dir,
-                    newdirname))
+            self.sudo("apt-get install python-setuptools")
+            self.sudo("easy_install -U cerebrod")
 
             # Clear any old ones
             self.sudo("pkill -9 -f sitter")
@@ -190,8 +157,6 @@ class MachineSitterRecipe(DeploymentRecipe):
 
             # Launch a machine sitter as root
             self.sudo("machinesitter --daemon %s" % (
-                    remote_dir,
-                    newdirname,
                     log_option
                     ))
         except:
