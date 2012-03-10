@@ -1,3 +1,6 @@
+.mr.developer.cfg
+.installed.cfg
 *.py~
 *.pyc
 *~
+*.cache
