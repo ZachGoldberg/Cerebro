@@ -1,7 +1,0 @@
-setup.py
-./__init__.py
-./dreampylib.py
-dreampylib.egg-info/PKG-INFO
-dreampylib.egg-info/SOURCES.txt
-dreampylib.egg-info/dependency_links.txt
-dreampylib.egg-info/top_level.txt
