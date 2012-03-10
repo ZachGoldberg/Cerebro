@@ -160,6 +160,7 @@ class MachineSitterRecipe(DeploymentRecipe):
             else:
                 self.sudo("hostname %s" % self.hostname)
 
+            self.sudo("easy_install cerebrod")
             # Upload the release
             self.put(release_dir + newest, remote_dir)
 

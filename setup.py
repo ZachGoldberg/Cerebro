@@ -1,6 +1,6 @@
 from setuptools import setup
 
-setup(name='Cerebro',
+setup(name='cerebrod',
       version='1.0',
       description='A Cluster Management System',
       author='Zach Goldberg',
@@ -9,7 +9,7 @@ setup(name='Cerebro',
       download_url='https://github.com/ZachGoldberg/Cerebro',
       zip_safe=True,
       package_data={
-        '': ['templates/*.html'],
+        '': ['templates/*.html', 'sittercommon/templates/*.html'],
          },
       packages=[
         'tasksitter',
