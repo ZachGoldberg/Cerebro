@@ -12,12 +12,13 @@ setup(name='cerebrod',
         '': ['templates/*.html', 'sittercommon/templates/*.html'],
          },
       packages=[
-        'tasksitter',
-        'machinesitter',
-        'sittercommon',
-        'machineconsole',
         'clustersitter',
         'clustersitter.providers',
+        'machineconsole',
+        'machinesitter',
+        'sittercommon',
+        'sittercommon.utils',
+        'tasksitter',
         ],
       package_dir={
         'tasksitter': 'src/tasksitter',
@@ -28,11 +29,12 @@ setup(name='cerebrod',
         },
       entry_points={
         'console_scripts': [
+            'cerebro = sittercommon.utils.main:main',
             'cerebrod = clustersitter.main:main',
             'clustersitter = clustersitter.main:main',
-            'tasksitter = tasksitter.main:main',
-            'machinesitter = machinesitter.main:main',
             'machineconsole = machineconsole.main:main',
+            'machinesitter = machinesitter.main:main',
+            'tasksitter = tasksitter.main:main',
             ]
         },
       install_requires=[
