@@ -53,6 +53,7 @@ class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
         paths = [
             'templates',
+            'sittercommon/templates',
             '/opt/tasksitter/templates/',
             os.path.join(
                 os.getenv('HOME'),
