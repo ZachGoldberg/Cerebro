@@ -176,42 +176,41 @@ Deploymet Recipe Interface
 
 How to do DNS 
 
-  *  In the job configuration format there is a field called "dns_basename".
+  *  In the job configuration format there is a field called "dns_basename"
   *  This should be set to something like "myjobname.mydomain.com" e.g. "redis.startup.com"
   *  Cerebro will then add two new records underneath that name for each machine.  It will
 
-  1. Create #.PROVIDER_REGION.basename as a A record to the machine
-  2. Add another CNAME to PROVIDER_REGION.basename to #.PROVIDER_REGION etc.
+      1. Create #.PROVIDER_REGION.basename as a A record to the machine
+      2. Add another CNAME to PROVIDER_REGION.basename to #.PROVIDER_REGION etc.
 
-  You should manually setup, e.g. "redis.startup.com" to be a cname to all of the
-  PROVIDER_REGION.redis.startup.com.  A complete DNS layout looks as follows:
+  * You should manually setup, e.g. "redis.startup.com" to be a cname to all of the PROVIDER_REGION.redis.startup.com.  A complete DNS layout looks as follows
 
-  startup.com
-  redis.startup.com (Admin Created)
-     -> CNAME aws-us-west-1.redis.startup.com (Admin Created)
-     -> CNAME aws-us-east-1.redis.startup.com (Admin Created)
 
-  aws-us-west-1.redis.startup.com (Admin Created)
-     -> A 45.67.20.106 (Cerebro Created)
-     -> A 45.67.20.105 (Cerebro Created)
+        startup.com
+        redis.startup.com (Admin Created)
+           -> CNAME aws-us-west-1.redis.startup.com (Admin Created)
+           -> CNAME aws-us-east-1.redis.startup.com (Admin Created)
+
+        aws-us-west-1.redis.startup.com (Admin Created)
+           -> A 45.67.20.106 (Cerebro Created)
+           -> A 45.67.20.105 (Cerebro Created)
  
-  0.aws-uswest-1.redis.startup.com (Cerebro Created)
-     -> A 45.67.20.106 (Cerebro Created)
-  1.aws-uswest-1.redis.startup.com (Cerebro Created)
-     -> A 45.67.20.105 (Cerebro Created)
+        0.aws-uswest-1.redis.startup.com (Cerebro Created)
+           -> A 45.67.20.106 (Cerebro Created)
+        1.aws-uswest-1.redis.startup.com (Cerebro Created)
+           -> A 45.67.20.105 (Cerebro Created)
 
-  aws-us-east-1.redis.startup.com (Admin Created)
-     -> A 12.67.20.106 (Cerebro Created)
+        aws-us-east-1.redis.startup.com (Admin Created)
+           -> A 12.67.20.106 (Cerebro Created)
  
-  0.aws-us-east-1.redis.startup.com (Cerebro Created)
-     -> A 12.67.20.106 (Cerebro Created)
+        0.aws-us-east-1.redis.startup.com (Cerebro Created)
+           -> A 12.67.20.106 (Cerebro Created)
 
 
-  So, if you point your servers to redis.startup.com they should get
-    If your using global load balancing, a cname to one of aws-us-west-1.redis.startup.com or 
+So, if you point your servers to redis.startup.com they should get either 
+
+  1. If your using global load balancing, a cname to one of aws-us-west-1.redis.startup.com or 
       aws-us-east-1.redis.startup.com based on the callers location
-    or both CNAMEs
- 
-    The cname returns an A record for each machine of that type.
- 
-  e.g. redis.startup.com -> aws-us-west-1.redis.startup.com -> 12.67.20.106
+  2. or both CNAMEs
+
+The cname returns an A record for each machine of that type.  e.g. redis.startup.com -> aws-us-west-1.redis.startup.com -> 12.67.20.106
