@@ -1,3 +1,0 @@
-#!/usr/bin/python -u
-from machineconsole.main import main
-main()

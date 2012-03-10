@@ -1,3 +1,0 @@
-#!/usr/bin/python -u
-from src.machinesitter.main import main
-main()
