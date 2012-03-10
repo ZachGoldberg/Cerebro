@@ -135,9 +135,6 @@ class MachineSitterRecipe(DeploymentRecipe):
         try:
             self.sudo("apt-get update")
 
-            # Now create the remote directory
-            self.run("mkdir -p %s" % remote_dir)
-
             if self.dns_hostname:
                 self.sudo("hostname %s" % self.dns_hostname)
             else:
