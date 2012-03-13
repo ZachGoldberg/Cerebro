@@ -1,3 +1,5 @@
+-- Updating job config should update config for all running jobs too (aka 'command' etc.)
+
 -- Throw giant red flags if a process reboots too frequently
 -- New cerebro CLI options:
  -- Redeploy/Update cerebro itself to a machine
