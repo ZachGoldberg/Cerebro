@@ -1,5 +1,12 @@
 -- Throw giant red flags if a process reboots too frequently
--- Implement the "Cerebro" controller command using shovel (replacing job_cfg_update etc.)
+-- New cerebro CLI options:
+ -- Redeploy/Update cerebro itself to a machine
+ -- Print logs from a task (chose which machine in CLI or dump all if
+   just one machine)
+ -- Reboot a task or all tasks on a machine
+ -- Check status of a jobfiller.
+
+Give each jobfiller an ID so we can look them up via CLI etc.
 
 --Documentation TODO:
 -- More examples of tasks.

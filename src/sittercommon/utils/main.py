@@ -21,7 +21,6 @@ def get_parser(default_options):
     parser = arg_parser.ArgumentParser(
         description="Cerebro Command Line Interaction Tool")
 
-
     parser.add_argument(
         "--clustersitter-url", dest="clustersitter_url",
         help="URL to the root of the clustersitter",

@@ -180,7 +180,7 @@ class JobFiller(object):
             return
 
         num_machines_total = self.job.get_num_required_machines_in_zone(
-            self.zone)
+            self.zone, self.state)
 
         try:
             records = provider.get_records(hostName=basename)
