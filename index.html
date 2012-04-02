@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8' />
+    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+    <meta name="description" content="Cerebro : Self hosted automated cloud deployment and management." />
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Cerebro</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/ZachGoldberg/Cerebro">Fork Me on GitHub</a>
+
+          <h1 id="project_title">Cerebro</h1>
+          <h2 id="project_tagline">Self hosted automated cloud deployment and management.</h2>
+
+          <section id="downloads">
+            <a class="zip_download_link" href="https://github.com/ZachGoldberg/Cerebro/zipball/master">Download this project as a .zip file</a>
+            <a class="tar_download_link" href="https://github.com/ZachGoldberg/Cerebro/tarball/master">Download this project as a tar.gz file</a>
+          </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <h1>Welcome to Cerebro!</h1>
+
+<p>Cerebro is a job deployment and monitoring system.    Cerebro fills the gap of having some code and deploying and managing it in a cloud environment.  The simplest usecase is taking a code package and deploying it on multiple machines in ec2 with monitoring and supervising on each process.</p>
+
+<p>Cerebro is a process <strong>supervisor</strong>,   <strong>deployment</strong> and <strong>management</strong> solution.  </p>
+
+<h2>Basic Feature List</h2>
+
+<ul>
+<li>Monitor an individual process on a cloud hosted VM</li>
+<li>Reboot the process if necessary</li>
+<li>Define constraints that the process cannot pass, or it'll be rebooted</li>
+<li>Provide log access via an HTTP interface</li>
+<li>Monitor and manage multiple of these processes per machine</li>
+<li>Monitor many machines across a cluster</li>
+<li>Deploy new machines, including process harness and job code</li>
+<li>Accepts python classes to define how to deploy a process or job</li>
+<li>Accept a job configuration via an HTTP API which defines how many of 
+each process to deploy in which datacenters on which cloud providers</li>
+<li>The ability to autodetect if a machine goes bad / disappears, decomission it
+and spin up an identcal replacement and redeploy to it, without any admin intervention.</li>
+<li>Provides an HTML interface at the cluster level which gives you:
+
+<ul>
+<li>The ability to update jobs in place</li>
+<li>An overview of what jobs are running on what machines, and where</li>
+<li>Links to the STDOUT/STDERR of every process in every job on every machine, 
+across the cluster.</li>
+<li>Basic machine vitals for all machines, including ram/cpu usage per process
+and total machine utilization.</li>
+</ul>
+</li>
+</ul><h2>Workflow</h2>
+
+<p>A basic workflow for using Cerebro, start to finish, is as follows in 10 easy steps:</p>
+
+<ol>
+<li>Bundle your software into an easily deployable package (Using python buildout, for example)</li>
+<li>Write a python "deployment class" (see docs below) for your package (short, maybe 30 lines of code)</li>
+<li>Write a system-deployment configuration file which defines how many machines you want your code to run
+on, what your credentials are for various cloud providers, dns provider etc.</li>
+<li>Spinup a clustersitter on a cloud node (following simple deployment steps)</li>
+<li>Run the "job_update_cfg" commnd and pass it your configuration and the location of your clustersitter</li>
+<li>Look at the HTML UI, see things happen and find the provided DNS names for your machines</li>
+<li>Get more customers, increase load, need more machines</li>
+<li>Update the config file to require more machines</li>
+<li>Again run job_update_cfg with your config file</li>
+<li>Watch cerebro spin up more machines, and load to go back to acceptable levels</li>
+</ol><h2>Under the Hood</h2>
+
+<p>Cerebro is made up of three parts: Task Sitter a Machine Sitter and a Cluster Sitter</p>
+
+<h3>Task Sitter</h3>
+
+<p>Task Sitter -- A harness to manage an arbitrary task or process.</p>
+
+<p>Goal: Instead of thinking about how many machines you need to run a process on
+the task sitter's goal is to force the admin to think instead in terms of CPU
+and RAM, an to plan how much of each resource a process should use ahead of time.</p>
+
+<p>The Task Sitter's job is to enforce the limits that the admin thinks a process
+should obey.  It can handle the cases where a process disobeys these limits.</p>
+
+<p>Together with a machine sitter a machine can be completely managed to run
+various tasks efficiently within the resource constraints of the machine.</p>
+
+<p>With a cluster sitter an admin can define how many CPUs and how much RAM a particular
+task can use and it can go to machines, look for available CPU and RAM where
+the process fits and slot it in there.</p>
+
+<p>Task Sitter Details</p>
+
+<ul>
+<li>
+<p>Define constraints</p>
+
+<ul>
+<li>Should always be alive? (--ensure-alive)</li>
+<li>Fixed % of a CPU (--cpu)</li>
+<li>Fixed MB of RAM (--mem)</li>
+<li>Fixed lifetime (--time-limit)</li>
+</ul>
+</li>
+<li>
+<p>Define runtime metadata</p>
+
+<ul>
+<li>User ID (--uid)</li>
+<li>Should the proc be restarted on violation? (--restart)</li>
+<li>Maximum # of reboots (--max-restarts)</li>
+<li>stdout / stderr directories (--std**-location)</li>
+</ul>
+</li>
+<li>
+<p>Monitoring</p>
+
+<ul>
+<li>HTTP Based Monitor (--http-monitoring, --http-monitoring-port)</li>
+</ul>
+</li>
+</ul><h3>Machine Sitter</h3>
+
+<p>Machine Sitter Details</p>
+
+<ul>
+<li>Monitor a set of TaskSitters</li>
+<li>Reboot TaskSitters if they fail (should never happen)</li>
+<li>Provide an API to add new tasks and start/stop tasks on a machine</li>
+<li>Provides central log access for all tasks</li>
+</ul><h3>Cluster Sitter</h3>
+
+<p>Cluster Sitter Details</p>
+
+<ul>
+<li>Monitors a set of MachineSitters in a cluster</li>
+<li>Accepts 'Jobs' which define how many cpus/memory a particular task needs,
+finds or creates machines (and deploys machinesitters if necessary) and then
+activates the "Jobs" as tasks on each machine</li>
+<li>Provides a web UI to see where all your tasks are.</li>
+<li>Pulls in data and aggregates it from the cluster, to see task CPU
+usage, task rebooting behavior, machine performance data etc.</li>
+<li>Provides an abstract "DeploymentRecipe" class that you can fill out
+to have the clustersitter actually deploy your jobs automagically.</li>
+<li>Presently knows how to spinup/teardown AWS instances, though implementing
+other cloud providers should be pretty straightforward as there is a
+pretty minimal interface to the 'providers'.</li>
+<li>Assigns DNS names (presently only using the Dynect API) to machines
+so they can automagically go live (see more in the 'How to do DNS' section)</li>
+<li>Decomissions machines if they fail, will spin up new ones as replacements.</li>
+<li>Supports the notion of linked jobs: When job A is linked to job B job A will be placed on
+every and only the machines job A is placed on.  Job B will also be
+rebooted whenever job A is updated.</li>
+<li>Keeps track of how many idle machiens you own, and can decomission them
+to keep to a predefined limit.</li>
+</ul><h3>Providers</h3>
+
+<ul>
+<li>Cerebro uses an interface for talking to both a cloud provider and a DNS provider</li>
+<li>Presently only AWS/EC2 is implemented as a cloud-VM provider and Dynect is the only DNS providr</li>
+<li>The interface is sufficiently minimal (aka create_instances() or dns_add_record()/dns_delete_record())
+that it should be very simple to expand to other providers (linode, rackspace etc.)</li>
+</ul><h2>Configuration</h2>
+
+<p>Cerebro Configuration File:
+ # See settings.py</p>
+
+<p>Example Job Configuration Format</p>
+
+<pre><code>{
+    "dns_basename": "redis.startup.com",
+    "deployment_recipe": "mystartup.recipes.deploy",
+    "deployment_layout": {
+        "aws-us-west-2a": {
+            "mem": 500,
+            "cpu": 1
+        },
+        "aws-us-east-1b": {
+            "mem": 50,
+            "cpu": 10
+        }
+    },
+    "recipe_options": {
+        # Passed as a dictionary to your jobs
+        "release_dir": "/opt/startup/releases/"
+    },
+    "persistent": true,
+    "task_configuration":
+        {
+            # Tasksitter configuration. 
+            "allow_exit": false,
+            "name": "Portal Server",
+            "command": "/opt/wifast/run_wsgi",
+            "auto_start": false,
+            "ensure_alive": true,
+            "max_restarts": -1,
+            "restart": true,
+            "uid": 0,
+    "cpu": .5, # allow this job to use 50% of CPU
+    "mem": 1200, # Allow this job to use 1.2GB of RAM
+        }
+},
+</code></pre>
+
+<p>Deploymet Recipe Interface</p>
+
+<pre><code>def run_deploy(options):
+    # API?
+    logger.*()
+</code></pre>
+
+<p>How to do DNS </p>
+
+<ul>
+<li> In the job configuration format there is a field called "dns_basename"</li>
+<li> This should be set to something like "myjobname.mydomain.com" e.g. "redis.startup.com"</li>
+<li>
+<p>Cerebro will then add two new records underneath that name for each machine.  It will</p>
+
+<ol>
+<li>Create #.PROVIDER_REGION.basename as a A record to the machine</li>
+<li>Add another CNAME to PROVIDER_REGION.basename to #.PROVIDER_REGION etc.</li>
+</ol>
+</li>
+<li>
+<p>You should manually setup, e.g. "redis.startup.com" to be a cname to all of the PROVIDER_REGION.redis.startup.com.  A complete DNS layout looks as follows</p>
+
+<pre><code>startup.com
+redis.startup.com (Admin Created)
+   -&gt; CNAME aws-us-west-1.redis.startup.com (Admin Created)
+   -&gt; CNAME aws-us-east-1.redis.startup.com (Admin Created)
+
+aws-us-west-1.redis.startup.com (Admin Created)
+   -&gt; A 45.67.20.106 (Cerebro Created)
+   -&gt; A 45.67.20.105 (Cerebro Created)
+
+0.aws-uswest-1.redis.startup.com (Cerebro Created)
+   -&gt; A 45.67.20.106 (Cerebro Created)
+1.aws-uswest-1.redis.startup.com (Cerebro Created)
+   -&gt; A 45.67.20.105 (Cerebro Created)
+
+aws-us-east-1.redis.startup.com (Admin Created)
+   -&gt; A 12.67.20.106 (Cerebro Created)
+
+0.aws-us-east-1.redis.startup.com (Cerebro Created)
+   -&gt; A 12.67.20.106 (Cerebro Created)
+</code></pre>
+</li>
+</ul><p>So, if you point your servers to redis.startup.com they should get either </p>
+
+<ol>
+<li>If your using global load balancing, a cname to one of aws-us-west-1.redis.startup.com or 
+  aws-us-east-1.redis.startup.com based on the callers location</li>
+<li>or both CNAMEs</li>
+</ol><p>The cname returns an A record for each machine of that type.  e.g. redis.startup.com -&gt; aws-us-west-1.redis.startup.com -&gt; 12.67.20.106</p>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Cerebro maintained by <a href="https://github.com/ZachGoldberg">ZachGoldberg</a></p>
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
