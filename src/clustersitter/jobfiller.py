@@ -292,7 +292,7 @@ class JobFiller(object):
                 self.machine_states[machine].set_state(new_state)
             else:
                 logger.warn(
-                    "Couldn't deploy monitoring code to %s?" % (
+                    "Couldn't deploy code to %s?" % (
                         str(machine)))
 
                 if datetime.now() - start_time > timedelta(minutes=2):
