@@ -57,9 +57,10 @@ class DeploymentRecipe(object):
 
     def run(self, cmd):
         self.logger.info("Running %s on %s" % (cmd, self.hostname))
-        output = self.client.exec_command(cmd)
-        stdout = output[1]
-        stderr = output[2]
+        chan = self.client.get_transport().open_session()
+        chan.exec_command(cmd)
+        stdout = chan.makefile('rb', -1)
+        stderr = chan.makefile_stderr('rb', -1)
         stdout_log = []
         while True:
             line = stdout.readline()
@@ -69,7 +70,9 @@ class DeploymentRecipe(object):
             self.logger.info("Output from (%s): %s" % (cmd, line.strip()))
             stdout_log.append(line)
         self.logger.info("Stderr from (%s): %s" % (cmd, stderr.readlines()))
-        return stdout_log
+        status = chan.recv_exit_status()
+        chan.close()
+        return stdout_log, status
 
     def put(self, local, remote):
         if os.path.basename(local) != os.path.basename(remote):
@@ -84,7 +87,7 @@ class DeploymentRecipe(object):
             return
 
         self.logger.info("Calculated local hash: %s", local_hash)
-        remote_hash = self.run("md5sum %s" % remote)
+        remote_hash, _ = self.run("md5sum %s" % remote)
         if remote_hash:
             remote_hash = remote_hash[0].split(' ')[0]
             self.logger.info("Calculated remote hash: %s", remote_hash)
