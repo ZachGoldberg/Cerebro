@@ -395,9 +395,13 @@ class JobFiller(object):
             while not ready:
                 loaded_data = machine.has_loaded_data()
                 has_task = self.job.name in machine.get_tasks()
+                if self.job.name == "Machine Doctor Redeployer":
+                    has_task = True
+
                 ready = loaded_data and has_task
                 if not ready:
-                    logger.debug("Waiting for machine to be actually monitored...")
+                    logger.debug(
+                        "Waiting for machine to be actually monitored...")
                     time.sleep(0.1)
                 else:
                     logger.debug("%s has our task, good to go!" % machine)
