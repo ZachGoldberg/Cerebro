@@ -1,45 +1,44 @@
 Welcome to Cerebro!
 ===================
 
-Cerebro is a job deployment and monitoring system.    Cerebro fills the gap of having some code and deploying and managing it in a cloud environment.  The simplest usecase is taking a code package and deploying it on multiple machines in ec2 with monitoring and supervising on each process.
-
-Cerebro is a process **supervisor**,   **deployment** and **management** solution.  
+Cerebro is a job deployment and monitoring system.  Cerebro fills the gap between having code working on your local machine and deploying and managing it in a cloud environment.  The simplest usecase is taking a code package and deploying it across multiple machines in ec2 with monitoring and supervising on each process.
 
 Basic Feature List
 --------------------
 
  * Monitor an individual process on a cloud hosted VM
- * Reboot the process if necessary
- * Define constraints that the process cannot pass, or it'll be rebooted
- * Provide log access via an HTTP interface
+ * Reboot the process if it does something bad or consumes too many resources.
+ * Provide log access via a JSON API and a web interface
  * Monitor and manage multiple of these processes per machine
  * Monitor many machines across a cluster
- * Deploy new machines, including process harness and job code
- * Accepts python classes to define how to deploy a process or job
- * Accept a job configuration via an HTTP API which defines how many of 
+ * Deploy new machines with your code
+ * Configurable deployment via simle python classes
+ * Accept a job configuration via an JSON API which defines how many of
    each process to deploy in which datacenters on which cloud providers
- * The ability to autodetect if a machine goes bad / disappears, decomission it
-   and spin up an identcal replacement and redeploy to it, without any admin intervention.
- * Provides an HTML interface at the cluster level which gives you:
+ * The ability to autodetect if a machine/VM hangs or disappears, decomission it
+   and spin up an identical replacement and redeploy to it, without any admin intervention.
+ * Provides a web ui at the cluster level which gives you:
    - The ability to update jobs in place
    - An overview of what jobs are running on what machines, and where
-   - Links to the STDOUT/STDERR of every process in every job on every machine, 
+   - Links to the STDOUT/STDERR of every process in every job on every machine,
      across the cluster.
    - Basic machine vitals for all machines, including ram/cpu usage per process
      and total machine utilization.
+ * Provides an admin utility on each machine for viewing running tasks on the machine
+   and easy access to tailing log files.
 
 Workflow
 ---------
 
-A basic workflow for using Cerebro, start to finish, is as follows in 10 easy steps:
+A basic workflow and scaling scenario with Cerebro, start to finish, in 10 easy steps:
 
  0. Bundle your software into an easily deployable package (Using python buildout, for example)
- 1. Write a python "deployment class" (see docs below) for your package (short, maybe 30 lines of code)
+ 1. Write a python "deployment class" (see docs below) for your package (short, maybe 15 lines of code)
  2. Write a system-deployment configuration file which defines how many machines you want your code to run
     on, what your credentials are for various cloud providers, dns provider etc.
  3. Spinup a clustersitter on a cloud node (following simple deployment steps)
  4. Run the "job_update_cfg" commnd and pass it your configuration and the location of your clustersitter
- 5. Look at the HTML UI, see things happen and find the provided DNS names for your machines
+ 5. Look at the web UI, see things happen and find the provided DNS names for your machines
  6. Get more customers, increase load, need more machines
  7. Update the config file to require more machines
  8. Again run job_update_cfg with your config file
@@ -153,7 +152,7 @@ Example Job Configuration Format
         "persistent": true,
         "task_configuration":
             {
-                # Tasksitter configuration. 
+                # Tasksitter configuration.
                 "allow_exit": false,
                 "name": "Portal Server",
                 "command": "/opt/wifast/run_wsgi",
@@ -174,7 +173,7 @@ Deploymet Recipe Interface
         # API?
         logger.*()
 
-How to do DNS 
+How to do DNS
 
   *  In the job configuration format there is a field called "dns_basename"
   *  This should be set to something like "myjobname.mydomain.com" e.g. "redis.startup.com"
@@ -194,7 +193,7 @@ How to do DNS
         aws-us-west-1.redis.startup.com (Admin Created)
            -> A 45.67.20.106 (Cerebro Created)
            -> A 45.67.20.105 (Cerebro Created)
- 
+
         0.aws-uswest-1.redis.startup.com (Cerebro Created)
            -> A 45.67.20.106 (Cerebro Created)
         1.aws-uswest-1.redis.startup.com (Cerebro Created)
@@ -202,14 +201,14 @@ How to do DNS
 
         aws-us-east-1.redis.startup.com (Admin Created)
            -> A 12.67.20.106 (Cerebro Created)
- 
+
         0.aws-us-east-1.redis.startup.com (Cerebro Created)
            -> A 12.67.20.106 (Cerebro Created)
 
 
-So, if you point your servers to redis.startup.com they should get either 
+So, if you point your servers to redis.startup.com they should get either
 
-  1. If your using global load balancing, a cname to one of aws-us-west-1.redis.startup.com or 
+  1. If your using global load balancing, a cname to one of aws-us-west-1.redis.startup.com or
       aws-us-east-1.redis.startup.com based on the callers location
   2. or both CNAMEs
 
