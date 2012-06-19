@@ -52,8 +52,8 @@ for az in ['b', 'c', 'd']:
 # DNS Provider configuration
 dns_provider_config = {
     'class': 'dynect:Dynect',
-    'customername': 'wifast',
-    'username': 'apiuser',
-    'password': 'qwe123',
-    'default_domain': 'wifast.com'
+    'customername': '',
+    'username': '',
+    'password': '',
+    'default_domain': ''
     }
