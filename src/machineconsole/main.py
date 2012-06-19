@@ -94,7 +94,7 @@ def show_logs(logs, title):
     lognames.sort()
 
     for logname in lognames:
-        logfile = logs[logname]
+        logfile = logs[logname]['location']
         menu.add_option_vals("%s (%s)" % (logname, logfile),
                          action=MenuChanger(tail_file, [logfile]))
 
@@ -115,8 +115,8 @@ def tail_file(filenames):
 
 def show_log(task):
     tail_file([
-            MACHINE_DATA.get_logfile(task),
-            MACHINE_DATA.get_logfile(task, True)])
+            MACHINE_DATA.get_logfile(task)['location'],
+            MACHINE_DATA.get_logfile(task, True)['location']])
 
 
 def start_task(task):
@@ -194,12 +194,14 @@ def basic_tasks():
             # strip useconds
             runtime = runtime[:runtime.find('.')]
             try:
-                stdout = MACHINE_DATA.get_logfile(task)
-                stderr = MACHINE_DATA.get_logfile(task, True)
+                stdout = MACHINE_DATA.get_logfile(task)['location']
+                stderr = MACHINE_DATA.get_logfile(task, True)['location']
 
                 stdout_kb = os.stat(stdout).st_size / 1024
                 stderr_kb = os.stat(stderr).st_size / 1024
             except:
+                import traceback
+                traceback.print_exc()
                 pass
 
         table.add_row([task['name'],
@@ -267,6 +269,7 @@ def main():
     global MACHINE_DATA
     if not MACHINE_DATA:
         MACHINE_DATA = MachineData("localhost", 40000)
+
     try:
 
         if not MACHINE_DATA.url:

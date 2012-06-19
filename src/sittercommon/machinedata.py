@@ -1,6 +1,7 @@
 import logging
 import re
 import requests
+import simplejson
 import socket
 import time
 import urllib
@@ -82,21 +83,12 @@ class MachineData(object):
 
     def load_generic_page(self, host, page):
         response = self._make_request(requests.get,
-                                      path="%s?nohtml=1" % page,
+                                      path="%s?nohtml=1&format=json" % page,
                                       host=host)
         if not response:
             return {}
 
-        lines = response.content.split('\n')
-        data = {}
-        for item in lines:
-            try:
-                key, value = item.split('=', 1)
-            except:
-                continue
-
-            data[key] = value
-
+        data = simplejson.loads(response.content)
         return data
 
     def reload(self):
