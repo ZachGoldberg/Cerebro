@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 class AmazonEC2(MachineProvider):
     instance_types = {
         'm1.small': (1, 1700, 160, 32),
+        'm1.medium': (1, 4000, 400, 64),
         'm1.large': (2, 7500, 850, 64),
         'm1.xlarge': (4, 15000, 1690, 64),
         't1.micro': (1, 613, 0, 64),
