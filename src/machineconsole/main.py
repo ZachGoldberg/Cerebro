@@ -169,7 +169,7 @@ def basic_tasks():
     MENUFACTORY = MenuFactory(SCR, add_line, remove_line)
 
     for name, task in MACHINE_DATA.tasks.items():
-        if task['running'] == "True":
+        if task['running']:
             running.append((name, task))
         else:
             not_running.append((name, task))

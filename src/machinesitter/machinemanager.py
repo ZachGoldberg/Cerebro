@@ -47,6 +47,8 @@ class MachineManager(object):
         self.http_monitor.add_handler('/start_task', self.remote_start_task)
         self.http_monitor.add_handler('/stop_task', self.remote_stop_task)
         self.http_monitor.add_handler('/add_task', self.remote_add_task)
+        self.http_monitor.add_handler('/restart_task',
+                                      self.remote_restart_task)
 
         print "Adding signals"
         signal.signal(signal.SIGTERM, self.exit_now)
@@ -98,6 +100,23 @@ class MachineManager(object):
         self.collect_old_task_logs(task)
         return "Stopped"
 
+    def remote_restart_task(self, args):
+        if not 'task_name' in args:
+            return "Error, no task name provided"
+
+        if not args['task_name'] in self.tasks:
+            return "Error, unknown task"
+
+        task = self.tasks[args['task_name']]
+        if task.was_started:
+            task.stop()
+
+        self.collect_old_task_logs(task)
+        task.set_port(self.next_port())
+        task.start()
+
+        return "Restarted"
+
     def remote_start_task(self, args):
         if not 'task_name' in args:
             return "Error"
@@ -122,9 +141,9 @@ class MachineManager(object):
         config['task_definitions'] = task_definitions
 
         if self.task_definition_file:
-            file = open(self.task_definition_file, 'w')
-            file.write(json.dumps(config))
-            file.close()
+            fileh = open(self.task_definition_file, 'w')
+            fileh.write(json.dumps(config))
+            fileh.close()
 
         return config
 

@@ -92,22 +92,16 @@ class MachineData(object):
         return data
 
     def reload(self):
-        # TODO self.tasks should be an atomic swap
         response = self._make_request(requests.get,
-                                      path="stats?nohtml=1")
+                                      path="stats?nohtml=1&format=json")
         if not response:
             return None
 
-        data = response.content.split('\n')
+        data = simplejson.loads(response.content)
 
         task_data = {}
         new_tasks = {}
-
-        for item in data:
-            try:
-                key, value = item.split('=', 1)
-            except:
-                continue
+        for key, value in data.iteritems():
             try:
                 task_name, metric = key.split('-')
             except:
@@ -121,7 +115,7 @@ class MachineData(object):
         for task_name in task_data.keys():
             task_dict = task_data[task_name]
             new_tasks[task_dict['name']] = task_dict
-            if task_dict['running'] == "True":
+            if task_dict['running']:
                 updated = False
                 tries = 0
                 while not updated and tries < 10:

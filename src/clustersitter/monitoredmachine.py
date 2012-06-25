@@ -128,7 +128,7 @@ class MonitoredMachine(HasMachineSitter):
             return []
 
         return [task for task in self.datamanager.tasks.values() if \
-                    task["running"] == "True"]
+                    task["running"]]
 
     def start_task(self, job):
         if self.is_initialized():

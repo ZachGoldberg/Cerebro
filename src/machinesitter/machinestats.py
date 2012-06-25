@@ -23,6 +23,13 @@ class MachineStats(StatsCollector):
                     hostname,
                     self.harness.http_monitor.port,
                     task.name)
+
+                data["%s-reboot" % task.name] = \
+                    "<a href='http://%s:%s/restart_task?task_name=%s'>restart</a>" % (
+                    hostname,
+                    self.harness.http_monitor.port,
+                    task.name)
+
                 location = "http://%s:%s" % (
                     hostname,
                     task.http_monitoring_port)
