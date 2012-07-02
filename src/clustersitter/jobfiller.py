@@ -118,9 +118,8 @@ class JobFiller(object):
 
     def run(self):
         logger.info("Starting JobFiller")
-        release_attempts = 0
+        release_attempts = 1
         while self.state.get_state() != 8:
-            release_attempts += 1
             state = self.state.get_state()
             logger.info("Running State: %s, attempt #%s" % (
                     str(self.state),
@@ -144,6 +143,7 @@ class JobFiller(object):
                 elif state == 7:
                     self.reboot_dependent_jobs()
             except:
+                release_attempts += 1
                 import traceback
                 traceback.print_exc()
                 logger.error(traceback.format_exc())
