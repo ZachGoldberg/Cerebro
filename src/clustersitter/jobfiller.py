@@ -122,9 +122,9 @@ class JobFiller(object):
         while self.state.get_state() != 8:
             release_attempts += 1
             state = self.state.get_state()
-            logger.info("Running State: %s, attempt #" % (
+            logger.info("Running State: %s, attempt #%s" % (
                     str(self.state),
-                    release_attempts)
+                    release_attempts))
 
             try:
                 if state == 0:
