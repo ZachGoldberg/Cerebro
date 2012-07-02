@@ -118,9 +118,13 @@ class JobFiller(object):
 
     def run(self):
         logger.info("Starting JobFiller")
+        release_attempts = 0
         while self.state.get_state() != 8:
+            release_attempts += 1
             state = self.state.get_state()
-            logger.info("Running State: %s" % str(self.state))
+            logger.info("Running State: %s, attempt #" % (
+                    str(self.state),
+                    release_attempts)
 
             try:
                 if state == 0:
@@ -143,13 +147,19 @@ class JobFiller(object):
                 import traceback
                 traceback.print_exc()
                 logger.error(traceback.format_exc())
-                if self.fail_on_error:
+
+                if release_attempts > 10 or self.fail_on_error:
+                    logger.info("Job Filler: Failed")
+                    ClusterEventManager.handle(
+                        "Failed Filling: %s" % str(self))
+
                     if self.post_callback:
                         self.post_callback(success=False)
 
                     return False
 
-        ClusterEventManager.handle("Completed Filling: %s" % str(self))
+        ClusterEventManager.handle(
+            "Completed Filling: %s" % str(self))
         logger.info("Job Filler: Done!")
         self.end_time = datetime.now()
 
