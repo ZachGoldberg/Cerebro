@@ -121,9 +121,9 @@ def parse_args(args):
                         help='Directory where stdout logs should be placed '
                         'default is to print to caller\'s STDERR')
 
-    parser.add_argument('--uid', dest='uid', type=int,
+    parser.add_argument('--uid', dest='uid',
                         help='Change to UID before executing child process'
-                        'requires root priviledges')
+                        'requires root priviledges.  Can be an ID or name.')
 
     # explicitly offer args the param incase we're parsing not from
     # sys.argv

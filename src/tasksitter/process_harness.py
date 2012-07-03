@@ -48,6 +48,19 @@ class ProcessHarness(object):
         signal.signal(signal.SIGTERM, self.exit_now)
         signal.signal(signal.SIGINT, self.exit_now)
 
+        actual_uid = None
+        try:
+            actual_uid = int(self.uid)
+        except:
+            try:
+                import pwd
+                actual_uid = pwd.getpwnam(self.uid)[2]
+            except:
+                sys.stderr.write("Invalid UID: %s" % uid)
+                os._exit(1)
+
+        self.uid = actual_uid
+
         # Start the child process
         self.start_process()
 
@@ -77,7 +90,7 @@ class ProcessHarness(object):
             # Put ourselves into our own pgrp, for sanity
             os.setpgrp()
 
-            if self.uid:
+            if self.uid != None:
                 try:
                     os.setuid(self.uid)
                 except OSError:  # no permission
