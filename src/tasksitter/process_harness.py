@@ -91,6 +91,10 @@ class ProcessHarness(object):
             # Put ourselves into our own pgrp, for sanity
             os.setpgrp()
 
+            # Configure STDOUT and STDERR
+            self.logmanager.setup_stdout()
+            self.logmanager.setup_stderr()
+
             if self.uid != None:
                 try:
                     os.setuid(self.uid)
@@ -98,9 +102,6 @@ class ProcessHarness(object):
                     sys.stderr.write("Must be root to set UID!")
                     os._exit(1)
 
-            # Configure STDOUT and STDERR
-            self.logmanager.setup_stdout()
-            self.logmanager.setup_stderr()
 
             # parse the command
             cmd = '/bin/bash'
