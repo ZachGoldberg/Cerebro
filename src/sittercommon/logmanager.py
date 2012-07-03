@@ -13,6 +13,11 @@ class LogManager(object):
     def __init__(self, stdout_location='-', stderr_location='-'):
         self.stdout_location = stdout_location
         self.stderr_location = stderr_location
+
+        # Enable others to write to the log locations incase the child
+        # Process is run as another user.
+        os.system("chmod o+rwx %s" % stdout_location)
+        os.system("chmod o+rwx %s" % stderr_location)
         self.harness = None
         self.extra_logfiles = {}
 
