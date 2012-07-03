@@ -60,7 +60,7 @@ class ProcessHarness(object):
                     sys.stderr.write("Invalid UID: %s" % uid)
                     os._exit(1)
 
-        self.uid = actual_uid
+            self.uid = actual_uid
 
         # Start the child process
         self.start_process()
