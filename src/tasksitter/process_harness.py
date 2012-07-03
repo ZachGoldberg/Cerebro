@@ -48,16 +48,17 @@ class ProcessHarness(object):
         signal.signal(signal.SIGTERM, self.exit_now)
         signal.signal(signal.SIGINT, self.exit_now)
 
-        actual_uid = None
-        try:
-            actual_uid = int(self.uid)
-        except:
+        if self.uid != None:
+            actual_uid = None
             try:
-                import pwd
-                actual_uid = pwd.getpwnam(self.uid)[2]
+                actual_uid = int(self.uid)
             except:
-                sys.stderr.write("Invalid UID: %s" % uid)
-                os._exit(1)
+                try:
+                    import pwd
+                    actual_uid = pwd.getpwnam(self.uid)[2]
+                except:
+                    sys.stderr.write("Invalid UID: %s" % uid)
+                    os._exit(1)
 
         self.uid = actual_uid
 
