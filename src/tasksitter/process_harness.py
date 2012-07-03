@@ -102,7 +102,6 @@ class ProcessHarness(object):
                     sys.stderr.write("Must be root to set UID!")
                     os._exit(1)
 
-
             # parse the command
             cmd = '/bin/bash'
             args = [cmd, "-c", self.command]

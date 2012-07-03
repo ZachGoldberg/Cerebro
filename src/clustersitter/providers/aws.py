@@ -14,16 +14,17 @@ logger = logging.getLogger(__name__)
 
 class AmazonEC2(MachineProvider):
     instance_types = {
-        'm1.small': (1, 1700, 160, 32),
+        # Sorted by price
+        't1.micro': (1, 613, 0, 64),
+        'm1.small': (1, 1700, 160, 64),
         'm1.medium': (1, 4000, 400, 64),
+        'c1.medium': (2, 1701, 350, 64),
         'm1.large': (2, 7500, 850, 64),
         'm1.xlarge': (4, 15000, 1690, 64),
-        't1.micro': (1, 613, 0, 64),
+        'c1.xlarge': (8, 7000, 1690, 64),
         'm2.xlarge': (2, 17100, 420, 64),
         'm2.2xlarge': (4, 34200, 850, 64),
         'm2.4xlarge': (8, 68400, 1690, 64),
-        'c1.medium': (2, 1700, 350, 32),
-        'c1.xlarge': (8, 7000, 1690, 64)
         }
 
     def __init__(self, config):
@@ -96,16 +97,32 @@ class AmazonEC2(MachineProvider):
         Ideally what we do now is figure out
         what instance_type combination best fills
         this request.  For simplicity for now
-        we'll just spin up one m1.large per cpu.
+        we'll just spin up a new 64b instance per CPU
+        with the instance type that most closely matches
+        mem_per_job
         """
         # TODO if this fails decomission the machines and return false
         aws_placement = zone.replace('aws-', '')
         conn = self.connection_by_zone[aws_placement]
 
         # TODO detect this better
-        instance_type = 'm1.large'
+        closest_type = 'm1.large'
+        closest_amount = 1000000
+        if mem_per_job:
+            for itype, perf in self.instance_types.items():
+                if perf[3] != 64:
+                    continue
+
+                mem_distance = abs(mem_per_job - perf[1])
+                if mem_distance < closest_amount:
+                    closest_amount = mem_distance
+                    closest_type = itype
+
+        instance_type = closest_type
+        print instance_type
         ClusterEventManager.handle(
-            "Spinning up %s amazon instances..." % cpus)
+            "Spinning up %s amazon instances of type %s..." % (cpus,
+                                                               instance_type))
         reservation = None
         try:
             reservation = conn.run_instances(
