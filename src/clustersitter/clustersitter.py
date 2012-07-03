@@ -288,7 +288,9 @@ class ClusterSitter(object):
         exports = dir(module)
         for export in exports:
             if hasattr(getattr(module, export), find_func):
-                return getattr(module, export)
+                value = getattr(module, export)
+                if value.__module__ == module.__name__:
+                    return value
 
     def build_recipe(self, recipe_class, machine,
                      post_callback=None, options=None,
