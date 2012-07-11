@@ -4,6 +4,7 @@ and ensures that they are constantly fulfilled.
 """
 import datetime
 import os
+import pwd
 import signal
 import simplejson
 import sys
@@ -101,6 +102,12 @@ class ProcessHarness(object):
                 except OSError:  # no permission
                     sys.stderr.write("Must be root to set UID!")
                     os._exit(1)
+
+                # Now that we're the child and the child's PID setup
+                # the environment for child scripts.
+                userpwd = pwd.getpwuid(self.uid)
+                os.environ['HOME'] = userpwd.pw_dir
+                os.environ['USER'] = userpwd.pw_name
 
             # parse the command
             cmd = '/bin/bash'
