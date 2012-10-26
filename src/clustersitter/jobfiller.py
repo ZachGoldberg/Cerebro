@@ -347,6 +347,7 @@ class JobFiller(object):
             task_names = [task['name'] for task in machine.get_running_tasks()]
             for job in jobs:
                 if job.name in task_names:
+                    logger.debug("Rebooting %s" % job.name)
                     machine.stop_task(job)
                     machine.start_task(job)
 
@@ -361,6 +362,7 @@ class JobFiller(object):
                 if self.reboot_task:
                     machine.stop_task(self.job)
 
+                logger.debug("Starting %s" % self.job.name)
                 val = machine.start_task(self.job)
 
                 if not val:
