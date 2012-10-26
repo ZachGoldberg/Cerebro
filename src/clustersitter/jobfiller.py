@@ -359,7 +359,12 @@ class JobFiller(object):
             while self.machine_states[machine].get_state() <= 4:
                 self.machine_states[machine].set_state(4)
                 machine.initialize()
-                if self.reboot_task:
+
+                tasks = machine.get_running_tasks()
+                task_names = [task['name'] for task in tasks]
+                already_running = self.job.name in task_names
+
+                if self.reboot_task or already_running:
                     machine.stop_task(self.job)
 
                 logger.debug("Starting %s" % self.job.name)
