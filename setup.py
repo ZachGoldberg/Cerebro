@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='cerebrod',
-      version='1.1.15',
+      version='1.1.16',
       description='A Cluster Management System',
       author='Zach Goldberg',
       author_email='zach@zachgoldberg.com',
