@@ -172,7 +172,11 @@ def main(sys_args=None, wait_for_child=True, allow_spam=False):
       if args.command in proc[1]:
         if proc[0] != os.getpid():
           print "Killing prexisting task: %s:%s" % proc
-          os.kill(proc[0], 9)
+          try:
+              os.kill(proc[0], 9)
+          except:
+              import traceback
+              traceback.print_exc()
 
     harness = run_command_with_harness(args.command, args, constraints_list)
     harness.allow_spam = allow_spam
