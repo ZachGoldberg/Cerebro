@@ -32,6 +32,10 @@ class TaskManager(object):
         self.sitter_stdout = "%s/%s.stdout" % (log_location, self.name)
         self.sitter_stderr = "%s/%s.stderr" % (log_location, self.name)
 
+        # Pre-clear stdout/stderr files
+        open(self.sitter_stdout, 'w').close()
+        open(self.sitter_stderr, 'w').close()
+
         self.process = None
         self.used_pids = []
 
