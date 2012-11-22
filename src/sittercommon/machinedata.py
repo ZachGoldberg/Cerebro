@@ -167,6 +167,20 @@ class MachineData(object):
 
         return None
 
+    def restart_task(self, task):
+        if isinstance(task, str):
+            task = self.tasks[task]
+
+        tid = urllib.quote(task['name'])
+        val = self._make_request(
+            requests.get,
+            path="restart_task?task_name=%s" % tid)
+
+        if val:
+            return val.content
+
+        return None
+
     def stop_task(self, task):
         if isinstance(task, str):
             task = self.tasks[task]

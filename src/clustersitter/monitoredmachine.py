@@ -28,6 +28,17 @@ class HasMachineSitter(object):
         else:
             return False
 
+    def _api_restart_task(self, job):
+        self.datamanager.reload()
+        if job.name in self.datamanager.tasks:
+            val = self.datamanager.restart_task(
+                self.datamanager.tasks[job.name])
+            logger.info("Restart task %s result: %s" % (job.name, val))
+            self.datamanager.reload()
+            return val
+        else:
+            return False
+
     def _api_stop_task(self, job):
         if job.name in self.datamanager.tasks:
             val = self.datamanager.stop_task(
@@ -134,6 +145,11 @@ class MonitoredMachine(HasMachineSitter):
         if self.is_initialized():
             logger.info("Starting a task %s on %s" % (job.name, str(self)))
             self._api_start_task(job)
+
+    def restart_task(self, job):
+        if self.is_initialized():
+            logger.info("Restarting a task %s on %s" % (job.name, str(self)))
+            self._api_restart_task(job)
 
     def stop_task(self, job):
         if self.is_initialized():

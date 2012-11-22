@@ -348,8 +348,7 @@ class JobFiller(object):
             for job in jobs:
                 if job.name in task_names:
                     logger.info("Rebooting %s" % job.name)
-                    machine.stop_task(job)
-                    machine.start_task(job)
+                    machine.restart_task(job)
 
         self.state.next()
 
