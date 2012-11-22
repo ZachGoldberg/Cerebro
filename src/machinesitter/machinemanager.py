@@ -264,6 +264,7 @@ class MachineManager(object):
         self.collect_old_task_logs(task)
 
     def restart_task(self, task):
+        task.stop()
         task.set_port(self.next_port())
         task.start()
 
@@ -294,6 +295,8 @@ class MachineManager(object):
         while True:
             for task in self.tasks.values():
                 if task.was_started and not task.is_running():
+                    print "%s: started: %s, running: %s" % (
+                        task, task.was_started, task.is_running())
                     self.task_finished(task)
                     if not task.allow_exit:
                         self.restart_task(task)
