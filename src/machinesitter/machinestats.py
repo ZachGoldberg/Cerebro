@@ -17,6 +17,11 @@ class MachineStats(StatsCollector):
                     hostname,
                     self.harness.http_monitor.port,
                     task.name)
+                data["%s-remove" % task.name] = \
+                    "<a href='http://%s:%s/remove_task?task_name=%s'>remove</a>" % (
+                    hostname,
+                    self.harness.http_monitor.port,
+                    task.name)
             else:
                 data["%s-stop" % task.name] = \
                     "<a href='http://%s:%s/stop_task?task_name=%s'>stop</a>" % (

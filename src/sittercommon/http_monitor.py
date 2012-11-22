@@ -48,7 +48,7 @@ class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             "/stats": self._get_stats,
             "/logs": self._get_logs,
             "/logfile": self._get_logfile,
-            }
+        }
 
         self.handlers.update(new_handlers)
 
@@ -76,7 +76,7 @@ class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         output = """Invalid Path Requests.  Options:<br><ul>"""
 
         return self.engine.render('index.html', {'handlers':
-                                                     self.handlers,
+                                                 self.handlers,
                                                  'name': sys.argv[0]})
 
         for handler in self.handlers.keys():

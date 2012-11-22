@@ -46,6 +46,7 @@ class MachineManager(object):
 
         self.http_monitor.add_handler('/start_task', self.remote_start_task)
         self.http_monitor.add_handler('/stop_task', self.remote_stop_task)
+        self.http_monitor.add_handler('/remove_task', self.remote_remove_task)
         self.http_monitor.add_handler('/add_task', self.remote_add_task)
         self.http_monitor.add_handler('/restart_task',
                                       self.remote_restart_task)
@@ -84,6 +85,20 @@ class MachineManager(object):
         config = self.write_out_task_definitions()
 
         return "OK | %s" % json.dumps(config)
+
+    def remote_remove_task(self, args):
+        if not 'task_name' in args:
+            return "Error, no task name provided"
+
+        if not args['task_name'] in self.tasks:
+            return "Error, unknown task"
+
+        task = self.tasks[args['task_name']]
+        if task.was_started:
+            return "You must stop a task before you remove it"
+
+        del self.tasks[task.name]
+        return "Removed"
 
     def remote_stop_task(self, args):
         if not 'task_name' in args:

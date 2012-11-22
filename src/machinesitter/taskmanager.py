@@ -59,7 +59,7 @@ class TaskManager(object):
 
         for opt in self.optional_fields:
             val = getattr(self, opt)
-            if val != None:
+            if val is not None:
                 data[opt] = val
 
         return data
