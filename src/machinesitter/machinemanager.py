@@ -1,14 +1,15 @@
+import json
+import os
+import signal
+import simplejson
+import socket
+import threading
+import time
+
 import sittercommon.http_monitor as http_monitor
 import sittercommon.logmanager as logmanager
 import machinestats
 import taskmanager
-
-import json
-import os
-import signal
-import socket
-import threading
-import time
 
 
 class MachineManager(object):
@@ -50,6 +51,10 @@ class MachineManager(object):
         self.http_monitor.add_handler('/add_task', self.remote_add_task)
         self.http_monitor.add_handler('/restart_task',
                                       self.remote_restart_task)
+        self.http_monitor.add_handler('/write_config',
+                                      self.remote_write_config)
+        self.http_monitor.add_handler('/load_config',
+                                      self.remote_load_config)
 
         print "Adding signals"
         signal.signal(signal.SIGTERM, self.exit_now)
@@ -146,6 +151,33 @@ class MachineManager(object):
             return "%s started" % args['task_name']
         else:
             return "Already running"
+
+    def remote_write_config(self, args):
+        if not 'file' in args:
+            return "Error, no file provided"
+
+        self.task_definition_file = args['file']
+        return "Wrote: %s" % self.write_out_task_definitions()
+
+    def remote_load_config(self, args):
+        if not 'file' in args:
+            return "Error, no file provided"
+
+        self.task_definition_file = args['file']
+
+        data = {}
+        try:
+            taskfile = open(self.task_definition_file)
+            data = simplejson.loads(taskfile.read())
+            taskfile.close()
+        except:
+            import traceback
+            return traceback.format_exc()
+
+        for task in data['task_definitions']:
+            self.add_new_task(task)
+
+        return "Added tasks: %s" % data
 
     def write_out_task_definitions(self):
         config = {'log_location': self.log_location}
