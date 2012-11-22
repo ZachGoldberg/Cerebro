@@ -179,6 +179,11 @@ class MachineManager(object):
         task = taskmanager.TaskManager(task_definition,
                                        self.log_location,
                                        self.launch_location)
+        if task.name in self.tasks:
+            # If we're adding a task that already exists, simply
+            # update the existing object instead of overwriting it.
+            task = self.tasks[task.name]
+            task.reload_from_definition(task_definition)
 
         task.set_port(self.next_port())
 

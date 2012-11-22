@@ -19,18 +19,7 @@ class TaskManager(object):
         'uid']
 
     def __init__(self, task_definition, log_location, launch_location):
-        self.auto_start = task_definition.get('auto_start', False)
-        self.restart = task_definition.get('restart', False)
-        self.max_restarts = task_definition.get('max_restarts', -1)
-        self.ensure_alive = task_definition.get('ensure_alive', False)
-        self.poll_interval = task_definition.get('poll_interval', 0.1)
-        self.allow_exit = task_definition.get('allow_exit', False)
-        self.cpu = task_definition.get('cpu')
-        self.mem = task_definition.get('mem')
-        self.time_limit = task_definition.get('time_limit')
-        self.uid = task_definition.get('uid')
-        self.command = task_definition['command']
-        self.name = task_definition['name']
+        self.reload_from_definition(task_definition)
         self.launch_location = launch_location
 
         self.http_monitoring = True
@@ -45,6 +34,20 @@ class TaskManager(object):
 
         self.process = None
         self.used_pids = []
+
+    def reload_from_definition(self, task_definition):
+        self.auto_start = task_definition.get('auto_start', False)
+        self.restart = task_definition.get('restart', False)
+        self.max_restarts = task_definition.get('max_restarts', -1)
+        self.ensure_alive = task_definition.get('ensure_alive', False)
+        self.poll_interval = task_definition.get('poll_interval', 0.1)
+        self.allow_exit = task_definition.get('allow_exit', False)
+        self.cpu = task_definition.get('cpu')
+        self.mem = task_definition.get('mem')
+        self.time_limit = task_definition.get('time_limit')
+        self.uid = task_definition.get('uid')
+        self.command = task_definition['command']
+        self.name = task_definition['name']
 
     def __repr__(self):
         return json.dumps(self.to_dict())
