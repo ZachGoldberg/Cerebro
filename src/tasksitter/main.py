@@ -165,19 +165,6 @@ def main(sys_args=None, wait_for_child=True, allow_spam=False):
     # Set outselves to our own pgrp to separate from machine sitter
     os.setpgrp()
 
-    # Ensure any previous instances of this task have died
-    procs = [(int(p), c) for p, c in [x.rstrip('\n').split(' ', 1) \
-               for x in os.popen('ps h -eo pid:1,command')]]
-    for proc in procs:
-      if args.command in proc[1]:
-        if proc[0] != os.getpid():
-          print "Killing prexisting task: %s:%s" % proc
-          try:
-              os.kill(proc[0], 9)
-          except:
-              import traceback
-              traceback.print_exc()
-
     harness = run_command_with_harness(args.command, args, constraints_list)
     harness.allow_spam = allow_spam
     harness.begin_monitoring()
