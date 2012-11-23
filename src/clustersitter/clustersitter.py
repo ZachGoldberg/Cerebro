@@ -354,6 +354,8 @@ class ClusterSitter(object):
             # If we can't decomission it then perhaps its locked
             # and we should leave well enough alone at this point,
             # just remove it from monitoring etc.
+            ClusterEventManager.handle(
+                "Provider doesn't allow decomissioning of %s" % str(machine))
             return
 
         if machine.config.dns_name:
