@@ -1,13 +1,27 @@
 import os
 import socket
+import time
 from sittercommon import address
 from tasksitter.stats_collector import StatsCollector
 
 
 class MachineStats(StatsCollector):
 
-    def get_hostname(self):
-        return address.get_external_address(True)
+    hostname_expire = 600
+    hostname_create = None
+
+    @classmethod
+    def get_hostname(cls):
+        now = time.time()
+        cache = True
+        if (cls.hostname_create is None or 
+                now - cls.hostname_create >= cls.hostname_expire):
+            print('generating new hostname')
+            cls.hostname_create = now
+            cache = False
+        else:
+            print('using cached hostname')
+        return address.get_external_address(True, cache=cache)
 
     def get_live_data(self):
         data = {}
