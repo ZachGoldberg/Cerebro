@@ -42,6 +42,7 @@ setup(name='cerebrod',
         'dynect_client',
         'paramiko',
         'requests',
+        'simplejson',
         'tenjin',
         ],
      )
