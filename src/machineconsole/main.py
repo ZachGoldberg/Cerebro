@@ -127,6 +127,16 @@ def stop_task(task):
     MACHINE_DATA.stop_task(task)
 
 
+def restart_task(task):
+    MACHINE_DATA.restart_task(task)
+
+
+def remove_task(task):
+    global CURRENT_LOC
+    MACHINE_DATA.remove_task(task)
+    CURRENT_LOC = "mainmenu"
+
+
 def show_task():
     name, task = AUX
     reload_data()
@@ -141,12 +151,16 @@ def show_task():
     menu.add_option_vals("Main Menu",
                     action=lambda: change_menu('mainmenu'), hotkey="*")
 
-    if task['running'] == "False":
+    if not task['running']:
         menu.add_option_vals("Start Task",
                              action=lambda: start_task(task))
+        menu.add_option_vals("Remove Task",
+                             action=lambda: remove_task(task))
     else:
         menu.add_option_vals("Stop Task",
                              action=lambda: stop_task(task))
+        menu.add_option_vals("Restart Task",
+                             action=lambda: restart_task(task))
 
         menu.add_option_vals("Show stdout/stderr",
                          action=lambda: show_log(task))

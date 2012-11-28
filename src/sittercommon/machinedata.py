@@ -153,6 +153,20 @@ class MachineData(object):
         else:
             return None
 
+    def remove_task(self, task):
+        if isinstance(task, str):
+            task = self.tasks[task]
+
+        tid = urllib.quote(task['name'])
+        val = self._make_request(
+            requests.get,
+            path="remove_task?task_name=%s" % tid)
+
+        if val:
+            return val.content
+
+        return None
+
     def start_task(self, task):
         if isinstance(task, str):
             task = self.tasks[task]
