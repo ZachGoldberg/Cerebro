@@ -1,42 +1,45 @@
 import os
 import socket
+from sittercommon import address
 from tasksitter.stats_collector import StatsCollector
 
 
 class MachineStats(StatsCollector):
 
+    def get_hostname(self):
+        return address.get_external_address(True)
+
     def get_live_data(self):
         data = {}
-        hostname = socket.gethostname()
         for task_name, task in self.harness.tasks.items():
             running = bool(task.is_running())
             data["%s-running" % task.name] = running
             if not running:
                 data["%s-start" % task.name] = \
                     "<a href='http://%s:%s/start_task?task_name=%s'>start</a>" % (
-                    hostname,
+                    self.get_hostname(),
                     self.harness.http_monitor.port,
                     task.name)
                 data["%s-remove" % task.name] = \
                     "<a href='http://%s:%s/remove_task?task_name=%s'>remove</a>" % (
-                    hostname,
+                    self.hostname,
                     self.harness.http_monitor.port,
                     task.name)
             else:
                 data["%s-stop" % task.name] = \
                     "<a href='http://%s:%s/stop_task?task_name=%s'>stop</a>" % (
-                    hostname,
+                    self.hostname,
                     self.harness.http_monitor.port,
                     task.name)
 
                 data["%s-reboot" % task.name] = \
                     "<a href='http://%s:%s/restart_task?task_name=%s'>restart</a>" % (
-                    hostname,
+                    self.hostname,
                     self.harness.http_monitor.port,
                     task.name)
 
                 location = "http://%s:%s" % (
-                    hostname,
+                    self.hostname,
                     task.http_monitoring_port)
                 data["%s-monitoring" % task.name] = "<a href='%s'>%s</a>" % (location,
                                                                            location)
@@ -50,7 +53,7 @@ class MachineStats(StatsCollector):
 
     def get_metadata(self):
         data = {}
-        data['hostname'] = socket.gethostname()
+        data['hostname'] = self.get_hostname()
         data['machinesitter_pid'] = os.getpid()
         data['launch_location'] = self.harness.launch_location
         data['log_location'] = self.harness.log_location
