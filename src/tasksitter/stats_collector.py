@@ -5,14 +5,30 @@ and process.  Exposes a simple interface to get all this information.
 import os
 import socket
 import threading
+import time
+from sittercommon import address
 
 
 class StatsCollector(object):
     """
     Collect various kinds of statistics about running the child process.
     """
+
+    hostname_expire = 600
+    hostname_create = None
+
+    @classmethod
+    def get_hostname(cls):
+        now = time.time()
+        cache = True
+        if (cls.hostname_create is None or 
+                now - cls.hostname_create >= cls.hostname_expire):
+            cls.hostname_create = now
+            cache = False
+        return address.get_external_address(True, cache=cache)
+
     def __init__(self, harness):
-        self.hostname = socket.gethostname()
+        self.hostname = self.get_hostname()
         self.harness = harness
         self.thread = None
 

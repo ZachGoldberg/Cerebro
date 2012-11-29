@@ -7,19 +7,6 @@ from tasksitter.stats_collector import StatsCollector
 
 class MachineStats(StatsCollector):
 
-    hostname_expire = 600
-    hostname_create = None
-
-    @classmethod
-    def get_hostname(cls):
-        now = time.time()
-        cache = True
-        if (cls.hostname_create is None or 
-                now - cls.hostname_create >= cls.hostname_expire):
-            cls.hostname_create = now
-            cache = False
-        return address.get_external_address(True, cache=cache)
-
     def get_live_data(self):
         data = {}
         for task_name, task in self.harness.tasks.items():
@@ -28,7 +15,7 @@ class MachineStats(StatsCollector):
             if not running:
                 data["%s-start" % task.name] = \
                     "<a href='http://%s:%s/start_task?task_name=%s'>start</a>" % (
-                    self.get_hostname(),
+                    self.hostname,
                     self.harness.http_monitor.port,
                     task.name)
                 data["%s-remove" % task.name] = \
@@ -64,7 +51,7 @@ class MachineStats(StatsCollector):
 
     def get_metadata(self):
         data = {}
-        data['hostname'] = self.get_hostname()
+        data['hostname'] = self.hostname
         data['machinesitter_pid'] = os.getpid()
         data['launch_location'] = self.harness.launch_location
         data['log_location'] = self.harness.log_location
