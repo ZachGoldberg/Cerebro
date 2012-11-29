@@ -15,22 +15,22 @@ class StatsCollector(object):
     """
 
     hostname_expire = 600
-    hostname_create = None
-
-    @classmethod
-    def get_hostname(cls):
-        now = time.time()
-        cache = True
-        if (cls.hostname_create is None or 
-                now - cls.hostname_create >= cls.hostname_expire):
-            cls.hostname_create = now
-            cache = False
-        return address.get_external_address(True, cache=cache)
 
     def __init__(self, harness):
-        self.hostname = self.get_hostname()
+        self.hostname_create = None
+        self.hostname = None
         self.harness = harness
         self.thread = None
+        self.update_hostname()
+
+    def update_hostname(self):
+        now = time.time()
+        cache = True
+        if (self.hostname_create is None or 
+                now - self.hostname_create >= self.hostname_expire):
+            self.hostname_create = now
+            cache = False
+        self.hostname = address.get_external_address(True, cache=cache)
 
     def start(self):
         """

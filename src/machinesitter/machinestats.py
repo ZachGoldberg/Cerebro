@@ -1,13 +1,11 @@
 import os
-import socket
-import time
-from sittercommon import address
 from tasksitter.stats_collector import StatsCollector
 
 
 class MachineStats(StatsCollector):
 
     def get_live_data(self):
+        self.update_hostname()
         data = {}
         for task_name, task in self.harness.tasks.items():
             running = bool(task.is_running())
@@ -50,6 +48,7 @@ class MachineStats(StatsCollector):
         return data
 
     def get_metadata(self):
+        self.update_hostname()
         data = {}
         data['hostname'] = self.hostname
         data['machinesitter_pid'] = os.getpid()
