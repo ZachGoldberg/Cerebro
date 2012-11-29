@@ -13,29 +13,29 @@ class MachineStats(StatsCollector):
             if not running:
                 data["%s-start" % task.name] = \
                     "<a href='http://%s:%s/start_task?task_name=%s'>start</a>" % (
-                    self.hostname,
+                    self.hostname_external,
                     self.harness.http_monitor.port,
                     task.name)
                 data["%s-remove" % task.name] = \
                     "<a href='http://%s:%s/remove_task?task_name=%s'>remove</a>" % (
-                    self.hostname,
+                    self.hostname_external,
                     self.harness.http_monitor.port,
                     task.name)
             else:
                 data["%s-stop" % task.name] = \
                     "<a href='http://%s:%s/stop_task?task_name=%s'>stop</a>" % (
-                    self.hostname,
+                    self.hostname_external,
                     self.harness.http_monitor.port,
                     task.name)
 
                 data["%s-reboot" % task.name] = \
                     "<a href='http://%s:%s/restart_task?task_name=%s'>restart</a>" % (
-                    self.hostname,
+                    self.hostname_external,
                     self.harness.http_monitor.port,
                     task.name)
 
                 location = "http://%s:%s" % (
-                    self.hostname,
+                    self.hostname_external,
                     task.http_monitoring_port)
                 data["%s-monitoring" % task.name] = "<a href='%s'>%s</a>" % (location,
                                                                            location)
@@ -51,6 +51,7 @@ class MachineStats(StatsCollector):
         self.update_hostname()
         data = {}
         data['hostname'] = self.hostname
+        data['hostname_external'] = self.hostname_external
         data['machinesitter_pid'] = os.getpid()
         data['launch_location'] = self.harness.launch_location
         data['log_location'] = self.harness.log_location

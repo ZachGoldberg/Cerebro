@@ -12,30 +12,6 @@ import urllib2
 __all__ = ['ExternalAddress', 'SimpleAddressLookup']
 
 
-cached_external_address = [None, None]
-
-
-def get_external_address(reverse_lookup=False, timeout=3, cache=True):
-    """
-    Wrap caching around a call to ExternalAddress.lookup().
-
-    @param reverse_lookup Whether or not to resolve IP addresses to
-        hostnames.
-    @param timeout The timeout on API HTTP requests.
-    @param cache Whether or not to use the cached result. A value of False will
-        also reset the cache.
-    @return The external address.
-    """
-    index = 0
-    if reverse_lookup:
-        index = 1
-
-    if not cache or cached_external_address[index] is None:
-        cached_external_address[index] = ExternalAddress.lookup(
-            reverse_lookup, timeout)
-    return cached_external_address[index]
-
-
 class ExternalAddress(object):
     """
     Class used to look up public internet address. This is also the base class

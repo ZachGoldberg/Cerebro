@@ -6,7 +6,7 @@ import os
 import socket
 import threading
 import time
-from sittercommon import address
+from sittercommon.address import ExternalAddress
 
 
 class StatsCollector(object):
@@ -18,6 +18,7 @@ class StatsCollector(object):
 
     def __init__(self, harness):
         self.hostname_create = None
+        self.hostname_external = None
         self.hostname = None
         self.harness = harness
         self.thread = None
@@ -25,12 +26,11 @@ class StatsCollector(object):
 
     def update_hostname(self):
         now = time.time()
-        cache = True
         if (self.hostname_create is None or 
                 now - self.hostname_create >= self.hostname_expire):
             self.hostname_create = now
-            cache = False
-        self.hostname = address.get_external_address(True, cache=cache)
+            self.hostname_external = ExternalAddress.lookup(True)
+            self.hostname = socket.getfqdn()
 
     def start(self):
         """
