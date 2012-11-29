@@ -16,11 +16,8 @@ class MachineStats(StatsCollector):
         cache = True
         if (cls.hostname_create is None or 
                 now - cls.hostname_create >= cls.hostname_expire):
-            print('generating new hostname')
             cls.hostname_create = now
             cache = False
-        else:
-            print('using cached hostname')
         return address.get_external_address(True, cache=cache)
 
     def get_live_data(self):
