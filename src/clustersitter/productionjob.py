@@ -1,5 +1,4 @@
 import logging
-import threading
 import time
 from datetime import datetime, timedelta
 
@@ -88,7 +87,7 @@ class ProductionJob(object):
             'recipe_options': self.recipe_options,
             'persistent': self.persistent,
             'linked_job': self.linked_job,
-            }
+        }
 
     def do_update_deployment(self, state, version=None):
         """
@@ -113,8 +112,8 @@ class ProductionJob(object):
                     self,
                     zone,
                     job_machines,
-                    reboot_task=True
-                    )
+                    reboot_task=True,
+                )
 
                 logger.info(
                     "Starting job filler for code update for %s" % self.name)
@@ -158,7 +157,6 @@ class ProductionJob(object):
         self.linked_job_object = linked_job
         return self.linked_job_object
 
-
     def ensure_on_linked_job(self, state, sitter):
         """
         1. Ensure the linked job exists, if not bail out
@@ -172,8 +170,9 @@ class ProductionJob(object):
         linked_job = self.find_linked_job(state)
 
         if not linked_job:
-            logger.warn("Couldn't find linked job (%s) for %s!" % (
-                    self.linked_job, str(self)))
+            logger.warn(
+                "Couldn't find linked job (%s) for %s!" % (
+                self.linked_job, str(self)))
             # Returning False stops all other jobs this cycle, which
             # we don't want to do.
             return True
@@ -240,8 +239,8 @@ class ProductionJob(object):
             # 1) Assume this job has already been added to state.jobs
             # 2) Want to ensure calculator has run at least once to find out
             #    if this job already exists throughout the cluster
-            logger.info("Waiting for calculator thread to kick in before "
-                         "filling jobs")
+            logger.info(
+                "Waiting for calculator thread to kick in before filling jobs")
             time.sleep(0.5)
 
         # Clear out finished fillers after 5 minutes
@@ -249,9 +248,9 @@ class ProductionJob(object):
             for filler in fillers:
                 now = datetime.now()
                 if (filler.is_done() and
-                    now - filler.end_time > timedelta(minutes=5)):
-                    logger.info("Removing a filler from %s for %s" % (
-                            zone, self.name))
+                        now - filler.end_time > timedelta(minutes=5)):
+                    logger.info(
+                        "Removing a filler from %s for %s" % (zone, self.name))
                     self.fillers[zone].remove(filler)
 
         # If we have a linked job then bypass all the normal logic
@@ -264,7 +263,8 @@ class ProductionJob(object):
         # Step 1a: Check for idle machines and reserve as we find them
         for zone in self.get_shared_fate_zones():
             idle_available = state.get_idle_machines_in_zone(zone)
-            total_required = self.get_num_required_machines_in_zone(zone, state)
+            total_required = self.get_num_required_machines_in_zone(
+                zone, state)
             idle_required = total_required - state.job_fill[self.name][zone]
             zombie_machines = state.get_zombie_machines_in_zone(zone, self)
 
@@ -295,15 +295,14 @@ class ProductionJob(object):
                     required_new_machine_count) +
                 "Currently Spawning: %s " % (currently_spawning) +
                 "idle-available: %s " % (len(idle_available)) +
-                "total_required: %s " % (total_required)
-                )
+                "total_required: %s " % (total_required))
 
             usable_machines = []
             if required_new_machine_count <= 0:
                 # idle_available > idle_required, so use just as many
                 # as we need
-                usable_machines = (idle_available[:idle_required] +
-                    zombie_machines)
+                usable_machines = (
+                    idle_available[:idle_required] + zombie_machines)
             elif required_new_machine_count > 0:
                 # Otherwise take all the available idle ones, and
                 # we'll make more

@@ -198,7 +198,6 @@ class ClusterState(object):
         # The DICT swap must be atomic, or else another
         # thread could get a bad value during calculation.
         self.idle_machines = idle_machines
-        self.zombie_machines = zombie_machines
         logger.debug("Calculated idle machines: %s" % str(self.idle_machines))
 
     def calculate_job_overfill(self):
