@@ -266,6 +266,7 @@ class ProductionJob(object):
             idle_available = state.get_idle_machines_in_zone(zone)
             total_required = self.get_num_required_machines_in_zone(zone, state)
             idle_required = total_required - state.job_fill[self.name][zone]
+            zombie_machines = state.get_zombie_machines_in_zone(zone, self)
 
             current_fillers = self.fillers[zone]
             currently_spawning = 0
@@ -274,7 +275,7 @@ class ProductionJob(object):
 
             self.currently_spawning[zone] = currently_spawning
 
-            idle_required -= currently_spawning
+            idle_required -= currently_spawning + len(zombie_machines)
 
             # !MACHINEASSUMPTION! Ideally we're counting resources here
             # not machines
@@ -301,13 +302,14 @@ class ProductionJob(object):
             if required_new_machine_count <= 0:
                 # idle_available > idle_required, so use just as many
                 # as we need
-                usable_machines = idle_available[:idle_required]
+                usable_machines = (idle_available[:idle_required] +
+                    zombie_machines)
             elif required_new_machine_count > 0:
                 # Otherwise take all the available idle ones, and
                 # we'll make more
-                usable_machines.extend(idle_available)
+                usable_machines.extend(idle_available + zombie_machines)
 
-            if idle_required > 0:
+            if idle_required + len(zombie_machines) > 0:
                 ClusterEventManager.handle(
                     "New JobFiller: %s, %s, %s, %s" % (
                         idle_required, zone, str(self), usable_machines))
