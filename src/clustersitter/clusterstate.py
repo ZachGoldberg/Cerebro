@@ -15,7 +15,6 @@ class ClusterState(object):
         self.jobs = []
         self.job_fill = {}
         self.job_fill_machines = {}
-        self.job_fill_zombies = {}
         self.providers = {}
         self.job_overflow = {}
         self.unreachable_machines = []
@@ -36,7 +35,7 @@ class ClusterState(object):
 
         # Ensure we can find the job's recipe
         if (job.deployment_recipe and
-                not self.sitter._get_recipe_class(job.deployment_recipe)):
+            not self.sitter._get_recipe_class(job.deployment_recipe)):
             logger.warn(
                 "Tried to add a job with an invalid recipe class: %s" % (
                     job.deployment_recipe))
@@ -95,52 +94,23 @@ class ClusterState(object):
         """
         return self.idle_machines[zone]
 
-    def get_zombie_machines_in_zone(self, zone, job):
-        """
-        Get the zombie machines in a zone for a job.
-        """
-        if job.name not in self.job_fill_zombies:
-            return []
-        return self.job_fill_zombies[job.name][zone]
-
-    def get_machine_zombie_tasks(self, machine):
-        """
-        Get the master tasks on a machine. Returns a two-tuple containing a
-        list of the running master tasks and a list of the stopped master
-        tasks.
-        """
-        zombies = []
-        tasks = machine.get_tasks()
-        running = {task['name']: task for task in machine.get_running_tasks()}
-        for job in self.jobs:
-            if (job.name in tasks and job.name not in running and
-                    job.linked_job is None):
-                zombies.append(running[job.name])
-        return zombies
-
     def calculate_job_fill(self):
-        """
-        Calculate a map of how jobs are allocated to machines.
-        """
         # If we find out that a job has TOO MANY tasks,
         # then we should decomission some machines or make
         # them idle
 
         job_fill = {}
         job_fill_machines = {}
-        job_fill_zombies = {}
         #!MACHINEASSUMPTION! Should be cpu_count not machine_count
         # Fill out a mapping of [job][task] -> machine_count
         logger.debug("Calculating job fill for jobs: %s" % self.jobs)
         for job in self.jobs:
             job_fill[job.name] = {}
             job_fill_machines[job.name] = {}
-            job_fill_zombies[job.name] = {}
 
             for zone in job.get_shared_fate_zones():
                 job_fill[job.name][zone] = 0
                 job_fill_machines[job.name][zone] = []
-                job_fill_zombies[job.name][zone] = []
 
         # Actually do the counting
         for zone, machines in self.machines_by_zone.items():
@@ -154,13 +124,8 @@ class ClusterState(object):
                     job_fill[task['name']][zone] += 1
                     job_fill_machines[task['name']][zone].append(machine)
 
-                for task in self.get_machine_zombie_tasks(machine):
-                    if task['name'] in job_fill:
-                        job_fill_zombies[task['name']][zone].append(machine)
-
         self.job_fill = job_fill
         self.job_fill_machines = job_fill_machines
-        self.job_fill_zombies = job_fill_zombies
         logger.debug("Calculated job fill: %s" % self.job_fill)
 
     def calculate_job_refill(self):
@@ -177,9 +142,6 @@ class ClusterState(object):
         logger.debug("Calculated job refill: %s" % self.job_fill)
 
     def calculate_idle_machines(self):
-        """
-        Calculate idle machines.
-        """
         idle_machines = {}
         for zone in self.zones:
             idle_machines[zone] = []
@@ -198,7 +160,6 @@ class ClusterState(object):
         # The DICT swap must be atomic, or else another
         # thread could get a bad value during calculation.
         self.idle_machines = idle_machines
-        self.zombie_machines = zombie_machines
         logger.debug("Calculated idle machines: %s" % str(self.idle_machines))
 
     def calculate_job_overfill(self):

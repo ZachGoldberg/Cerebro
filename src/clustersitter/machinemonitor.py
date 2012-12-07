@@ -10,7 +10,7 @@ class MachineMonitor:
         self.clustersitter = parent
         self.number = number
         # Need to copy the array to deref it so its not shared
-        # among threads
+        # amoung threads
         self.monitored_machines = [m for m in monitored_machines]
         self.add_queue = []
         self.pull_failures = {}
