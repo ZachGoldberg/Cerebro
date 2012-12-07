@@ -65,6 +65,16 @@ class JobFillerState(StateMachine):
 
 
 class JobFiller(object):
+    """
+    Responsible for deploying jobs to idle machines in a zone. Will:
+     - Start new machines to ensure machine avilability
+     - Deploy cerebro to idle machine(s)
+     - Add idle machine(s) to monitoring
+     - Deploy new job code to idle machine(s)
+     - Ensure hostnames propogated to DNS for new machine(s)
+     - Reboot/reload linked jobs on master job changes
+    """
+
     def __init__(self, num_cores, job, zone, idle_machines=None,
                  raw_machines=None, reboot_task=False, post_callback=None,
                  fail_on_error=False):

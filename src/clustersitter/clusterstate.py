@@ -1,11 +1,32 @@
 import json
 import logging
+import threading
 import time
+
+from eventmanager import ClusterEventManager
+from jobfiller import JobFiller
+from productionjob import ProductionJob
 
 logger = logging.getLogger(__name__)
 
 
+def call_safely(job, name, *args, **kwargs):
+    """
+    Call a function safely. Any errors raised by the function are caught
+    and logged, allowing program execution to continue. Used primarily to
+    wrap state calculations and processors that may fail due to concurency
+    restrictions.
+    """
+    try:
+        job(*args, **kwargs)
+    except:
+        import traceback
+        logger.warn("Crash in %s" % name)
+        logger.warn(traceback.format_exc())
+
+
 class ClusterState(object):
+
     def __init__(self, parent):
         # list of tuples (MachineMonitor, ThreadObj)
         self.monitors = []
@@ -15,6 +36,7 @@ class ClusterState(object):
         self.jobs = []
         self.job_fill = {}
         self.job_fill_machines = {}
+        self.awol_tasks = []
         self.providers = {}
         self.job_overflow = {}
         self.unreachable_machines = []
@@ -22,9 +44,10 @@ class ClusterState(object):
         self.idle_machines = []
         self.sitter = parent
         self.job_file = "%s/jobs.json" % self.sitter.log_location
-        self.repair_jobs = []
+        self.repair_jobs = {}
         self.max_idle_per_zone = -1
         self.loggers = []
+        self.process_thread = None
 
     def add_job(self, job):
         logger.info("Add Job: %s" % job.name)
@@ -94,6 +117,29 @@ class ClusterState(object):
         """
         return self.idle_machines[zone]
 
+    def get_machine_awol_tasks(self, machine):
+        """
+        Get a list of the stopped master tasks on a machine.
+        """
+        awol = []
+        tasks = machine.get_tasks()
+        running = {task['name']: task for task in machine.get_running_tasks()}
+        for job in self.jobs:
+            if (job.name in tasks and job.name not in running and
+                    job.linked_job is None):
+                awol.append(running[job.name])
+        return awol
+
+    def calculate_awol_tasks(self):
+        """
+        Fill the AWOL tasks list.
+        """
+        awol_tasks = []
+        for zone, machines in self.machines_by_zone.items():
+            for machine in machines:
+                for task in self.get_awol_tasks(machine):
+                    awol_tasks.append(zone, machine, task)
+
     def calculate_job_fill(self):
         # If we find out that a job has TOO MANY tasks,
         # then we should decomission some machines or make
@@ -128,7 +174,7 @@ class ClusterState(object):
         self.job_fill_machines = job_fill_machines
         logger.debug("Calculated job fill: %s" % self.job_fill)
 
-    def calculate_job_refill(self):
+    def process_job_refill(self):
         logger.debug("Calculating job refill for jobs: %s" % self.jobs)
         # Now see if we need to add any new machines to any jobs
         for job in self.jobs:
@@ -142,6 +188,10 @@ class ClusterState(object):
         logger.debug("Calculated job refill: %s" % self.job_fill)
 
     def calculate_idle_machines(self):
+        """
+        Calculate idle machines. Idle machines are classified as not having any
+        tasks running on them.
+        """
         idle_machines = {}
         for zone in self.zones:
             idle_machines[zone] = []
@@ -162,9 +212,92 @@ class ClusterState(object):
         self.idle_machines = idle_machines
         logger.debug("Calculated idle machines: %s" % str(self.idle_machines))
 
+    def calculate_unreachable_machines(self):
+        """
+        Find unreachable machines.
+        """
+        for machine, monitor in self.unreachable_machines:
+            # Check if we've aready launched a redeploy job to
+            # this machine, if so skip it
+            found = False
+            jobs = []
+            for zone_jobs in self.repair_jobs.values():
+                jobs.extend(zone_jobs)
+            for job in jobs:
+                for fillers in job.fillers.values():
+                    for filler in fillers:
+                        for jobmachine in filler.machines:
+                            if machine == jobmachine:
+                                found = True
+                                break
+            if found:
+                continue
+
+            ClusterEventManager.handle("Attempting to redeploy to %s" %
+                                       machine)
+
+            # Build a 'fake' job for the doctor to run
+            zone = machine.config.shared_fate_zone
+            job = ProductionJob(
+                "",
+                {'name': 'Machine Doctor Redeployer'},
+                {
+                    machine.config.shared_fate_zone: {
+                        'mem': machine.config.mem,
+                        'cpu': machine.config.cpus
+                    }
+                }, None)
+
+            if zone not in self.repair_jobs:
+                self.repair_jobs[zone] = {}
+            job.sitter = self.sitter
+            self.repair_jobs[zone][job.name] = (job, 'new')
+
+            def post_filler(success):
+                if success:
+                    logger.info("Successful redeploy of %s!" % machine)
+                else:
+                    logger.info(
+                        "Redeploy failed! Decomissioning %s" % machine)
+
+                    # Decomission time!
+                    ClusterEventManager.handle(
+                        "Decomissioning %s" % machine)
+
+                    self.sitter.decomission_machine(machine)
+
+                # Can happen if machine is decomissioned by
+                # somebody else while we were redeploying.
+                if (machine, monitor) in \
+                        self.unreachable_machines:
+                    self.unreachable_machines.remove(
+                        (machine, monitor))
+
+                del self.repair_jobs[zone][job.name]
+
+            filler = JobFiller(1, job, machine.config.shared_fate_zone,
+                               raw_machines=[machine],
+                               post_callback=post_filler,
+                               fail_on_error=True)
+
+            job.fillers[machine.config.shared_fate_zone] = [filler]
+
+            filler.start()
+
+    def process_job_repairs(self):
+        """
+        Attempt to repair jobs on unreachable machines.
+        """
+        repair_jobs = dict(self.repair_jobs)
+        for zone, zone_jobs in repair_jobs.iteritems():
+            for name, job in zone_jobs.iteritems():
+                if job[1] == 'new':
+                    self.repair_jobs[zone][name] = (job[0], 'running')
+                    logger.debug("Repair job: %s/%s" % (zone, name))
+                    for filler in job.fillers[zone]:
+                        filler.start()
+
     def calculate_job_overfill(self):
-        # TODO we really should just do the calculating here
-        # and let the machinedoctor spin down the task
         job_overflow = {}
         for job in self.jobs:
             zone_overflow = job.get_zone_overflow(self)
@@ -173,26 +306,87 @@ class ClusterState(object):
         self.job_overflow = job_overflow
         logger.debug("Calculated job overflow: %s" % self.job_overflow)
 
-    def _calculate(self):
-            def run_job(job, name):
-                # Since all state is accessed and shared there
-                # are all sorts of race conditions if a calculator
-                # is running and a job is added or removed.
-                # If one calculator run crashes because of this
-                # thats OK.
-                try:
-                    job()
-                except:
-                    import traceback
-                    logger.warn("Crash in %s" % name)
-                    logger.warn(traceback.format_exc())
+    def process_job_overflow(self):
+        """
+        Turn off any overflowed jobs
+        """
+        for jobname, zone_overflow in self.job_overflow.items():
+            for zone, count in zone_overflow.items():
+                if count <= 0:
+                    continue
 
-            run_job(self.calculate_idle_machines, "Calculate Idle Machines")
-            run_job(self.calculate_job_fill, "Calculate Job Fill")
-            run_job(self.calculate_job_refill, "Calculate Job ReFill")
-            run_job(self.calculate_job_overfill, "Calculate Job OverFill")
+                ClusterEventManager.handle(
+                    "Detected job overflow -- " +
+                    "Job: %s, Zone: %s, Count: %s" % (jobname,
+                                                      zone,
+                                                      count))
+
+                decomissioned = 0
+                for machine in self.machines_by_zone[zone]:
+                    if decomissioned == count:
+                        break
+
+                    for task in machine.get_running_tasks():
+                        if task['name'] == jobname:
+                            while jobname in [
+                                    t['name'] for t
+                                    in machine.get_running_tasks()]:
+                                ClusterEventManager.handle(
+                                    "Stopping %s on %s" % (
+                                        jobname,
+                                        str(machine)))
+
+                                machine.datamanager.stop_task(jobname)
+                                machine.datamanager.reload()
+
+                                decomissioned += 1
+                                break
+
+    def process_idle_limit(self):
+        """
+        Enforce idle machine limits
+        """
+        if self.max_idle_per_zone != -1:
+            logger.info("Enforcing an idle limit")
+            idle_limit = self.max_idle_per_zone
+            self.max_idle_per_zone = -1
+            for zone, machines in self.idle_machines.items():
+                if len(machines) > idle_limit:
+                    decomission_targets = [m for m in machines[idle_limit:]]
+                    for machine in decomission_targets:
+                        self.sitter.decomission_machine(machine)
+
+    def _calculate(self):
+        """
+        Perform all state calculations.
+        """
+        call_safely(self.calculate_job_overfill, "Calculate Job OverFill")
+        call_safely(self.calculate_awol_tasks, "Calculate AWOL Tasks")
+        call_safely(self.calculate_idle_machines, "Calculate Idle Machines")
+        call_safely(self.calculate_job_fill, "Calculate Job Fill")
+        call_safely(
+            self.calculate_unreachable_machines,
+            "Calculate Unreachable Machines")
+
+    def _process(self):
+        """
+        Asynchronously perform processing as a result ofprevious state
+        calculations. Will not be performed more than once simultaneously.
+        """
+        def run():
+            call_safely(
+                self.process_job_refill,
+                "Process Job ReFill State Changes")
+            call_safely(self.process_job_repairs, "Process Job Repairs")
+            call_safely(self.process_job_overflow, "Process Job Overflow")
+        if self.process_thread is None or not self.process_thread.is_alive():
+            self.process_thread = threading.thread(
+                target=run,
+                name="StateProcessor")
+            self.process_thread.start()
 
     def _calculator(self):
         while True:
             self._calculate()
+            self._process()
             time.sleep(self.sitter.stats_poll_interval)

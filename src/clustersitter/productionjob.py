@@ -274,7 +274,7 @@ class ProductionJob(object):
 
             self.currently_spawning[zone] = currently_spawning
 
-            idle_required -= currently_spawning
+            idle_required -= currently_spawning + len(awol_machines)
 
             # !MACHINEASSUMPTION! Ideally we're counting resources here
             # not machines
@@ -301,6 +301,7 @@ class ProductionJob(object):
             if required_new_machine_count <= 0:
                 # idle_available > idle_required, so use just as many
                 # as we need
+<<<<<<< Updated upstream
                 usable_machines = idle_available[:idle_required]
             elif required_new_machine_count > 0:
                 # Otherwise take all the available idle ones, and

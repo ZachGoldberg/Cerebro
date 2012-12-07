@@ -17,7 +17,7 @@ import process
 class ProcessHarness(object):
     """
     An object which manages the lifecycle of a single child process, killing it
-    when it violates constraitns and rebooting it as necessary
+    when it violates constraints and rebooting it as necessary
     """
     def __init__(self, command, constraints, restart=False,
                  max_restarts=-1, poll_interval=.1,
