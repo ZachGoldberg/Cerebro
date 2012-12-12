@@ -3,10 +3,6 @@ import threading
 import time
 from datetime import datetime
 
-from eventmanager import ClusterEventManager
-from jobfiller import JobFiller
-from productionjob import ProductionJob
-
 logger = logging.getLogger(__name__)
 
 
@@ -31,7 +27,7 @@ class MachineDoctor(object):
 
     def start(self):
         self.thread = threading.Thread(target=self._run,
-                                           name="MachineDoctor")
+                                       name="MachineDoctor")
         self.thread.start()
 
     def _run(self):

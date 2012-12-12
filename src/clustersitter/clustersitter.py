@@ -18,11 +18,9 @@ import productionjob
 import providers.aws
 import sittercommon.machinedata
 
-
 from clusterstate import ClusterState
 from clusterstats import ClusterStats
 from eventmanager import ClusterEventManager
-from machinedoctor import MachineDoctor
 from machinemonitor import MachineMonitor
 from monitoredmachine import MonitoredMachine
 from productionjob import ProductionJob
@@ -60,6 +58,9 @@ class ClusterSitter(object):
         self.launch_location = launch_location
         self.launch_time = datetime.now()
         self.start_state = "Not Started"
+        
+        # In seconds
+        self.stats_poll_interval = 5
 
         self.state = ClusterState(self)
 
@@ -78,9 +79,6 @@ class ClusterSitter(object):
             clz = self._get_recipe_class(module, find_func=clsname)
             self.dns_provider = getattr(clz, clsname)(
                 dns_provider_config)
-
-        # In seconds
-        self.stats_poll_interval = 5
 
         self.stats = ClusterStats(self)
         self.http_monitor = http_monitor.HTTPMonitor(self.stats,
@@ -331,21 +329,13 @@ class ClusterSitter(object):
                     self.next_port = self.orig_starting_port
         return works
 
-    def remove_machine(self, machine):
-        self.state.machines_by_zone[
-            machine.config.shared_fate_zone].remove(machine)
-
-        for monitor in self.state.monitors:
-            monitor[0].remove_machine(machine)
-
     def decomission_machine(self, machine):
-        self.remove_machine(machine)
-        if not machine.config.shared_fate_zone in self.state.provider_by_zone:
+        if not self.state.has_provider(machine.config.shared_fate_zone):
             logger.warn(
                 "No provider found for %s?" % machine.config.shared_fate_zone)
             return
 
-        provider = self.state.provider_by_zone[machine.config.shared_fate_zone]
+        provider = self.state.get_provider(machine.config.shared_fate_zone)
 
         ClusterEventManager.handle(
             "Decomissioning %s" % str(machine))
@@ -394,15 +384,7 @@ class ClusterSitter(object):
             if not isinstance(mm, MonitoredMachine):
                 mm = MonitoredMachine(m)
 
-            if not mm.config.shared_fate_zone in self.state.machines_by_zone:
-                self.state.machines_by_zone[mm.config.shared_fate_zone] = []
-
-            # We can re-add machines after they temporarily disappear
-            if mm not in self.state.machines_by_zone[
-                mm.config.shared_fate_zone]:
-                self.state.machines_by_zone[
-                    mm.config.shared_fate_zone].append(mm)
-
+            self.state.add_machine(mm.config.shared_fate_zone, mm)
             monitored_machines.append(mm)
 
         # Spread the machines out evenly across threads
@@ -482,15 +464,14 @@ class ClusterSitter(object):
 
         for provider in self.state.providers.values():
             newzones = provider.get_all_shared_fate_zones()
-            self.state.zones.extend(newzones)
             for zone in newzones:
-                self.state.provider_by_zone[zone] = provider
+                self.state.set_provider(zone, provider)
 
             # Note: add_machines() has to be called AFTER the monitors
             # are initialized.
             self.add_machines(provider.get_machine_list())
 
-        logger.info("Zone List: %s" % self.state.zones)
+        logger.info("Zone List: %s" % self.state.get_zones())
 
         # Kickoff all the threads at once
         if self.daemon:
@@ -502,14 +483,7 @@ class ClusterSitter(object):
             monitor[1].start()
 
         logger.info("Starting metadata calculator")
-        self.calculator = threading.Thread(target=self.state._calculator,
-                                           name="Calculator")
-        self.calculator.start()
-
-        logger.info("Starting machine recovery thread")
-        self.machine_doctor = MachineDoctor(self)
-        self.machine_doctor.start()
-
+        self.state.start()
         self.start_state = "Started"
 
     def _register_sitter_failure(self, monitored_machine, monitor):

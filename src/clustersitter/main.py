@@ -78,7 +78,7 @@ def main(sys_args=None):
     logging.getLogger().setLevel(logging.INFO)
     logging.basicConfig(
         format='%(asctime)s %(name)s:%(levelname)s %(message)s')
-    logging.getLogger().handlers[0].setLevel(logging.ERROR)
+    logging.getLogger().handlers[0].setLevel(logging.DEBUG)
 
     sitter = ClusterSitter(daemon=args.daemon,
                            provider_config=settings.provider_config,
@@ -94,7 +94,7 @@ def main(sys_args=None):
         localhost = MachineConfig("localhost", "localhost",
                                   1, 1)
 
-        sitter.state.zones.append("localhost")
+        sitter.state.set_provider("localhost", None)
         sitter.add_machines([localhost], False)
 
     # wait forever

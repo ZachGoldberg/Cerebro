@@ -1,8 +1,7 @@
 import logging
-import threading
 import time
-from datetime import datetime, timedelta
 
+from datetime import datetime, timedelta
 from eventmanager import ClusterEventManager
 from jobfiller import JobFiller
 
@@ -99,7 +98,8 @@ class ProductionJob(object):
         """
         self.recipe_options['version'] = version
 
-        for zone, machines in state.machines_by_zone.items():
+        machines_by_zone = state.get_machines()
+        for zone, machines in machines_by_zone.items():
             job_machines = []
             for machine in machines:
                 tasks = machine.get_running_tasks()
@@ -114,7 +114,7 @@ class ProductionJob(object):
                     zone,
                     job_machines,
                     reboot_task=True
-                    )
+                )
 
                 logger.info(
                     "Starting job filler for code update for %s" % self.name)
@@ -124,22 +124,9 @@ class ProductionJob(object):
 
                 self.fillers[zone].append(filler)
 
-    def get_zone_overflow(self, state):
-        zone_overflow = {}
-
-        for zone in self.get_shared_fate_zones():
-            zone_overflow[zone] = 0
-            required = self.get_num_required_machines_in_zone(zone, state)
-            active = state.job_fill.get(self.name, {}).get(zone, 0)
-
-            if active > required:
-                zone_overflow[zone] += (active - required)
-
-        return zone_overflow
-
     def find_dependent_jobs(self):
         dependent_jobs = []
-        for job in self.sitter.state.jobs:
+        for job in self.sitter.state.jobs.values():
             if job.linked_job == self.name:
                 dependent_jobs.append(job)
 
@@ -150,7 +137,7 @@ class ProductionJob(object):
             return self.linked_job_object
 
         linked_job = None
-        for job in state.jobs:
+        for job in state.jobs.values():
             if job.name == self.linked_job:
                 linked_job = job
                 break
@@ -178,9 +165,10 @@ class ProductionJob(object):
             # we don't want to do.
             return True
 
+        job_fill_machines = state.get_job_machines()
         for zone in linked_job.get_shared_fate_zones():
             machines_to_fill = []
-            machines = state.job_fill_machines[linked_job.name][zone]
+            machines = job_fill_machines.get(zone, [])
 
             for machine in machines:
                 task_names = [
@@ -263,7 +251,7 @@ class ProductionJob(object):
         # Step 1: Ensure we have enough machines in each SFZ
         # Step 1a: Check for idle machines and reserve as we find them
         for zone in self.get_shared_fate_zones():
-            idle_available = state.get_idle_machines_in_zone(zone)
+            idle_available = state.get_idle_machines(zone)
             total_required = self.get_num_required_machines_in_zone(zone, state)
             idle_required = total_required - state.job_fill[self.name][zone]
 
@@ -274,7 +262,7 @@ class ProductionJob(object):
 
             self.currently_spawning[zone] = currently_spawning
 
-            idle_required -= currently_spawning + len(awol_machines)
+            idle_required -= currently_spawning
 
             # !MACHINEASSUMPTION! Ideally we're counting resources here
             # not machines
@@ -301,7 +289,6 @@ class ProductionJob(object):
             if required_new_machine_count <= 0:
                 # idle_available > idle_required, so use just as many
                 # as we need
-<<<<<<< Updated upstream
                 usable_machines = idle_available[:idle_required]
             elif required_new_machine_count > 0:
                 # Otherwise take all the available idle ones, and

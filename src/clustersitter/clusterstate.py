@@ -1,392 +1,487 @@
-import json
-import logging
-import threading
-import time
 
-from eventmanager import ClusterEventManager
-from jobfiller import JobFiller
-from productionjob import ProductionJob
+import logging
+import time
+from actions import (
+    DecomissionMachineAction, DeployJobAction, UndeployJobAction,
+    StartTaskAction, StopTaskAction)
+from managedstate import ManagedState, PendingMachine
+from threading import Thread
 
 logger = logging.getLogger(__name__)
 
 
-def call_safely(job, name, *args, **kwargs):
-    """
-    Call a function safely. Any errors raised by the function are caught
-    and logged, allowing program execution to continue. Used primarily to
-    wrap state calculations and processors that may fail due to concurency
-    restrictions.
-    """
-    try:
-        job(*args, **kwargs)
-    except:
-        import traceback
-        logger.warn("Crash in %s" % name)
-        logger.warn(traceback.format_exc())
-
-
 class ClusterState(object):
+    """
+    Cluster state. Manages the state of the cluster and generates actions as a
+    result of state changes.
+    """
 
-    def __init__(self, parent):
-        # list of tuples (MachineMonitor, ThreadObj)
+    def __init__(self, sitter):
+        """
+        Initialize an empty state object.
+
+        @param sitter The cluster sitter object.
+        """
+        self.thread = None
+        self.running = False
+        self.sleep = sitter.stats_poll_interval
+        self.sitter = sitter
         self.monitors = []
-        self.machines_by_zone = {}
-        self.zones = []
-        self.provider_by_zone = {}
-        self.jobs = []
-        self.job_fill = {}
-        self.job_fill_machines = {}
-        self.awol_tasks = []
-        self.providers = {}
-        self.job_overflow = {}
-        self.unreachable_machines = []
-        self.machine_spawn_threads = []
-        self.idle_machines = []
-        self.sitter = parent
-        self.job_file = "%s/jobs.json" % self.sitter.log_location
-        self.repair_jobs = {}
-        self.max_idle_per_zone = -1
         self.loggers = []
-        self.process_thread = None
+        self.providers = {}
+        self.jobs = {}
+        self.desired = ManagedState()
+        self.current = ManagedState()
+        self.max_idle_per_zone = -1
+        self.pending_actions = []
+        self.running_actions = []
+
+    def get_provider(self, zone):
+        """
+        Get the provider for a zone.
+
+        @param zone The name of the zone.
+        """
+        return self.providers.get(zone)
+
+    def set_provider(self, zone, provider):
+        """
+        Set the provider for a zone.
+
+        @param zone The name of the zone.
+        @param provider The provider for the zone.
+        """
+        self.providers[zone] = provider
+
+    def has_provider(self, zone):
+        """
+        Check if the zone has a provider.
+
+        @param zone The name of the zone.
+        """
+        return zone in self.providers
+
+    def get_machines(self, zones=None):
+        """
+        Get machines. Machines are returned in a dict categorized by zone.
+
+        @param zones Only return machines in these zones.
+        @return A dictionary of machines categorized by zone. Each key is the
+            zone name. The value is a list of machines by zone.
+        """
+        if isinstance(zones, basestring):
+            zones = [zones]
+        machines = {}
+
+        def map_machine(state, machine):
+            if zones is None or machine['zone'] in zones:
+                if machine['zone'] not in machines:
+                    machines[machine['zone']] = []
+                machines[machine['zone']].append(machine['machine'])
+
+        self.current.map_machines(map_machine)
+        return machines
+
+    def get_idle_machines(self, zones=None):
+        """
+        Get idle machines.
+
+        @param zones Only return machines in these zones.
+        @return A dictionary of zone/idle machine mappings. The keys are the
+            zone names and the values are a list of idle machines in that zone.
+        """
+        if isinstance(zones, basestring):
+            zones = [zones]
+        machines = {}
+
+        def map_idle_machine(state, machine):
+            if (zones is None or machine['zone'] in zones and
+                    state.is_idle_machine(machine)):
+                if machine['zone'] not in machines:
+                    machines[machine['zone']] = []
+                machines[machine['zone']].append(machine['machine'])
+
+        self.current.map_machines(map_idle_machine)
+        return machines
+
+    def get_job_machines(self, job, zones=None):
+        """
+        Get the machines running a job.
+
+        @param job The job to find machines for.
+        @return A list of machines running the job.
+        """
+        if isinstance(job, basestring):
+            job = self.jobs.get(job)
+        if isinstance(zones, basestring):
+            zones = [zones]
+        machines = {}
+
+        if job is None:
+            return []
+
+        def map_job_machine(state, machine, task):
+            if (zones is None or machine['zone'] in zones and
+                    job == task['job']):
+                if machine['zone'] not in machines:
+                    machines[machine['zone']] = []
+                machines[machine['zone']].append(machine['machine'])
+
+        self.current.map_tasks(map_job_machine)
+        return machines
 
     def add_job(self, job):
-        logger.info("Add Job: %s" % job.name)
-        for zone in job.get_shared_fate_zones():
-            if not zone in self.zones:
-                logger.warn("Tried to add a job with an unknown SFZ %s" % zone)
-                return False
-
-        # Ensure we can find the job's recipe
-        if (job.deployment_recipe and
-            not self.sitter._get_recipe_class(job.deployment_recipe)):
-            logger.warn(
-                "Tried to add a job with an invalid recipe class: %s" % (
-                    job.deployment_recipe))
-
-            return False
-
-        # Ensure we don't already have a job with this name,
-        # if we do, replace it
-        found_existing_job = False
-        for existing_job in self.jobs:
-            if existing_job.name == job.name:
-                found_existing_job = True
-                # Rather than wholesale replace the object we will
-                # simply update the 'configured' fields, this way
-                # existing state aka job fillers are not lost
-                fields = ['dns_basename',
-                          'task_configuration',
-                          'deployment_layout',
-                          'deployment_recipe',
-                          'recipe_options',
-                          'persistent',
-                          'linked_job']
-                for field in fields:
-                    setattr(existing_job, field, getattr(job, field))
-
-        if not found_existing_job:
-            self.jobs.append(job)
-
-        self.persist_jobs()
-        return True
-
-    def remove_job(self, jobname):
-        removed = False
-        for job in self.jobs:
-            if job.name == jobname:
-                self.jobs.remove(job)
-                removed = True
-
-        self.persist_jobs()
-        return removed
-
-    def persist_jobs(self):
         """
-        Naively just rewrite the whole "job db"
+        Add a job to the cluster. The job is allocated to idle machines.
+        New machines are added to the state if necessary. If a job exists with
+        the same name it will be replaced. Exact jobs will not be replaced.
+
+        @param job The job to add to the cluster. The job is configured with
+            the required zones and number of machines.
+        @return True if the job was added. False if it was not.
+        @raise ClusterStateError If a child job is added before its parent.
         """
-        jobs_to_write = [j for j in self.jobs if j.persistent]
-        f = open(self.job_file, 'w')
-        f.write(json.dumps([j.to_dict() for j in jobs_to_write]))
-        f.close()
+        if job.name in self.jobs:
+            if job == self.jobs[job.name]:
+                return
+            self.remove_job(self.jobs[job.name])
 
-    def get_idle_machines_in_zone(self, zone):
+        zones = job.get_shared_fate_zones()
+        idle_machine_zones = self.get_idle_machines(zones=zones)
+        for zone in zones:
+            num_required_machines = job.get_num_required_machines_in_zone(zone)
+            idle_machines = idle_machine_zones.get(
+                zone, [])[:num_required_machines]
+            num_pending_machines = num_required_machines - len(idle_machines)
+            for machine in idle_machines:
+                self.desired.add_task(machine, job)
+            for n in range(num_pending_machines):
+                machine = self.desired.add_machine(zone)
+                self.desires.add_task(machine, job)
+
+    def remove_job(self, job):
         """
-        @ TODO Do some sort of calculation -- if we have too many idle
-        machines we should decomission them.  Define a configurable
-        threshold somewhere.
+        Remove a job from the cluster. Child jobs will be removed as well.
+
+        @param job The job to remove.
         """
-        return self.idle_machines[zone]
+        if isinstance(job, basestring):
+            job = self.jobs.get(job)
+        if job is not None:
+            jobs = [job]
+            jobs.extend(job.find_dependent_jobs())
+            while jobs:
+                self.desired.remove_tasks(jobs.pop(0))
 
-    def get_machine_awol_tasks(self, machine):
+    def get_zones(self):
         """
-        Get a list of the stopped master tasks on a machine.
+        Get a list of active zones.
+        
+        @return A list of active zone names.
         """
-        awol = []
-        tasks = machine.get_tasks()
-        running = {task['name']: task for task in machine.get_running_tasks()}
-        for job in self.jobs:
-            if (job.name in tasks and job.name not in running and
-                    job.linked_job is None):
-                awol.append(running[job.name])
-        return awol
+        return self.providers.keys()
 
-    def calculate_awol_tasks(self):
+    def add_machine(self, zone, machine):
         """
-        Fill the AWOL tasks list.
+        Add a machine to the cluster.
+
+        @param machine The machine to add to the cluster.
         """
-        awol_tasks = []
-        for zone, machines in self.machines_by_zone.items():
-            for machine in machines:
-                for task in self.get_awol_tasks(machine):
-                    awol_tasks.append(zone, machine, task)
+        self.desired.add_machine(zone, machine)
+        self.current.add_machine(zone, machine)
 
-    def calculate_job_fill(self):
-        # If we find out that a job has TOO MANY tasks,
-        # then we should decomission some machines or make
-        # them idle
-
-        job_fill = {}
-        job_fill_machines = {}
-        #!MACHINEASSUMPTION! Should be cpu_count not machine_count
-        # Fill out a mapping of [job][task] -> machine_count
-        logger.debug("Calculating job fill for jobs: %s" % self.jobs)
-        for job in self.jobs:
-            job_fill[job.name] = {}
-            job_fill_machines[job.name] = {}
-
-            for zone in job.get_shared_fate_zones():
-                job_fill[job.name][zone] = 0
-                job_fill_machines[job.name][zone] = []
-
-        # Actually do the counting
-        for zone, machines in self.machines_by_zone.items():
-            for machine in machines:
-                for task in machine.get_running_tasks():
-                    # Don't add tasks from machines to the job_fill
-                    # dict unless we already know about the job
-                    if not task['name'] in job_fill:
-                        continue
-
-                    job_fill[task['name']][zone] += 1
-                    job_fill_machines[task['name']][zone].append(machine)
-
-        self.job_fill = job_fill
-        self.job_fill_machines = job_fill_machines
-        logger.debug("Calculated job fill: %s" % self.job_fill)
-
-    def process_job_refill(self):
-        logger.debug("Calculating job refill for jobs: %s" % self.jobs)
-        # Now see if we need to add any new machines to any jobs
-        for job in self.jobs:
-            if job.name in self.job_fill:
-                if not job.refill(self, self.sitter):
-                    # refill returning false means
-                    # we need to wait for another calculation run before
-                    # we can keep working.
-                    break
-
-        logger.debug("Calculated job refill: %s" % self.job_fill)
-
-    def calculate_idle_machines(self):
+    def remove_machine(self, machine):
         """
-        Calculate idle machines. Idle machines are classified as not having any
-        tasks running on them.
+        Remove a machine from the cluster.
+
+        @param machine The machine to remove.
         """
-        idle_machines = {}
-        for zone in self.zones:
-            idle_machines[zone] = []
-            for machine in self.machines_by_zone.get(zone, []):
-                tasks = machine.get_running_tasks()
+        self.desired.remove_machine(machine)
+        for monitor in self.monitors:
+            monitor[0].remove_machine(machine)
 
-                #!MACHINEASSUMPTION! Here we assume no tasks == idle,
-                # not sum(jobs.cpu) < machine.cpu etc.
-                idle = bool(not tasks)
-                idle = idle and machine.has_loaded_data()
-                idle = idle and not machine.is_in_deployment()
-
-                if idle:
-                    idle_machines[zone].append(machine)
-
-        # The DICT swap must be atomic, or else another
-        # thread could get a bad value during calculation.
-        self.idle_machines = idle_machines
-        logger.debug("Calculated idle machines: %s" % str(self.idle_machines))
-
-    def calculate_unreachable_machines(self):
+    def start_task(self, machine, task):
         """
-        Find unreachable machines.
+        Start a task on a machine.
+
+        @param machine The machine on which the task is running.
+        @param task The name of the task to start.
         """
-        for machine, monitor in self.unreachable_machines:
-            # Check if we've aready launched a redeploy job to
-            # this machine, if so skip it
-            found = False
-            jobs = []
-            for zone_jobs in self.repair_jobs.values():
-                jobs.extend(zone_jobs)
+        if task in self.jobs:
+            self.desired.update_task(
+                machine, self.jobs[task], ManagedState.Running)
+
+    def stop_task(self, machine, task):
+        """
+        Stop a task on a machine.
+
+        @param machine The machine on which the task is running.
+        @param task The name of the task to stop.
+        """
+        if task in self.jobs:
+            self.desired.update_task(
+                machine, self.jobs[task], ManagedState.Stopped)
+
+    def restart_task(self, machine, task):
+        """
+        Restart a task on a machine.
+
+        @param machine The machine on which the task is running.
+        @param task The name of the task to restart.
+        """
+        if task in self.jobs:
+            self.desired.update_task(
+                machine, self.jobs[task], ManagedState.Restart)
+
+    def pause_machine(self, machine):
+        """
+        Pause all maintenance on a machine. State changes will not be
+        propogated to the machine while it is pause.
+
+        @param machine The machine to pause.
+        @return True if the machine was paused, False if it was not (machine
+            does not exist).
+        """
+        self.desired.update_machine(machine, ManagedState.Paused)
+
+    def move_task(self, from_machine, to_machine, task):
+        """
+        Move a task from one machine to another. Will also move child tasks.
+
+        @param from_machine The machine currently running the task.
+        @param to_machine The machine that should be running the task.
+        @param task The task to move.
+        """
+        if task in self.jobs:
+            jobs = [self.jobs[task]]
+            jobs.extend(self.jobs[task].find_dependent_jobs())
             for job in jobs:
-                for fillers in job.fillers.values():
-                    for filler in fillers:
-                        for jobmachine in filler.machines:
-                            if machine == jobmachine:
-                                found = True
-                                break
-            if found:
-                continue
+                self.desired.move(from_machine, to_machine, job)
 
-            ClusterEventManager.handle("Attempting to redeploy to %s" %
-                                       machine)
-
-            # Build a 'fake' job for the doctor to run
-            zone = machine.config.shared_fate_zone
-            job = ProductionJob(
-                "",
-                {'name': 'Machine Doctor Redeployer'},
-                {
-                    machine.config.shared_fate_zone: {
-                        'mem': machine.config.mem,
-                        'cpu': machine.config.cpus
-                    }
-                }, None)
-
-            if zone not in self.repair_jobs:
-                self.repair_jobs[zone] = {}
-            job.sitter = self.sitter
-            self.repair_jobs[zone][job.name] = (job, 'new')
-
-            def post_filler(success):
-                if success:
-                    logger.info("Successful redeploy of %s!" % machine)
-                else:
-                    logger.info(
-                        "Redeploy failed! Decomissioning %s" % machine)
-
-                    # Decomission time!
-                    ClusterEventManager.handle(
-                        "Decomissioning %s" % machine)
-
-                    self.sitter.decomission_machine(machine)
-
-                # Can happen if machine is decomissioned by
-                # somebody else while we were redeploying.
-                if (machine, monitor) in \
-                        self.unreachable_machines:
-                    self.unreachable_machines.remove(
-                        (machine, monitor))
-
-                del self.repair_jobs[zone][job.name]
-
-            filler = JobFiller(1, job, machine.config.shared_fate_zone,
-                               raw_machines=[machine],
-                               post_callback=post_filler,
-                               fail_on_error=True)
-
-            job.fillers[machine.config.shared_fate_zone] = [filler]
-
-            filler.start()
-
-    def process_job_repairs(self):
+    def calculate_current_state(self):
         """
-        Attempt to repair jobs on unreachable machines.
+        Update the current state. Machine and task states are updated to
+        reflect current real world values.
         """
-        repair_jobs = dict(self.repair_jobs)
-        for zone, zone_jobs in repair_jobs.iteritems():
-            for name, job in zone_jobs.iteritems():
-                if job[1] == 'new':
-                    self.repair_jobs[zone][name] = (job[0], 'running')
-                    logger.debug("Repair job: %s/%s" % (zone, name))
-                    for filler in job.fillers[zone]:
-                        filler.start()
+        def map_machine_state(state, machine):
+            # Generate current task list
+            current_tasks = {}
+            for task in machine['tasks']:
+                if task['job'] is not None:
+                    current_tasks[task['job'].name] = (task['status'], task['job'])
 
-    def calculate_job_overfill(self):
-        job_overflow = {}
-        for job in self.jobs:
-            zone_overflow = job.get_zone_overflow(self)
-            job_overflow[job.name] = zone_overflow
+            # Generate monitored task list
+            monitored_tasks = {}
+            running_tasks = machine['machine'].get_running_tasks()
+            for task in machine['machine'].get_tasks():
+                status = ManagedState.Stopped
+                if task in running_tasks:
+                    status = ManagedState.Running
+                monitored_tasks[task] = (status, self.jobs.get(task))
 
-        self.job_overflow = job_overflow
-        logger.debug("Calculated job overflow: %s" % self.job_overflow)
+            # We're going to do some easy set math.
+            monitored_task_set = set(monitored_tasks.keys())
+            current_task_set = set(current_tasks.keys())
 
-    def process_job_overflow(self):
+            # Add missing tasks
+            for task in monitored_task_set - current_task_set:
+                state.add_task(
+                    machine, monitored_tasks[task][1],
+                    monitored_tasks[task][0])
+
+            # Remove extra tasks
+            for task in current_task_set - monitored_task_set:
+                state.remove_task(machine, current_tasks[task][1])
+
+            # Update task state
+            for task in current_task_set & monitored_task_set:
+                state.update_task(
+                    machine, monitored_tasks[task][1],
+                    monitored_tasks[task][0])
+
+        self.current.map_machines(map_machine_state)
+
+    def calculate_actions(self):
         """
-        Turn off any overflowed jobs
+        Diff the desired (self) state against the current (provided) state. The
+        resulting actions will perform the changes that need to be made to move
+        the current state to the desired state.
+
+        @return A list of actions.
         """
-        for jobname, zone_overflow in self.job_overflow.items():
-            for zone, count in zone_overflow.items():
-                if count <= 0:
-                    continue
+        actions = []
+        idle_machines = {}
 
-                ClusterEventManager.handle(
-                    "Detected job overflow -- " +
-                    "Job: %s, Zone: %s, Count: %s" % (jobname,
-                                                      zone,
-                                                      count))
+        # Pause and activate machines.
+        def map_pause_machine(current, current_machine):
+            if current_machine['status'] == ManagedState.Maintenance:
+                return
+            desired_machine = self.desired.get_machine(current_machine)
+            if (desired_machine is not None and
+                    current_machine['status'] != desired_machine['status']):
+                current.update_machine(
+                    current_machine, status=desired_machine['status'])
 
-                decomissioned = 0
-                for machine in self.machines_by_zone[zone]:
-                    if decomissioned == count:
-                        break
+        self.current.map_machines(map_pause_machine)
 
-                    for task in machine.get_running_tasks():
-                        if task['name'] == jobname:
-                            while jobname in [
-                                    t['name'] for t
-                                    in machine.get_running_tasks()]:
-                                ClusterEventManager.handle(
-                                    "Stopping %s on %s" % (
-                                        jobname,
-                                        str(machine)))
+        # Remove tasks that need removing.
+        def map_remove_task(current, machine, task):
+            if (task['job'] is None or
+                    not self.current.is_mutable_task(machine, task)):
+                return
+            if not self.desired.has_task(machine, task):
+                action = UndeployJobAction(
+                    self.sitter, machine['zone'], [machine['machine']],
+                    task['job'])
+                # We need to know if this will create an idle machine.
+                if self.current.is_idle_machine(machine, exclude=task):
+                    if machine['zone'] not in idle_machines:
+                        machine['zone'] = []
+                    idle_machines['zone'].append(machine)
+                actions.append(action)
 
-                                machine.datamanager.stop_task(jobname)
-                                machine.datamanager.reload()
+        self.current.map_tasks(map_remove_task)
 
-                                decomissioned += 1
-                                break
+        # Start, stop, or restart tasks that aren't in the right state.
+        def map_task_status(current, machine, current_task):
+            if (current_task['job'] is None or
+                    not current.is_mutable_task(machine, current_task)):
+                return
+            desired_task = self.desired.get_task(current_task)
+            if desired_task is None:
+                return
+            if current_task['status'] != desired_task['status']:
+                if desired_task['status'] == ManagedState.Running:
+                    actions.append(StartTaskAction(
+                        self.sitter, machine['machine'], current_task['job']))
+                elif desired_task['status'] == ManagedState.Stopped:
+                    actions.append(StopTaskAction(
+                        self.sitter, machine['machine'], current_task['job']))
 
-    def process_idle_limit(self):
+        self.current.map_tasks(map_task_status)
+
+        # Calculate idle machines.
+        def map_idle_machine(state, machine):
+            if state.is_idle_machine(machine):
+                zone = machine['zone']
+                if zone not in idle_machines:
+                    idle_machines[zone] = []
+                idle_machines[zone].append(machine)
+
+        self.current.map_machines(map_idle_machine)
+
+        # Resolve pending machines with available idle machines.
+        def map_pending_with_idle(desired, machine):
+            if not self.current.is_mutable_machine(machine):
+                return
+            if desired.is_pending_machine(machine):
+                if zone in machine['zone']:
+                    idle_zone = idle_machines[machine['zone']]
+                    if len(idle_zone) > 0:
+                        idle_machine = idle_zone.pop(0)
+                        desired.update_machine(
+                            machine, idle_machine['machine'])
+
+        self.desired.map_machines(map_pending_with_idle)
+
+        # Deploy missing tasks.
+        deploy_jobs = {}
+
+        def map_missing_task(desired, desired_machine, task):
+            current_machine = self.current.get_machine(desired_machine)
+            if (current_machine is None or
+                    not self.current.is_mutable_machine(current_machine)):
+                return
+            if not self.current.has_task(current_machine, task):
+                if task['job'].name not in deploy_jobs:
+                    deploy_jobs[task['job'].name] = (task['job'], [])
+                deploy_jobs[task['job'].name][1].append(
+                    current_machine['machine'])
+
+        self.desired.map_tasks(map_missing_task)
+        for job, machines in deploy_jobs.values():
+            actions.append(DeployJobAction(self.sitter, machines, job))
+
+        # Resolve pending machines with new machines.
+        """Not sure if necessary? Breaks job filler I think.
+        def map_pending_with_new(desired, desired_machine):
+            if (self.current.has_machine(desired_machine) and
+                    not self.current.is_mutable_machine(desired_machine)):
+                return
+            if desired.is_pending_machine(desired_machine):
+                actions.append(DeployMachineAction(
+                    self, desired_machine['machine']))
+
+        self.desired.map_machines(map_pending_with_new)
         """
-        Enforce idle machine limits
-        """
-        if self.max_idle_per_zone != -1:
-            logger.info("Enforcing an idle limit")
-            idle_limit = self.max_idle_per_zone
-            self.max_idle_per_zone = -1
-            for zone, machines in self.idle_machines.items():
-                if len(machines) > idle_limit:
-                    decomission_targets = [m for m in machines[idle_limit:]]
-                    for machine in decomission_targets:
-                        self.sitter.decomission_machine(machine)
 
-    def _calculate(self):
-        """
-        Perform all state calculations.
-        """
-        call_safely(self.calculate_job_overfill, "Calculate Job OverFill")
-        call_safely(self.calculate_awol_tasks, "Calculate AWOL Tasks")
-        call_safely(self.calculate_idle_machines, "Calculate Idle Machines")
-        call_safely(self.calculate_job_fill, "Calculate Job Fill")
-        call_safely(
-            self.calculate_unreachable_machines,
-            "Calculate Unreachable Machines")
+        # Decomission extra machines.
+        if self.max_idle_per_zone >= 0:
+            for zone, idle_zone in idle_machines.iteritems():
+                while len(idle_zone) > self.max_idle_per_zone:
+                    self.desired.remove_machine(idle_zone.pop())
 
-    def _process(self):
-        """
-        Asynchronously perform processing as a result ofprevious state
-        calculations. Will not be performed more than once simultaneously.
-        """
-        def run():
-            call_safely(
-                self.process_job_refill,
-                "Process Job ReFill State Changes")
-            call_safely(self.process_job_repairs, "Process Job Repairs")
-            call_safely(self.process_job_overflow, "Process Job Overflow")
-        if self.process_thread is None or not self.process_thread.is_alive():
-            self.process_thread = threading.thread(
-                target=run,
-                name="StateProcessor")
-            self.process_thread.start()
+        def map_decomission_machine(current, current_machine):
+            if not current.is_mutable_machine(current_machine):
+                return
+            if not self.desired.has_machine(current_machine):
+                actions.append(
+                    DecomissionMachineAction(
+                        self.sitter, current_machine['machine']))
 
-    def _calculator(self):
-        while True:
-            self._calculate()
-            self._process()
-            time.sleep(self.sitter.stats_poll_interval)
+        self.current.map_machines(map_decomission_machine)
+
+        return actions
+
+    def calculate(self):
+        """
+        Handle all state calculations.
+
+        @return Actions generated by the state calculations.
+        """
+        print("Desired state: %s" % self.desired.state)
+        print("Current state: %s" % self.current.state)
+        self.calculate_current_state()
+        self.pending_actions.extend(self.calculate_actions())
+
+    def process(self):
+        """
+        Process actions in their own threads.
+        """
+        while len(self.pending_actions) > 0:
+            action = self.pending_actions.pop(0)
+            action.start()
+            self.running_actions.append(action)
+
+    def run(self):
+        """
+        Run a full calculate/process cycle.
+        """
+        try:
+            self.calculate()
+            self.process()
+        except:
+            import traceback
+            logger.error("failure during state cycle")
+            logger.error(traceback.format_exc())
+
+    def start(self):
+        """
+        Run the state calculator until stopped.
+        """
+        def run_loop():
+            while self.running:
+                self.run()
+                time.sleep(self.sleep)
+
+        if self.thread is None or not thread.is_alive():
+            self.thread = Thread(target=run_loop, name="Calculator")
+        self.running = True
+        self.thread.start()
+
+    def stop(self, timeout=None):
+        """
+        Stop the state calculator.
+        """
+        self.running = False
+        self.thread.join()

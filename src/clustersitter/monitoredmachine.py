@@ -129,6 +129,8 @@ class MonitoredMachine(HasMachineSitter):
         return True
 
     def get_tasks(self):
+        if self.datamanager is None:
+            return []
         return self.datamanager.tasks
 
     def get_running_tasks(self):
@@ -144,17 +146,20 @@ class MonitoredMachine(HasMachineSitter):
     def start_task(self, job):
         if self.is_initialized():
             logger.info("Starting a task %s on %s" % (job.name, str(self)))
-            self._api_start_task(job)
+            return self._api_start_task(job)
+        return False
 
     def restart_task(self, job):
         if self.is_initialized():
             logger.info("Restarting a task %s on %s" % (job.name, str(self)))
-            self._api_restart_task(job)
+            return self._api_restart_task(job)
+        return False
 
     def stop_task(self, job):
         if self.is_initialized():
             logger.info("Stopping a task %s on %s" % (job.name, str(self)))
-            self._api_stop_task(job)
+            return self._api_stop_task(job)
+        return False
 
     def initialize(self):
         return self._api_identify_sitter()

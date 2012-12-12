@@ -82,6 +82,7 @@ class JobFiller(object):
         self.job = job
         self.zone = zone
         self.machines = idle_machines or []
+        self.new_machines = []
         self.state = JobFillerState()
         self.thread = None
         self.end_time = None
@@ -164,7 +165,7 @@ class JobFiller(object):
                         "Failed Filling: %s" % str(self))
 
                     if self.post_callback:
-                        self.post_callback(success=False)
+                        self.post_callback(self, success=False)
 
                     return False
 
@@ -435,7 +436,7 @@ class JobFiller(object):
         self.state.next()
 
     def launch_machines(self, new_machine_count):
-        provider = self.job.sitter.state.provider_by_zone[self.zone]
+        provider = self.job.sitter.state.get_provider(self.zone)
         mem_per_job = self.job.deployment_layout[self.zone]['mem']
 
         machineconfigs = provider.fill_request(zone=self.zone,
@@ -449,6 +450,7 @@ class JobFiller(object):
         for machine in machines:
             self.machine_states[machine] = MachineDeploymentState()
 
+        self.new_machines.extend(machines)
         self.machines.extend(machines)
 
         return True
