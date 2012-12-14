@@ -378,6 +378,7 @@ class ClusterState(object):
         self.max_idle_per_zone = -1
         self.machines = []
         self.jobs = {}
+        self.job_file = "%s/jobs.json" % sitter.log_location
         self.desired_jobs = JobState()
         self.current_jobs = JobState()
         self.pending_actions = []
@@ -653,6 +654,14 @@ class ClusterState(object):
 
         self.desired_jobs.remove_tasks(job.name)
         return True
+        
+    def persist_jobs(self):
+        """
+        Persist jobs to the jobs file.
+        """
+        jobs = [j for j in self.jobs.values() if k.persistent]
+        with open(self.job_file, 'w') as fd:
+            fd.write(json.dumps([j.to_dict() for j in jobs]))
 
     def start_task(self, machine, task):
         """
@@ -859,6 +868,7 @@ class ClusterState(object):
             if (not self.desired_jobs.has_task(job.name) and
                     not self.current_jobs.has_task(job.name)):
                 del self.jobs[job.name]
+        self.persist_jobs()
 
     def calculate(self):
         """
