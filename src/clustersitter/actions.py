@@ -409,13 +409,13 @@ class RedeployMachineAction(MachineAction):
         """Run the action in maintenance mode."""
         #TODO: Make redeploying less hacky.
         job = ProductionJob(
+            self.sitter,
             '', {'name': 'Machine Redeployer'}, {
                 self.zone: {
                     'mem': self.machine.config.mem,
                     'cpu': self.machine.config.cpus,
                 },
             }, None)
-        job.sitter = self.sitter
 
         filler = JobFiller(
             1, job, self.zone, raw_machines=[self.machine], fail_on_error=True)

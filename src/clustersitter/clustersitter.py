@@ -209,6 +209,7 @@ class ClusterSitter(object):
         if check:
             return check
         job = ProductionJob(
+                self,
                 args['dns_basename'],
                 args['task_configuration'],
                 args['deployment_layout'],
@@ -218,7 +219,7 @@ class ClusterSitter(object):
                 args.get('linked_job'))
 
         if args.get('linked_job'):
-            job.find_linked_job(self.state)
+            job.find_linked_job()
             if not job.linked_job_object:
                 return "Couldn't find linked job!"
 

@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 class ProductionJob(object):
     def __init__(self,
+                 sitter,
                  dns_basename,
                  task_configuration,
                  deployment_layout,
@@ -36,7 +37,7 @@ class ProductionJob(object):
         self.name = task_configuration['name']
         self.deployment_recipe = deployment_recipe
         self.recipe_options = recipe_options or {}
-        self.sitter = None
+        self.sitter = sitter
         self.currently_spawning = {}
         self.persistent = persistent
 
@@ -57,7 +58,7 @@ class ProductionJob(object):
     def get_shared_fate_zones(self):
         return self.deployment_layout.keys()
 
-    def get_num_required_machines_in_zone(self, zone, state):
+    def get_num_required_machines_in_zone(self, zone):
         """
         Return the total number of machines needed in this zone
         """
@@ -65,7 +66,7 @@ class ProductionJob(object):
         if not self.linked_job:
             return self.deployment_layout.get(zone, {}).get('num_machines', 0)
 
-        self.find_linked_job(state)
+        self.find_linked_job()
 
         return self.linked_job_object.deployment_layout.get(
             zone, {}).get('num_machines', 0)
@@ -132,12 +133,12 @@ class ProductionJob(object):
 
         return dependent_jobs
 
-    def find_linked_job(self, state):
+    def find_linked_job(self):
         if self.linked_job_object:
             return self.linked_job_object
 
         linked_job = None
-        for job in state.jobs.values():
+        for job in sitter.state.jobs.values():
             if job.name == self.linked_job:
                 linked_job = job
                 break
@@ -156,7 +157,7 @@ class ProductionJob(object):
         that spawns new machines.  We should always just be populating
         existing machines.
         """
-        linked_job = self.find_linked_job(state)
+        linked_job = self.find_linked_job()
 
         if not linked_job:
             logger.warn("Couldn't find linked job (%s) for %s!" % (
@@ -252,7 +253,7 @@ class ProductionJob(object):
         # Step 1a: Check for idle machines and reserve as we find them
         for zone in self.get_shared_fate_zones():
             idle_available = state.get_idle_machines(zone)
-            total_required = self.get_num_required_machines_in_zone(zone, state)
+            total_required = self.get_num_required_machines_in_zone(zone)
             idle_required = total_required - state.job_fill[self.name][zone]
 
             current_fillers = self.fillers[zone]
