@@ -30,13 +30,18 @@ class ClusterStats(StatsCollector):
         data['events'] = ClusterEventManager.get_events()
 
         state = self.harness.state
+        job_fill, job_machine_fill = state.current_jobs.get_job_fill()
+        idle_machines = []
+        zoned_idle_machines = state.get_machines(idle=True)
+        for zone, machines in zoned_idle_machines.iteritems():
+            idle_machines.extend(machines)
 
-        data['providers'] = state.providers.keys()
-        data['machines_by_zone'] = str(state.machines_by_zone)
-        data['job_fill'] = str(state.job_fill)
-        data['idle_machines'] = str(state.idle_machines)
+        data['providers'] = state.get_providers().keys()
+        data['machines_by_zone'] = str(state.get_machines())
+        data['job_fill'] = str(job_fill)
+        data['idle_machines'] = str(state.get_machines(idle=True))
         data['unreachable_machines'] = [
-            str(m) for m in state.unreachable_machines]
+            str(m) for m in state.get_machines(status=state.Unreachable)]
 
         monitors = []
         machines = []
@@ -78,8 +83,8 @@ class ClusterStats(StatsCollector):
             machine_data['initialized'] = machine.is_initialized()
             machine_data['has_loaded_data'] = machine.has_loaded_data()
             machine_data['pull_failures'] = pull_failures.get(machine, 0)
-            machine_data['idle'] = machine in state.idle_machines.get(
-                machine_data['zone'], [])
+            machine_data['idle'] = machine in (zoned_idle_machines.get(
+                machine_data['zone'], []))
 
             return machine_data
 
@@ -104,7 +109,7 @@ class ClusterStats(StatsCollector):
         data['monitors'] = monitors
 
         jobs = []
-        check_jobs = state.jobs + state.repair_jobs
+        check_jobs = state.jobs
         for job in check_jobs:
             job_data = {}
             job_data['name'] = job.name
@@ -125,9 +130,9 @@ class ClusterStats(StatsCollector):
                     fillers.append(filler_data)
 
             job_data['fillers'] = fillers
-            job_data['fill'] = state.job_fill.get(job.name, {})
+            job_data['fill'] = job_fill.get(job.name, {})
 
-            fill_machines = state.job_fill_machines.get(job.name, {})
+            fill_machines = job_fill_machines.get(job.name, {})
             for zone in fill_machines.keys():
                 fill_machines[zone] = [str(m) for m in fill_machines[zone]]
 
@@ -147,8 +152,7 @@ class ClusterStats(StatsCollector):
         alive_thread_names = [t.getName() for t in py_threads]
         threads = {}
 
-        std_threads = ['MachineDoctor', 'MainThread',
-                       'Calculator', "HTTPServer"]
+        std_threads = ['MainThread', 'Calculator', 'HTTPServer']
         for i in range(self.harness.worker_thread_count):
             std_threads.append("Monitoring-%s" % i)
 

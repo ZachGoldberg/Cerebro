@@ -78,6 +78,8 @@ class JobFiller(object):
     def __init__(self, num_cores, job, zone, idle_machines=None,
                  raw_machines=None, reboot_task=False, post_callback=None,
                  fail_on_error=False):
+        #TODO: Support filling multiple jobs per run.
+        #TODO: Separate machine deployment and job filling.
         self.num_cores = num_cores
         self.job = job
         self.zone = zone
@@ -436,7 +438,7 @@ class JobFiller(object):
         self.state.next()
 
     def launch_machines(self, new_machine_count):
-        provider = self.job.sitter.state.get_provider(self.zone)
+        provider = self.job.sitter.state.get_zone_provider(self.zone)
         mem_per_job = self.job.deployment_layout[self.zone]['mem']
 
         machineconfigs = provider.fill_request(zone=self.zone,

@@ -130,7 +130,7 @@ class MonitoredMachine(HasMachineSitter):
 
     def get_tasks(self):
         if self.datamanager is None:
-            return []
+            return {}
         return self.datamanager.tasks
 
     def get_running_tasks(self):

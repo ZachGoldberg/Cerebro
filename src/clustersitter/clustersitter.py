@@ -330,12 +330,12 @@ class ClusterSitter(object):
         return works
 
     def decomission_machine(self, machine):
-        if not self.state.has_provider(machine.config.shared_fate_zone):
+        self.state.remove_machine(machine)
+        provider = self.state.get_zone_provider(machine.config.shared_fate_zone)
+        if not provider:
             logger.warn(
                 "No provider found for %s?" % machine.config.shared_fate_zone)
             return
-
-        provider = self.state.get_provider(machine.config.shared_fate_zone)
 
         ClusterEventManager.handle(
             "Decomissioning %s" % str(machine))
@@ -384,7 +384,7 @@ class ClusterSitter(object):
             if not isinstance(mm, MonitoredMachine):
                 mm = MonitoredMachine(m)
 
-            self.state.add_machine(mm.config.shared_fate_zone, mm)
+            self.state.add_machine(mm, mm.config.shared_fate_zone)
             monitored_machines.append(mm)
 
         # Spread the machines out evenly across threads
@@ -460,15 +460,13 @@ class ClusterSitter(object):
 
         aws = AmazonEC2(self.provider_config['aws'])
         if aws.usable():
-            self.state.providers['aws'] = aws
+            self.state.add_provider('aws', aws)
 
-        for provider in self.state.providers.values():
-            newzones = provider.get_all_shared_fate_zones()
-            for zone in newzones:
-                self.state.set_provider(zone, provider)
-
+        for provider in self.state.get_providers().values():
             # Note: add_machines() has to be called AFTER the monitors
             # are initialized.
+            logger.info("adding %d machines for provider %s" %
+                (len(provider.get_machine_list()), 'aws'))
             self.add_machines(provider.get_machine_list())
 
         logger.info("Zone List: %s" % self.state.get_zones())
@@ -497,4 +495,4 @@ class ClusterSitter(object):
         """
         logger.info(
             "Registering an unreachable machine %s" % monitored_machine)
-        self.state.unreachable_machines.append((monitored_machine, monitor))
+        self.state.update_machine(monitored_machine, self.state.Unreachable)

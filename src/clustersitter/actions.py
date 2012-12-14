@@ -1,10 +1,11 @@
 
 import logging
-from managedstate import ManagedState
 from jobfiller import JobFiller
+from productionjob import ProductionJob
 from threading import Thread
 
 logger = logging.getLogger(__name__)
+
 
 class ClusterActionError(Exception):
     """Raised on Action error."""
@@ -21,6 +22,120 @@ class ClusterActionStatus(object):
     Pending = 'pending'
     Running = 'running'
     Finished = 'finished'
+
+
+class ClusterActionGenerator(object):
+    """
+    Generate optimized actions for a state diff.
+    """
+
+    def __init__(self, state):
+        """Initialize the generator."""
+        self.update_actions = {}
+        self.deploy_actions = {}
+
+    def _ensure_update(self, zone, machine):
+        """Ensure there is space in the update_actions dict."""
+        if zone not in self.update_actions:
+            self.update_actions[zone] = {}
+        if machine.hostname not in self.update_actions[zone]:
+            self.update_actions[zone][machine.hostname] = {
+                'machine': machine,
+                'add': [],
+                'remove': [],
+                'update': {},
+            }
+
+    def _ensure_deploy(self, zone):
+        """Ensure there is space in the deploy_actions dict."""
+        if zone not in self.deploy_actions:
+            self.deploy_actions[zone] = []
+
+    def add_task(self, zone, machine, task):
+        """
+        Add an "add task" action.
+
+        @param zone The zone the task should run in.
+        @param machine The machine to add the task to.
+        @param task The name of the task to add.
+        """
+        self._ensure_update(zone, machine)
+        self.update_actions[zone][machine.hostname]['add'].append(task)
+
+    def remove_task(self, zone, machine, task):
+        """
+        Add a "remove task" action.
+
+        @param zone The zone the task is running in.
+        @param machine The machine the task is running on.
+        @param task The name of the task to remove.
+        """
+        self._ensure_update(zone, machine)
+        self.update_actions[zone][machine.hostname]['remove'].append(task)
+
+    def update_task(self, zone, machine, task, status):
+        """
+        Add an "update task" action.
+
+        @param zone The zone the task is running in.
+        @param machine The machine the task is running on.
+        @param task The name of the task to update.
+        @param status The new status of the task.
+        """
+        self._ensure_update(zone, machine)
+        self.update_actions[zone][machine.hostname]['update'][task] = status
+
+    def deploy_machines(self, zone, tasks, machines):
+        """
+        Deploy new machines to run a task.
+
+        @param zone The zone to deploy the machines to.
+        @param tasks The tasks to deploy to the machine.
+        @param machines The number of new machines to deploy.
+        """
+        self._ensure_deploy(zone)
+        self.deploy_actions[zone].append({
+            'tasks': tasks,
+            'machines': machines,
+        })
+
+    def generate(self):
+        """
+        Generate the actions. Each generated action will be a SequentialAction
+        containing each of the actions for a particular machine.
+
+        @return A list of generated actions.
+        """
+        actions = {}
+        for zone, machines in self.update_actions.iteritems():
+            for machine in machines.values():
+                sequence = []
+                for task, status in machine['updates'].iteritems():
+                    if status == self.state.Running:
+                        sequence.append(StartTaskAction(
+                            self.sitter, zone, machine['machine'], task))
+                    else:
+                        sequence.append(StopTaskAction(
+                            self.sitter, zone, machine['machine'], task))
+
+                for task in machine['remove']:
+                    sequence.append(RemoveTaskAction(
+                        self.sitter, zone, machine['machine'], task))
+
+                for task in machine['add']:
+                    sequence.append(AddTaskAction(
+                        self.sitter, zone, machine['machine'], task))
+
+                actions.append(SequentialMachineAction(self.sitter, actions))
+
+        for zone, items in self.deploy_actions.iteritems():
+            for item in items:
+                for n in range(item['machines']):
+                    actions.append(
+                        DeployMachineAction(item['zone'], item['tasks']))
+
+        return actions
+
 
 class ClusterAction(object):
     """
@@ -76,7 +191,11 @@ class ClusterAction(object):
         """
         if self.status != ClusterActionStatus.Pending:
             raise ClusterActionError("action may not be run more than once")
-        self.thread = Thread(target=self.execute)
+        if hasattr(self, 'name'):
+            name = self.name
+        else:
+            name = self.__class__.__name__
+        self.thread = Thread(name=name, target=self.execute)
         self.thread.start()
 
     def join(self):
@@ -91,86 +210,78 @@ class ClusterAction(object):
         self.thread.join()
 
 
+class SequentialAction(ClusterAction):
+    """
+    Execute a series of actions in sequence.
+    """
+
+    def __init__(self, sitter, actions):
+        """
+        Initialize the action.
+
+        @param sitter The cluster sitter object.
+        @param actions The actions to execute.
+        """
+        super(SequentialAction, self).__init__(sitter)
+        self.actions = actions
+
+    def run(self):
+        """Run the action."""
+        for action in self.actions:
+            try:
+                action.execute()
+            except:
+                import traceback
+                logger.error("failure in sequential action, continuing")
+                logger.error(traceback.format_exc())
+
+
+class SequentialMachineAction(SequentialAction):
+    """
+    Execute a series of actions in sequence on a single machine. Puts the
+    machine in maintenance mode during the run.
+    """
+
+    def __init__(self, sitter, machine, actions):
+        """
+        Initialize the action.
+
+        @param sitter The cluster sitter object.
+        @param machine The machine to operate on.
+        @param actions The actions to execute.
+        """
+        super(SequentialMachineAction, self).__init__(sitter, actions)
+        self.name = "%s %s" % (self.__class__.__name__, machine.hostname)
+        self.machine = machine
+        self.initial_status = self.state.get_machine_status(machine)
+
+    def run(self):
+        """Run the action sequence in machine maintenance mode."""
+        self.state.update_machine(self.machine, self.state.Maintenance)
+        try:
+            super(SequentialMachineAction, self).run()
+        finally:
+            self.state.update_machine(self.machine, self.initial_status)
+
+
 class MachineAction(ClusterAction):
     """
-    Base class for running something against a machine.
+    Base class for running action against a machine.
     """
 
-    def __init__(self, sitter, machine):
+    def __init__(self, sitter, zone, machine):
         """
         Initialize the action.
 
-        @param state The cluster state. Updated by the action.
-        @param machine The machine to remove the task from.
+        @param sitter The cluster sitter object.
+        @param zone The zone the job is being deployed to.
+        @param machine The machine to manage the job on.
         """
         super(MachineAction, self).__init__(sitter)
-        self.machine = machine
-
-    def run(self):
-        """
-        Run the action. Sets the machine status to maintenance and calls
-        run_maintenance.
-        """
-        try:
-            self.state.current.update_machine(
-                self.machine, ManagedState.Maintenance)
-            return self.run_maintenance()
-        finally:
-            self.state.current.update_machine(
-                self.machine, ManagedState.Active)
-
-
-class TaskAction(ClusterAction):
-    """
-    Base class for running something against a task.
-    """
-
-    def __init__(self, sitter, machine, job):
-        """
-        Initialize the action.
-
-        @param state The cluster state. Updated by the action.
-        @param machine The machine to manage the task from.
-        @param job The job to run the action against.
-        """
-        super(TaskAction, self).__init__(sitter)
-        self.machine = machine
-        self.job = job
-
-    def run(self):
-        """
-        Run the action. Sets the task status to maintenance and calls
-        run_maintenance.
-        """
-        task = self.state.get_task(self.machine, self.job)
-        status = task['status']
-        try:
-            self.state.current.update_task(
-                self.machine, self.job, ManagedState.Maintenance)
-            status = self.run_maintenance()
-        finally:
-            self.state.current.update_task(
-                self.machine, self.job, status)
-
-
-class JobAction(ClusterAction):
-    """
-    Base class for managing a job on a series of machines.
-    """
-
-    def __init__(self, sitter, zone, machines, job):
-        """
-        Initialize the action.
-
-        @param state The cluster state. Updated by the action.
-        @param zone The zone the job is being deployed to.
-        @param machines The machines to manage the job on.
-        @param job The job to run the action against.
-        """
-        super(JobAction, self).__init__(sitter)
+        self.name = "%s %s" % (self.__class__.__name__, machine.hostname)
         self.zone = zone
-        self.machines = machines
-        self.job = job
+        self.machine = machine
+        self.initial_state = self.state.get_machine_state(machine)
 
     def run(self):
         """
@@ -178,14 +289,30 @@ class JobAction(ClusterAction):
         run_maintenance.
         """
         try:
-            for machine in self.machines:
-                self.state.current.update_machine(
-                    machine, status=ManagedState.Maintenance)
+            self.state.update_machine(self.machine, self.state.Maintenance)
             self.run_maintenance()
         finally:
-            for machine in self.machines:
-                self.state.current.update_machine(
-                    machine, status=ManagedState.Active)
+            self.state.update_state(self.machine, self.initial_state)
+
+
+class TaskAction(MachineAction):
+    """
+    Base class for managing a task on a machine.
+    """
+
+    def __init__(self, sitter, zone, machine, task):
+        """
+        Initialize the action.
+
+        @param sitter The cluster sitter object.
+        @param zone The zone the job is being deployed to.
+        @param machine The machine to manage the job on.
+        @param task The task to run the action against.
+        """
+        super(TaskAction, self).__init__(sitter, zone, machine)
+        self.name = "%s %s %s" % (
+            self.__class__.__name__, machine.hostname, task)
+        self.job = self.state.get_job(task)
 
 
 class StartTaskAction(TaskAction):
@@ -193,10 +320,10 @@ class StartTaskAction(TaskAction):
 
     def run_maintenance(self):
         """Run the action in maintenance mode."""
-        if not self.machine['machine'].start_task(self.task['job']):
-            raise ClusterActionError("failed to start job '%s' on machine '%s'" % (
-                self.job.name, self.machine.hostname))
-        return ManagedState.Running
+        if not self.machine.start_task(self.job):
+            raise ClusterActionError(
+                "failed to start job '%s' on machine '%s'" %
+                (self.job.name, self.machine.hostname))
 
 
 class RestartTaskAction(TaskAction):
@@ -204,10 +331,10 @@ class RestartTaskAction(TaskAction):
 
     def run_maintenance(self):
         """Run the action in maintenance mode."""
-        if not self.machine['machine'].restart_task(self.task['job']):
-            raise ClusterActionError("failed to restart job '%s' on machine '%s'" % (
-                self.job.name, self.machine.hostname))
-        return ManagedState.Running
+        if not self.machine.restart_task(self.job):
+            raise ClusterActionError(
+                "failed to restart job '%s' on machine '%s'" %
+                (self.job.name, self.machine.hostname))
 
 
 class StopTaskAction(TaskAction):
@@ -215,51 +342,85 @@ class StopTaskAction(TaskAction):
 
     def run_maintenance(self):
         """Run the action."""
-        if not self.machine['machine'].stop_task(self.task['job']):
-            raise ClusterActionError("failed to stop job '%s' on machine '%s'" % (
-                self.job.name, self.machine.hostname))
-        return ManagedState.Stopped
+        if not self.machine.stop_task(self.job):
+            raise ClusterActionError(
+                "failed to stop job '%s' on machine '%s'" %
+                (self.job.name, self.machine.hostname))
 
 
-class DeployJobAction(JobAction):
-    """Deploy a job."""
+class AddTaskAction(TaskAction):
+    """Add a task to a machine."""
 
     def run_maintenance(self):
         """Run the action in maintenance mode."""
-        idle_machines = []
-        pending_machines = []
-        for machine in self.machines:
-            if self.state.is_pending_machine(machine):
-                pending_machines.append(machine)
-            else:
-                idle_machines.append(machine)
+        filler = JobFiller(
+            1, self.job, self.zone, idle_machines=[self.machine])
+        if not filler.run():
+            logger.error(
+                "failed to deploy job '%s' to machine '%s'" %
+                (self.job.name, self.machine.hostname))
 
-        def filler_callback(filler, success):
-            """Update pending machines with real machines."""
-            new_machines = list(filler.new_machines)
-            while len(pending_machines) > 0 and len(new_machines) > 0:
-                new = new_machines.pop(0)
-                pending = pending_machines.pop(0)
-                self.state.desired.update_machine(pending, obj=new)
 
-            while len(new_machines) > 0:
-                self.state.desired.add_machine(self.zone, new_machines.pop(0))
+class RemoveTaskAction(TaskAction):
+    """Remove a task from a machine."""
 
-            for machine in filler.new_machines:
-                self.state.current.add_machine(self.zone, machine)
-            for machine in filler.machines:
-                self.state.current.add_task(machine, self.job)
+    def run_maintenance(self):
+        """Run the action in maintenance mode."""
+        #TODO: Undeploy the job code.
+        if not self.machine.stop_task(self.job):
+            raise ClusterActionError(
+                "failed to stop job '%s' on machine '%s'" %
+                (self.job.name, self.machine.hostname))
+
+
+class DeployMachineAction(ClusterAction):
+    """Deploy a set of tasks to a new machine."""
+
+    def __init__(self, zone, tasks):
+        """
+        Initialize the action.
+
+        @param zone The zone to deploy the tasks to.
+        @param tasks The tasks to deploy.
+        """
+        super(DeployMachineAction, self).__init__(self.sitter)
+        self.name = "%s %s" % (self.__class__.__name__, ",".join(tasks))
+        self.zone = zone
+        self.jobs = [self.state.get_job(t) for t in tasks]
+
+    def run(self):
+        """Run the action."""
+        # Perform first run and grab the new machine.
+        job = self.jobs[0]
+        filler = JobFiller(1, self.jobs[0], self.zone)
+
+        if filler.run():
+            machine = filler.machines[0]
+
+            for job in self.jobs[1:]:
+                filler = JobFiller(1, job, self.zone, idle_machines=machine)
+                filler.run()
+
+
+class RedeployMachineAction(MachineAction):
+    """Redeploy an unreachable machine."""
+
+    def run_maintenance(self):
+        """Run the action in maintenance mode."""
+        #TODO: Make redeploying less hacky.
+        job = ProductionJob(
+            '', {'name': 'Machine Redeployer'}, {
+                self.zone: {
+                    'mem': self.machine.config.mem,
+                    'cpu': self.machine.config.cpus,
+                },
+            }, None)
+        job.sitter = self.sitter
 
         filler = JobFiller(
-            num_cores=len(self.machines), job=self.job, zone=self.zone,
-            idle_machines=idle_machines, post_callback=filler_callback)
-        filler.run()
-
-class UndeployJobAction(JobAction):
-    """Undeploy a job."""
-
-    def run_maintenance(self):
-        """Run the action in maintenance mode."""
+            1, job, self.zone, raw_machines=[self.machine], fail_on_error=True)
+        if not filler.run():
+            self.sitter.decomission_machine(self.machine)
 
 
 class DecomissionMachineAction(MachineAction):
@@ -267,6 +428,4 @@ class DecomissionMachineAction(MachineAction):
 
     def run_maintenance(self):
         """Run the action in maintenance mode."""
-        for machine in self.machines:
-            self.state.remove_machine(machine)
-            self.sitter.decomission_machine(machine)
+        self.sitter.decomission_machine(self.machine)
