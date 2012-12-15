@@ -3,6 +3,7 @@ Cluster state tracking and maintenance.
 """
 
 import logging
+import simplejson
 import time
 from actions import (
     ClusterActionGenerator, DecomissionMachineAction, RestartTaskAction)
@@ -203,7 +204,7 @@ class JobState(object):
                     'zone': zone})
         for n in range(create):
             self.tasks[name].append({
-                'machine': machine,
+                'machine': None,
                 'status': status,
                 'zone': zone})
 
@@ -659,9 +660,9 @@ class ClusterState(object):
         """
         Persist jobs to the jobs file.
         """
-        jobs = [j for j in self.jobs.values() if k.persistent]
+        jobs = [j for j in self.jobs.values() if j.persistent]
         with open(self.job_file, 'w') as fd:
-            fd.write(json.dumps([j.to_dict() for j in jobs]))
+            fd.write(simplejson.dumps([j.to_dict() for j in jobs]))
 
     def start_task(self, machine, task):
         """
