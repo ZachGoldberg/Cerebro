@@ -385,7 +385,7 @@ class ClusterSitter(object):
             if not isinstance(mm, MonitoredMachine):
                 mm = MonitoredMachine(m)
 
-            self.state.add_machine(mm, mm.config.shared_fate_zone)
+            self.state.add_machine(mm, existing=True)
             monitored_machines.append(mm)
 
         # Spread the machines out evenly across threads

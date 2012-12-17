@@ -29,10 +29,11 @@ class ClusterActionGenerator(object):
     Generate optimized actions for a state diff.
     """
 
-    def __init__(self, state):
+    def __init__(self, sitter):
         """Initialize the generator."""
         self.update_actions = {}
         self.deploy_actions = {}
+        self.sitter = sitter
 
     def _ensure_update(self, zone, machine):
         """Ensure there is space in the update_actions dict."""
@@ -106,7 +107,7 @@ class ClusterActionGenerator(object):
 
         @return A list of generated actions.
         """
-        actions = {}
+        actions = []
         for zone, machines in self.update_actions.iteritems():
             for machine in machines.values():
                 sequence = []
@@ -132,7 +133,7 @@ class ClusterActionGenerator(object):
             for item in items:
                 for n in range(item['machines']):
                     actions.append(
-                        DeployMachineAction(item['zone'], item['tasks']))
+                        DeployMachineAction(self.sitter, zone, item['tasks']))
 
         return actions
 
@@ -376,14 +377,14 @@ class RemoveTaskAction(TaskAction):
 class DeployMachineAction(ClusterAction):
     """Deploy a set of tasks to a new machine."""
 
-    def __init__(self, zone, tasks):
+    def __init__(self, sitter, zone, tasks):
         """
         Initialize the action.
 
         @param zone The zone to deploy the tasks to.
         @param tasks The tasks to deploy.
         """
-        super(DeployMachineAction, self).__init__(self.sitter)
+        super(DeployMachineAction, self).__init__(sitter)
         self.name = "%s %s" % (self.__class__.__name__, ",".join(tasks))
         self.zone = zone
         self.jobs = [self.state.get_job(t) for t in tasks]

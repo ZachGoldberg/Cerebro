@@ -439,6 +439,11 @@ class JobFiller(object):
 
     def launch_machines(self, new_machine_count):
         provider = self.job.sitter.state.get_zone_provider(self.zone)
+        if not provider:
+            raise Exception((
+                "Failed to launch %d machines, no provider found "
+                "for zone '%s',") % (new_machine_count, self.zone))
+
         mem_per_job = self.job.deployment_layout[self.zone]['mem']
 
         machineconfigs = provider.fill_request(zone=self.zone,

@@ -138,7 +138,7 @@ class ProductionJob(object):
             return self.linked_job_object
 
         linked_job = None
-        for job in sitter.state.jobs.values():
+        for job in self.sitter.state.jobs.values():
             if job.name == self.linked_job:
                 linked_job = job
                 break

@@ -117,12 +117,12 @@ class JobState(object):
         @param machine The machine to check in.
         @return The status of the task or None if not present.
         """
-        item = self._get_task_item(self, name, machine)
+        item = self._get_task_item(name, machine)
         if item:
             return item['status']
         return None
 
-    def get_machines(self, name=None, zones=None):
+    def get_task_machines(self, name=None, zones=None):
         """
         Get machines that have tasks allocated to them.
 
@@ -196,8 +196,6 @@ class JobState(object):
 
         for machine in machines:
             if not self.has_task(name, machine):
-                if not self.has_machine(machine):
-                    self.add_machine(machine, zone)
                 self.tasks[name].append({
                     'machine': machine,
                     'status': status,
@@ -341,12 +339,15 @@ class ClusterState(object):
     Paused -- Machine is paused by admin for maintenance.
     Maintenance -- Maintenance is being performed by the cluster sitter on the
         machine.
+    Pending -- Waiting for the machine monitor to initialize the machine so
+        that tasks can be added to state tracking.
     Unreachable -- Machine is unreachable.
     """
 
     Active = 'active'
+    Maintenance = 'maint'
     Paused = 'paused'
-    Maintenance = 'maintenance'
+    Pending = 'pending'
     Unreachable = 'unreachable'
 
     def __init__(self, sitter):
@@ -475,7 +476,8 @@ class ClusterState(object):
         @return True if the machine is mutable or False.
         """
         item = self._get_machine_item(machine)
-        if not item or item['status'] in [self.Paused, self.Maintenance]:
+        allow_status = [self.Maintenance, self.Paused, self.Pending]
+        if not item or item['status'] in allow_status:
             return False
         return True
 
@@ -547,38 +549,54 @@ class ClusterState(object):
         """
         if not self.has_machine(machine):
             #TODO: Add machine to monitoring here.
-            if not machine.is_initialized():
-                logger.error(
-                    "%s not initialized, not added to state tracking" %
-                    machine.hostname)
-                return False
-
-            zone = machine.config.shared_fate_zone
             if status is None:
                 status = self.Active
+
+            if existing and not machine.is_initialized():
+                logger.info(
+                    "%s not initialized, marked as pending" %
+                    machine.hostname)
+                status = self.Pending
+
+            zone = machine.config.shared_fate_zone
             self.machines.append({
                 'machine': machine,
                 'status': status,
                 'zone': zone,
             })
 
-            if existing:
-                if not machine.has_loaded_data():
-                    machine.datamanager.reload()
-                for task in machine.get_tasks().values():
-                    name = task['name']
-                    task_status = JobState.Running
-                    if not task['running']:
-                        task_status = JobState.Stopped
-                    if task not in self.jobs:
-                        logger.warn((
-                            "task %s does not have a job object, "
-                            "adding anyways") % name)
-                    self.desired_job.add_tasks(
-                        name, zone, [machine], status=task_status)
-                    self.current_job.add_tasks(
-                        name, zone, [machine], status=task_status)
+            if existing and status != self.Pending:
+                self.add_machine_tasks()
             return True
+
+    def add_machine_tasks(self, machine):
+        """
+        Add tasks from a running machine to state tracking.
+
+        @param machine The machine to add tasks from.
+        """
+        if not machine.is_initialized():
+            logger.info(
+                "%s not initialized, not adding tasks" %
+                machine.hostname)
+            return False
+        if not machine.has_loaded_data():
+            machine.datamanager.reload()
+        for task in machine.get_tasks().values():
+            name = task['name']
+            zone = self.get_machine_zone(machine)
+            task_status = JobState.Running
+            if not task['running']:
+                task_status = JobState.Stopped
+            if name not in self.jobs:
+                logger.warn((
+                    "task %s does not have a job object, "
+                    "adding anyways") % name)
+            self.desired_jobs.add_tasks(
+                name, zone, [machine], status=task_status)
+            self.current_jobs.add_tasks(
+                name, zone, [machine], status=task_status)
+        return True
 
     def remove_machine(self, machine):
         """
@@ -613,7 +631,9 @@ class ClusterState(object):
         Add a job to the cluster. The job is allocated to idle machines.
         New machines are added to the state if necessary. Child jobs must be
         added after their parents. To deploy a job with the same name the
-        existing job must first be removed.
+        existing job must first be removed. If the name of this job matches
+        existing tasks that do not have jobs then those tasks will be assigned
+        to this job.
 
         @param job The job to add to the cluster. The job is configured with
             the required zones and number of machines.
@@ -631,15 +651,21 @@ class ClusterState(object):
 
         self.jobs[job.name] = job
         zones = job.get_shared_fate_zones()
-        zoned_idle_machines = self.get_machines(zones, True)
+        zoned_idle_machines = self.get_machines(zones, idle=True)
+        zoned_existing_machines = self.desired_jobs.get_task_machines(
+            job.name, zones)
+
         for zone in zones:
             #TODO: !MACHINEASSUMPTION! Fill jobs based on required CPU and
             # memory.
-            required_machines = job.get_num_required_machines_in_zone(zone)
-            idle_machines = zoned_idle_machines[zone][:required_machines]
-            create_machines = required_machines - len(idle_machines)
+            num_existing = len(zoned_existing_machines[zone])
+            num_required = job.get_num_required_machines_in_zone(zone)
+            num_needed = max(0, num_required - num_existing)
+            
+            idle_machines = zoned_idle_machines[zone][:num_needed]
+            num_create = num_needed - len(idle_machines)
             self.desired_jobs.add_tasks(
-                job.name, zone, idle_machines, create_machines)
+                job.name, zone, idle_machines, num_create)
         return True
 
     def remove_job(self, job):
@@ -728,12 +754,22 @@ class ClusterState(object):
                 (task, machine.hostname))
         return True
 
+    def calculate_ready_machines(self):
+        """
+        Convert ready pending machines to active.
+        """
+        for machine in self.machines:
+            if machine['status'] == self.Pending:
+                if self.add_machine_tasks(machine['machine']):
+                    machine['status'] = self.Active
+
     def calculate_current_state(self):
         """
         Update the current state of jobs on the cluster.
         """
+        #TODO: Check providers for new zones.
         zoned_machines = self.get_machines()
-        job_machines = self.current_jobs.get_machines()
+        job_machines = self.current_jobs.get_task_machines()
 
         # Remove missing machines.
         for zone, machines in job_machines.iteritems():
@@ -777,13 +813,13 @@ class ClusterState(object):
         Generate the actions necessary to convert the current job state to the
         desired job state.
         """
-        action_generator = ClusterActionGenerator(self)
+        action_generator = ClusterActionGenerator(self.sitter)
 
         # Assign idle machines to pending tasks.
         pending_tasks = self.desired_jobs.get_pending_tasks()
         task_chain = {}
         for zone, tasks in pending_tasks.iteritems():
-            for task, required in tasks:
+            for task, required in tasks.iteritems():
                 # Aggregate linked jobs into a task chain.
                 master = self._get_master_task(task)
                 if master not in task_chain:
@@ -877,13 +913,16 @@ class ClusterState(object):
 
         @return Actions generated by the state calculations.
         """
+        self.calculate_ready_machines()
         self.calculate_current_state()
-        logger.debug("machines = %s" % self.machines)
-        logger.debug("desired_jobs = %s" % self.desired_jobs.tasks)
-        logger.debug("current_jobs = %s" % self.current_jobs.tasks)
+        logger.info("machines = %s" % self.machines)
+        logger.info("desired_jobs = %s" % self.desired_jobs.tasks)
+        logger.info("current_jobs = %s" % self.current_jobs.tasks)
         self.calculate_job_deployment()
         self.calculate_job_cleanup()
         self.calculate_idle_cleanup()
+        import pdb
+        pdb.set_trace()
 
     def process(self):
         """
