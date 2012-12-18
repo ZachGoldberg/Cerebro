@@ -157,6 +157,7 @@ class AmazonEC2(MachineProvider):
             except:
                 failure_count += 1
                 if failure_count > 5:
+                    import traceback
                     logger.error(traceback.format_exc())
                     return False
                 continue
