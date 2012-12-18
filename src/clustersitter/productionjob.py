@@ -134,18 +134,14 @@ class ProductionJob(object):
         return dependent_jobs
 
     def find_linked_job(self):
-        if self.linked_job_object:
-            return self.linked_job_object
-
-        linked_job = None
-        for job in self.sitter.state.jobs.values():
-            if job.name == self.linked_job:
-                linked_job = job
-                break
-
-        self.linked_job_object = linked_job
+        """
+        Get the linked job object for this job.
+        
+        @return The linked job object.
+        """
+        if self.linked_job and not self.linked_job_object:
+            self.linked_job_object = self.sitter.state.jobs[self.linked_job]
         return self.linked_job_object
-
 
     def ensure_on_linked_job(self, state, sitter):
         """
@@ -201,6 +197,31 @@ class ProductionJob(object):
                 self.fillers[zone].append(filler)
 
         return True
+
+    def deploy(self, zone, machine=None, fail_on_error=False):
+        """
+        Deploy the job to a machine.
+
+        @param machines The machine to deploy to. If absent a new machine will
+            be spun up.
+        @param fail_on_error Whether the job filler should fail on the first
+            error.
+        @return The machine the job was deployed to or None if deployment
+            failed.
+        """
+        machines = []
+        if machine:
+            machines.append(machine)
+        filler = JobFiller(1, self, zone, machines, fail_on_error=fail_on_error)
+        self.fillers[zone].append(filler)
+        self.currently_spawning[zone] += 1
+        try:
+            if filler.run():
+                return filler.machines[0]
+        finally:
+            self.fillers[zone].remove(filler)
+            self.currently_spawning[zone] -= 1
+        return None
 
     def refill(self, state, sitter):
         self.sitter = sitter
