@@ -111,7 +111,7 @@ class ClusterActionGenerator(object):
         for zone, machines in self.update_actions.iteritems():
             for machine in machines.values():
                 sequence = []
-                for task, status in machine['updates'].iteritems():
+                for task, status in machine['update'].iteritems():
                     if status == self.state.Running:
                         sequence.append(StartTaskAction(
                             self.sitter, zone, machine['machine'], task))
@@ -127,7 +127,9 @@ class ClusterActionGenerator(object):
                     sequence.append(AddTaskAction(
                         self.sitter, zone, machine['machine'], task))
 
-                actions.append(SequentialMachineAction(self.sitter, actions))
+                sequence_action = SequentialMachineAction(
+                    self.sitter, machine['machine'], sequence)
+                actions.append(sequence_action)
 
         for zone, items in self.deploy_actions.iteritems():
             for item in items:
@@ -282,7 +284,7 @@ class MachineAction(ClusterAction):
         self.name = "%s %s" % (self.__class__.__name__, machine.hostname)
         self.zone = zone
         self.machine = machine
-        self.initial_state = self.state.get_machine_state(machine)
+        self.initial_state = self.state.get_machine_status(machine)
 
     def run(self):
         """
@@ -293,7 +295,7 @@ class MachineAction(ClusterAction):
             self.state.update_machine(self.machine, self.state.Maintenance)
             self.run_maintenance()
         finally:
-            self.state.update_state(self.machine, self.initial_state)
+            self.state.update_machine(self.machine, self.initial_state)
 
 
 class TaskAction(MachineAction):
@@ -354,9 +356,7 @@ class AddTaskAction(TaskAction):
 
     def run_maintenance(self):
         """Run the action in maintenance mode."""
-        filler = JobFiller(
-            1, self.job, self.zone, idle_machines=[self.machine])
-        if not filler.run():
+        if not self.job.deploy(self.zone, self.machine):
             logger.error(
                 "failed to deploy job '%s' to machine '%s'" %
                 (self.job.name, self.machine.hostname))
@@ -393,14 +393,20 @@ class DeployMachineAction(ClusterAction):
         """Run the action."""
         # Perform first run and grab the new machine.
         job = self.jobs[0]
-        filler = JobFiller(1, self.jobs[0], self.zone)
+        machine = self.jobs[0].deploy(self.zone)
+        if not machine:
+            raise ClusterActionError(
+                "failed to deploy job '%s' on new machine" %
+                self.jobs[0].name)
 
-        if filler.run():
-            machine = filler.machines[0]
+        self.state.desired_jobs.set_pending_machines(
+            self.zone, jobs[0].name, [machine], True)
 
-            for job in self.jobs[1:]:
-                filler = JobFiller(1, job, self.zone, idle_machines=machine)
-                filler.run()
+        for job in self.jobs[1:]:
+            if not job.deploy(self.zone, machine):
+                raise ClusterActionError(
+                    "failed to deploy job '%s' to machine '%s'" %
+                    (job.name, machine.hostname))
 
 
 class RedeployMachineAction(MachineAction):

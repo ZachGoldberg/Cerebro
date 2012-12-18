@@ -109,8 +109,7 @@ class ClusterStats(StatsCollector):
         data['monitors'] = monitors
 
         jobs = []
-        check_jobs = state.jobs
-        for job in check_jobs:
+        for job in state.jobs.values():
             job_data = {}
             job_data['name'] = job.name
             job_data['task_configuration'] = job.task_configuration
@@ -132,7 +131,7 @@ class ClusterStats(StatsCollector):
             job_data['fillers'] = fillers
             job_data['fill'] = job_fill.get(job.name, {})
 
-            fill_machines = job_fill_machines.get(job.name, {})
+            fill_machines = job_machine_fill.get(job.name, {})
             for zone in fill_machines.keys():
                 fill_machines[zone] = [str(m) for m in fill_machines[zone]]
 
