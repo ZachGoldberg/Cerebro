@@ -112,7 +112,7 @@ class ClusterActionGenerator(object):
             for machine in machines.values():
                 sequence = []
                 for task, status in machine['update'].iteritems():
-                    if status == self.state.Running:
+                    if status == self.sitter.state.desired_jobs.Running:
                         sequence.append(StartTaskAction(
                             self.sitter, zone, machine['machine'], task))
                     else:
@@ -391,22 +391,25 @@ class DeployMachineAction(ClusterAction):
 
     def run(self):
         """Run the action."""
+        def fail(job):
+            for job in self.jobs:
+                self.state.remove_job(job)
+            raise ClusterActionError(
+                "failed to deploy job '%s' on new machine" %
+                job.name)
+
         # Perform first run and grab the new machine.
         job = self.jobs[0]
         machine = self.jobs[0].deploy(self.zone)
         if not machine:
-            raise ClusterActionError(
-                "failed to deploy job '%s' on new machine" %
-                self.jobs[0].name)
+            fail(self.jobs[0])
 
         self.state.desired_jobs.set_pending_machines(
             self.zone, jobs[0].name, [machine], True)
 
         for job in self.jobs[1:]:
             if not job.deploy(self.zone, machine):
-                raise ClusterActionError(
-                    "failed to deploy job '%s' to machine '%s'" %
-                    (job.name, machine.hostname))
+                fail(job)
 
 
 class RedeployMachineAction(MachineAction):
