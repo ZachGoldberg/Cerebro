@@ -1,6 +1,9 @@
 High Priority:
--- Reclassify what an idle server is (idle server has no master procs).
 -- Simplify (one-click) restarting machinesitter process.
+-- Cache job definitions from last run, reload for existing machines
+-- "Undeploy" job code from machines.
+-- Need signal handling for clean exits
+-- Clean up thread handling (need stops and joins)
 
 Other:
 -- Support dashes in task names!  
@@ -11,7 +14,7 @@ Other:
  -- Redeploy/Update cerebro itself to a machine
  -- Print logs from a task (chose which machine in CLI or dump all if
    just one machine)
- -- Reboot a task or all tasks on a machine
+ -- Reboot all tasks on a machine
  -- Check status of a jobfiller.
 
 Give each jobfiller an ID so we can look them up via CLI etc.
@@ -56,3 +59,14 @@ Implement 'flexible' limits, aka how long a process can be in
    violation before its killed
 Add Logging instead of printing inside task sitter
   Expose task-sitter logs, too!
+
+
+BUGS:
+
+Machineconsole, show task definitions:
+    Traceback (most recent call last):
+      File "/usr/local/lib/python2.7/dist-packages/cerebrod-1.1.29-py2.7.egg/machineconsole/main.py", line 293, in main
+        run()
+      File "/usr/local/lib/python2.7/dist-packages/cerebrod-1.1.29-py2.7.egg/machineconsole/main.py", line 279, in run
+        globals()[CURRENT_LOC]()
+    KeyError: 'show_task_definitions
