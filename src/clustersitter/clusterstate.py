@@ -149,7 +149,7 @@ class JobState(object):
             for task in tasks:
                 zone = task['zone']
                 machine = task['machine']
-                if machine is not None:
+                if machine:
                     if zone not in zoned_machines:
                         zoned_machines[zone] = []
                     zoned_machines[zone].append(machine)
@@ -565,7 +565,7 @@ class ClusterState(object):
             })
 
             if existing and status != self.Pending:
-                self.add_machine_tasks()
+                self.add_machine_tasks(machine)
             return True
 
     def add_machine_tasks(self, machine):
@@ -589,7 +589,7 @@ class ClusterState(object):
                 task_status = JobState.Stopped
             if name not in self.jobs:
                 logger.warn((
-                    "task %s does not have a job object, "
+                    "task '%s' does not have a job object, "
                     "adding anyways") % name)
             self.desired_jobs.add_tasks(
                 name, zone, [machine], status=task_status)
@@ -669,17 +669,21 @@ class ClusterState(object):
         """
         Remove a job from the cluster. Child jobs will be removed as well.
 
-        @param job The job to remove.
+        @param job The job or name of the job to remove.
         @return True if the job was removed or False (job not deployed).
         """
-        if job.name not in self.jobs:
-            logger.warn("job '%s' not deployed, not removing" % job.name)
-            return False
+        tasks = []
+        if isinstance(job, basestring):
+            tasks.append(job)
+            job = self.jobs.get(job)
+        else:
+            tasks.append(job.name)
+            children = job.find_dependent_jobs()
+            for child in children:
+                tasks.append(child.name)
 
-        children = job.find_dependent_jobs()
-        for child in children:
-            self.desired_jobs.remove_tasks(child.name)
-        self.desired_jobs.remove_tasks(job.name)
+        for task in tasks:
+            self.desired_jobs.remove_tasks(task)
         return True
         
     def persist_jobs(self):
@@ -759,7 +763,8 @@ class ClusterState(object):
         Convert ready pending machines to active.
         """
         for machine in self.machines:
-            if machine['status'] == self.Pending:
+            if (machine['status'] == self.Pending and
+                    machine['machine'].is_initialized()):
                 if self.add_machine_tasks(machine['machine']):
                     machine['status'] = self.Active
 
@@ -833,7 +838,12 @@ class ClusterState(object):
             for zone, master_machines in zoned_master_machines.iteritems():
                 for child in children:
                     # Assign child tasks.
-                    self.desired_jobs.add_tasks(child, zone, master_machines)
+                    machines = []
+                    for machine in master_machines:
+                        tasks = self.desired_jobs.get_machine_tasks(machine)
+                        if child not in tasks:
+                            machines.append(machine)
+                    self.desired_jobs.add_tasks(child, zone, machines)
 
         # Assign idle machines to pending tasks.
         pending_tasks = self.desired_jobs.get_pending_tasks()
@@ -912,11 +922,14 @@ class ClusterState(object):
 
     def calculate_job_cleanup(self):
         """
-        Remove jobs that are no longer deployed to machines.
+        Remove jobs that are no longer deployed to machines. If the job is a
+        child job then we remove it if its master is no longer deployed to any
+        machines.
         """
         for job in self.jobs.values():
-            if (not self.desired_jobs.has_task(job.name) and
-                    not self.current_jobs.has_task(job.name)):
+            master = self._get_master_job(job)
+            if (master and not self.desired_jobs.has_task(master.name) and
+                    not self.current_jobs.has_task(master.name)):
                 del self.jobs[job.name]
         self.persist_jobs()
 
