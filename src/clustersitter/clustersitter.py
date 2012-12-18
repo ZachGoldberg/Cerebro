@@ -266,9 +266,9 @@ class ClusterSitter(object):
                                           locals())
             except:
                 # Odd?
-                logger.warn("Not sure what %s is..." % recipe_class)
+                logger.warn("Unable to load recipe %s..." % recipe_class)
         else:
-            logger.warn("Not sure what %s is..." % recipe_class)
+            logger.warn("Invalid recipe class %s..." % recipe_class)
             return None
 
         if hasattr(recipe_cls, find_func):
