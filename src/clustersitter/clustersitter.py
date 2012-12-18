@@ -237,13 +237,10 @@ class ClusterSitter(object):
         if check:
             return check
 
-        if self.state.remove_job(args['name']):
-            ClusterEventManager.handle(
-                "Removed a job: %s" % args['name'])
-
-            return "Removal OK"
-        else:
-            return "Couldn't find job to remove"
+        self.state.remove_job(args['name'])
+        ClusterEventManager.handle(
+            "Removed a job: %s" % args['name'])
+        return "Removal OK"
 
     # ----------- END API ----------
 
