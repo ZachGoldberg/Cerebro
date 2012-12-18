@@ -149,7 +149,7 @@ class JobState(object):
             for task in tasks:
                 zone = task['zone']
                 machine = task['machine']
-                if machine is None and (not zones or zone in zones):
+                if machine is not None:
                     if zone not in zoned_machines:
                         zoned_machines[zone] = []
                     zoned_machines[zone].append(machine)
@@ -236,24 +236,22 @@ class JobState(object):
                 if not machines or task['machine'] in machines:
                     task['status'] = status
 
-    def set_pending_deploying(self, zone, names, count):
+    def set_pending_deploying(self, zone, name, count):
         """
-        Flag pending tasks in a zone as currently being deployed.
+        Flag a pending task as currently being deployed.
 
         @param zone The zone the task is running in.
-        @param names The names of the tasks to flag.
-        @param count The max number of tasks of a single name in a zone to
-            flag.
+        @param name The name of the task to flag.
+        @param count The max number of task in a zone to flag.
         """
-        for name in names:
-            if name in self.tasks:
-                flagged = 0
-                for task in self.tasks[name]:
-                    if not task['machine'] and task['zone'] == zone:
-                        flagged += 1
-                        task['deploying'] = True
-                        if flagged >= count:
-                            break
+        if name in self.tasks:
+            flagged = 0
+            for task in self.tasks[name]:
+                if not task['machine'] and task['zone'] == zone:
+                    flagged += 1
+                    task['deploying'] = True
+                    if flagged >= count:
+                        break
 
     def get_pending_tasks(self):
         """
@@ -278,22 +276,23 @@ class JobState(object):
                     required[zone][name] += 1
         return required
 
-    def set_pending_machines(self, zone, names, machines):
+    def set_pending_machines(self, zone, name, machines, deploying=False):
         """
-        Assign machines to tasks that do not have machines. Each task will be
-        assigned to each machine.
+        Assign machines to tasks that do not have machines. Each machine will
+        be assigned to the given task.
 
         @param zone The zone to assign to.
-        @param names The names of the tasks to assign machines to.
-        @param machines The machines to assign to the tasks.
+        @param name The name of the task to assign machines to.
+        @param machines The machines to assign to the task.
+        @param deploying True to replace machines that have the deploying flag
+        set. Defaults to False.
         """
         for machine in machines:
-            for name in names:
-                for task in self.tasks.get(name, []):
-                    if (not task['machine'] and task['zone'] == zone and
-                            task.get('deploying', False)):
-                        task['machine'] = machine
-                        break
+            for task in self.tasks.get(name, []):
+                if (not task['machine'] and task['zone'] == zone and
+                        task.get('deploying', False) == deploying):
+                    task['machine'] = machine
+                    break
 
     def get_job_fill(self):
         """
@@ -316,7 +315,7 @@ class JobState(object):
         """
         job_fill = {}
         job_fill_machines = {}
-        for name, tasks in self.tasks:
+        for name, tasks in self.tasks.iteritems():
             job_fill[name] = {}
             job_fill_machines[name] = {}
             for task in tasks:
@@ -398,16 +397,16 @@ class ClusterState(object):
                 return item
         return None
 
-    def _get_master_task(self, task):
-        """Get the master task in a task chain."""
-        if task not in self.jobs:
+    def _get_master_job(self, job):
+        """Get the master job in a job chain."""
+        if job.name not in self.jobs:
             return None
-        current = self.jobs[task]
-        while current.linked_job:
-            if current.linked_job not in self.jobs:
-                return None
-            current = self.jobs[current.linked_job]
-        return current
+        current_job = job
+        next_job = job.find_linked_job()
+        while next_job:
+            current_job = next_job
+            next_job = current_job.find_linked_job()
+        return current_job
 
     def get_job(self, name):
         """
@@ -611,7 +610,8 @@ class ClusterState(object):
         if item:
             self.machines.remove(item)
 
-        for monitor in self.state.monitors:
+        for monitor in self.monitors:
+            #TODO: Verify this once monitors are managed in ClusterState.
             monitor[0].remove_machine(machine)
 
     def update_machine(self, machine, status):
@@ -628,12 +628,12 @@ class ClusterState(object):
 
     def add_job(self, job):
         """
-        Add a job to the cluster. The job is allocated to idle machines.
-        New machines are added to the state if necessary. Child jobs must be
-        added after their parents. To deploy a job with the same name the
-        existing job must first be removed. If the name of this job matches
-        existing tasks that do not have jobs then those tasks will be assigned
-        to this job.
+        Add a job to the cluster. Master jobs are immediately allocated to
+        machines. Child jobs are attached to their associated master job and
+        deployed simultenously as a job "chain". To deploy a job with the same
+        name the existing job must first be removed. If the name of this job
+        matches existing tasks that do not have jobs then those tasks will be
+        assigned to this job.
 
         @param job The job to add to the cluster. The job is configured with
             the required zones and number of machines.
@@ -643,29 +643,26 @@ class ClusterState(object):
             logger.warn(
                 "job '%s' already deployed, not adding" % job.name)
             return False
-        if job.linked_job is not None and job.linked_job not in self.jobs:
-            logger.warn(
-                "child job '%s' deployed before master '%s', not adding" %
-                (job.name, job.linked_job))
-            return False
 
         self.jobs[job.name] = job
-        zones = job.get_shared_fate_zones()
-        zoned_idle_machines = self.get_machines(zones, idle=True)
-        zoned_existing_machines = self.desired_jobs.get_task_machines(
-            job.name, zones)
+        if not job.linked_job:
+            # Allocate the master job to machines.
+            zones = job.get_shared_fate_zones()
+            zoned_idle_machines = self.get_machines(zones, idle=True)
+            zoned_existing_machines = self.desired_jobs.get_task_machines(
+                job.name, zones)
 
-        for zone in zones:
-            #TODO: !MACHINEASSUMPTION! Fill jobs based on required CPU and
-            # memory.
-            num_existing = len(zoned_existing_machines[zone])
-            num_required = job.get_num_required_machines_in_zone(zone)
-            num_needed = max(0, num_required - num_existing)
-            
-            idle_machines = zoned_idle_machines[zone][:num_needed]
-            num_create = num_needed - len(idle_machines)
-            self.desired_jobs.add_tasks(
-                job.name, zone, idle_machines, num_create)
+            for zone in zones:
+                #TODO: !MACHINEASSUMPTION! Fill jobs based on required CPU and
+                # memory.
+                num_existing = len(zoned_existing_machines[zone])
+                num_required = job.get_num_required_machines_in_zone(zone)
+                num_needed = max(0, num_required - num_existing)
+                
+                idle_machines = zoned_idle_machines[zone][:num_needed]
+                num_create = num_needed - len(idle_machines)
+                self.desired_jobs.add_tasks(
+                    job.name, zone, idle_machines, num_create)
         return True
 
     def remove_job(self, job):
@@ -679,6 +676,9 @@ class ClusterState(object):
             logger.warn("job '%s' not deployed, not removing" % job.name)
             return False
 
+        children = job.find_dependent_jobs()
+        for child in children:
+            self.desired_jobs.remove_tasks(child.name)
         self.desired_jobs.remove_tasks(job.name)
         return True
         
@@ -781,7 +781,7 @@ class ClusterState(object):
         # Update tasks.
         for zone, machines in zoned_machines.iteritems():
             for machine in machines:
-                if machine.is_initialized():
+                if not machine.is_initialized():
                     logger.info(
                         "machine '%s' not initialized, skipping state update" %
                         machine.hostname)
@@ -789,11 +789,11 @@ class ClusterState(object):
 
                 expected_tasks = self.current_jobs.get_machine_tasks(machine)
                 actual_tasks = {}
-                for actual_task in machine.get_tasks().iteritems():
+                for actual_task in machine.get_tasks().values():
                     if actual_task['running']:
-                        actual_tasks[actual_task['name']] = self.Running
+                        actual_tasks[actual_task['name']] = JobState.Running
                     else:
-                        actual_tasks[actual_task['name']] = self.Stopped
+                        actual_tasks[actual_task['name']] = JobState.Stopped
 
                 add_tasks = set(actual_tasks.keys()) - set(expected_tasks)
                 remove_tasks = set(expected_tasks) - set(actual_tasks.keys())
@@ -815,38 +815,48 @@ class ClusterState(object):
         """
         action_generator = ClusterActionGenerator(self.sitter)
 
+        # Build job chains.
+        chains = {}
+        for name, job in self.jobs.iteritems():
+            master = self._get_master_job(job)
+            if not master:
+                continue
+            if master.name not in chains:
+                chains[master.name] = []
+            if master.name != job.name:
+                chains[master.name].append(job.name)
+
+        # Assign chain tasks to machines.
+        for master, children in chains.iteritems():
+            # Find machines where the master is running.
+            zoned_master_machines = self.desired_jobs.get_task_machines(master)
+            for zone, master_machines in zoned_master_machines.iteritems():
+                for child in children:
+                    # Assign child tasks.
+                    self.desired_jobs.add_tasks(child, zone, master_machines)
+
         # Assign idle machines to pending tasks.
         pending_tasks = self.desired_jobs.get_pending_tasks()
-        task_chain = {}
         for zone, tasks in pending_tasks.iteritems():
-            for task, required in tasks.iteritems():
-                # Aggregate linked jobs into a task chain.
-                master = self._get_master_task(task)
-                if master not in task_chain:
-                    task_chain[master] = {
-                        'required': 0,
-                        'tasks': set(),
-                        'zone': zone,
-                    }
-                task_chain[master]['tasks'].add(task)
-                task_chain[master]['required'] = max(
-                    task_chain[master]['required'], required)
+            for master, required in tasks.iteritems():
+                if required > 0:
+                    tasks = [master] + chains.get(master, [])
 
-        for chain in task_chain.values():
-            idle_machines = self.get_machines(
-                zones=[chain['zone']], idle=True)[chain['zone']]
-            idle_machines = idle_machines[:chain['required']]
-            required = chain['required'] - len(idle_machines)
+                    # Find some idle machines.
+                    idle_machines = self.get_machines(
+                        zones=[zone], idle=True)[zone]
+                    idle_machines = idle_machines[:required]
+                    required = required - len(idle_machines)
 
-            # Assign idle machines to task chain.
-            self.desired_jobs.set_pending_machines(
-                chain['zone'], chain['tasks'], idle_machines)
+                    # Assign idle machines to task chain.
+                    self.desired_jobs.set_pending_machines(
+                        zone, master, idle_machines)
 
-            # Deploy new machines to task chain.
-            self.desired_jobs.set_pending_deploying(
-                chain['zone'], chain['tasks'], required)
-            action_generator.deploy_machines(
-                chain['zone'], chain['tasks'], required)
+                    # Deploy job chain to new machines.
+                    self.desired_jobs.set_pending_deploying(
+                        zone, master, required)
+                    action_generator.deploy_machines(
+                        zone, tasks, required)
 
         # Calculate changes to existing tasks.
         desired_tasks = self.desired_jobs.flatten()
@@ -890,12 +900,15 @@ class ClusterState(object):
             zoned_idle_machines = self.get_machines(idle=True)
             for zone, idle_machines in zoned_idle_machines.iteritems():
                 if len(idle_machines) > self.max_idle_per_zone:
-                    count = self.max_idle_per_zone - len(idle_machines)
+                    count = len(idle_machines) - self.max_idle_per_zone
                     decomission[zone] = idle_machines[-count:]
 
             for zone, machines in decomission.iteritems():
-                self.pending_actions.append(
-                    DecomissionMachineAction(self, zone, machines))
+                for machine in machines:
+                    logger.info("decomissioning idle maching '%s'" %
+                        machine.hostname)
+                    self.pending_actions.append(
+                        DecomissionMachineAction(self.sitter, zone, machine))
 
     def calculate_job_cleanup(self):
         """
@@ -921,8 +934,6 @@ class ClusterState(object):
         self.calculate_job_deployment()
         self.calculate_job_cleanup()
         self.calculate_idle_cleanup()
-        import pdb
-        pdb.set_trace()
 
     def process(self):
         """
