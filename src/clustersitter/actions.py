@@ -405,7 +405,7 @@ class DeployMachineAction(ClusterAction):
             fail(self.jobs[0])
 
         self.state.desired_jobs.set_pending_machines(
-            self.zone, jobs[0].name, [machine], True)
+            self.zone, self.jobs[0].name, [machine], True)
 
         for job in self.jobs[1:]:
             if not job.deploy(self.zone, machine):
