@@ -401,48 +401,40 @@ class JobFiller(object):
         self.state.next()
 
     def add_to_monitoring(self):
-        # Ensure the machines aren't already monitored
+        sitter = self.job.sitter
+        state = sitter.state
         machines_to_add = []
-        # TODO move this to a function in clustersitter.py
-        # def check_already_monitored or some such
-        for machine in self.machines:
-            found = False
-            for monitor, _ in self.job.sitter.state.monitors:
-                if machine in monitor.monitored_machines:
-                    found = True
-                    break
 
-            if not found:
+        # Ensure the machines aren't already monitored
+        for machine in self.machines:
+            if not state.is_machine_monitored(machine):
                 machines_to_add.append(machine)
 
-        if machines_to_add:
-            self.job.sitter.add_machines(machines_to_add, update_dns=False)
+        sitter.add_machines(machines_to_add, update_dns=False)
 
         # Now wait for the machines to actually be monitored
         for machine in self.machines:
             ready = False
             while not ready:
-                found = False
-                for monitor, _ in self.job.sitter.state.monitors:
-                    if machine in monitor.monitored_machines:
-                        found = True
-                        break
-                if not found:
+                if not state.is_machine_monitored(machine):
+                    # Fail if the machine falls out of monitoring.
                     raise Exception("Failed to deploy machine sitter to '%s'" %
                         machine)
 
                 loaded_data = machine.has_loaded_data()
                 has_task = self.job.name in machine.get_tasks()
+                #TODO: Why not wait for the sitter to be deployed?
                 if self.job.name == "Machine Redeployer":
                     has_task = True
 
                 ready = loaded_data and has_task
                 if not ready:
                     logger.debug(
-                        "Waiting for machine to be actually monitored...")
+                        "Waiting for machine to actually be monitored...")
                     time.sleep(0.1)
                 else:
-                    logger.debug("%s has our task, good to go!" % machine)
+                    logger.debug("Found '%s' on '%s', good to go!" %
+                        (self.job.name, machine))
 
         self.state.next()
 

@@ -429,8 +429,10 @@ class RedeployMachineAction(MachineAction):
         """Run the action in maintenance mode."""
         logger.info("redeploying sitter to '%s'" % self.machine.hostname)
         if not self.job.deploy(self.zone, self.machine, True):
-            logger.info("failed to redeploy '%s', decomissioning" %
-                self.machine.hostname)
+            logger.info((
+                "failed to redeploy '%s', decomissioning and deploying "
+                "jobs elsewhere") % self.machine.hostname)
+            self.state.detach_machine(self.machine)
             self.sitter.decomission_machine(self.machine)
 
 

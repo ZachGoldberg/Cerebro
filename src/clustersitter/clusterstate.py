@@ -386,7 +386,8 @@ class ClusterState(object):
         self.machines = []
         self.jobs = {}
         self.job_file = "%s/jobs.json" % sitter.log_location
-        self.repair_jobs = []
+        self.job_chains = {}
+        self.repair_jobs = {}
         self.desired_jobs = JobState()
         self.current_jobs = JobState()
         self.pending_actions = []
@@ -483,10 +484,21 @@ class ClusterState(object):
         """
         item = self._get_machine_item(machine)
         allow_status = [
-            self.Maintenance, self.Paused, self.Pending, self.Unreachable]
+            self.Maintenance, self.Paused, self.Pending]
         if not item or item['status'] in allow_status:
             return False
         return True
+
+    def is_machine_monitored(self, machine):
+        """
+        Check if a machine is being or is queued to be monitored.
+
+        @return True if the machine is monitored or False.
+        """
+        for monitor, thread in self.monitors:
+            if monitor.has_machine(machine):
+                return True
+        return False
 
     def get_machines(self, zones=None, status=None, idle=None):
         """
@@ -542,6 +554,15 @@ class ClusterState(object):
             return None
         return item['status']
 
+    def get_machine_repair_job(self, machine):
+        """
+        Get the repair job for the machine.
+
+        @return The repair job for the machine or None if there is no repair
+            job.
+        """
+        return self.repair_jobs.get(machine.hostname)
+
     def add_machine(self, machine, status=None, existing=False):
         """
         Add a machine to state tracking.
@@ -555,7 +576,6 @@ class ClusterState(object):
         @return True on success, False on failure (machine not initialized).
         """
         if not self.has_machine(machine):
-            #TODO: Add machine to monitoring here.
             if status is None:
                 status = self.Active
 
@@ -575,6 +595,7 @@ class ClusterState(object):
             if existing and status != self.Pending:
                 self.add_machine_tasks(machine)
             return True
+        return False
 
     def add_machine_tasks(self, machine):
         """
@@ -618,10 +639,6 @@ class ClusterState(object):
         if item:
             self.machines.remove(item)
 
-        for monitor in self.monitors:
-            #TODO: Verify this once monitors are managed in ClusterState.
-            monitor[0].remove_machine(machine)
-
     def update_machine(self, machine, status):
         """
         Update the status of a machine.
@@ -634,13 +651,49 @@ class ClusterState(object):
         if item:
             item['status'] = status
 
+    def monitor_machine(self, machine):
+        """
+        Add a machine to monitoring.
+
+        @param machine The machine to add to monitoring.
+        @return True if the machine was added or False if the machine is
+            already being monitored.
+        """
+        if self.is_machine_monitored(machine):
+            return False
+
+        def sort_monitors(monitor):
+            return monitor[0].num_monitored_machines()
+
+        # Always add to the monitor with the least amount of machines.
+        self.monitors.sort(key=sort_monitors)
+        return self.monitors[0][0].add_machine(machine)
+
+    def unmonitor_machine(self, machine):
+        """
+        Remove a machine from monitoring.
+
+        @param machine The machine to remove from monitoring.
+        @return True if the machine was removed or False if the machine was not
+            being monitored.
+        """
+        for monitor, thread in self.monitors:
+            if monitor.remove_machine(machine):
+                return True
+        return False
+
     def repair_machine(self, machine):
         """
         Redeploy a machinesitter to a machine.
 
         @param machine The machine to repair.
+        @return True if a repair job was generated or False if one already
+            exists.
         """
         #TODO: Handle machine repairs in machine object.
+        if machine.hostname in self.repair_jobs:
+            return False
+
         zone = self.get_machine_zone(machine)
         job = ProductionJob(
             self.sitter,
@@ -651,9 +704,29 @@ class ClusterState(object):
                 },
             }, None)
 
-        self.repair_jobs.append(job)
+        self.repair_jobs[machine.hostname] = job
         self.pending_actions.append(
             RedeployMachineAction(self.sitter, zone, machine, job))
+        return True
+
+    def detach_machine(self, machine):
+        """
+        Undeploy all jobs from a machine. Jobs removed in this manner will be
+        assigned to another idle job. Used to keep jobs around when undeploying
+        a dead machine.
+
+        @param machine The machine to detach.
+        """
+        zone = self.get_machine_zone(machine)
+        tasks = self.desired_jobs.get_machine_tasks(machine)
+        job_chains = {}
+        for task in tasks:
+            if task in self.job_chains:
+                job_chains[task] = self.job_chains[task]
+            self.desired_jobs.remove_tasks(task, [machine])
+
+        for master in job_chains.keys():
+            self.desired_jobs.add_tasks(master, zone, [], 1)
 
     def add_job(self, job):
         """
@@ -843,6 +916,22 @@ class ClusterState(object):
                     self.current_jobs.update_tasks(
                         task, actual_tasks[task], [machine])
 
+    def calculate_job_chains(self):
+        """
+        Generate job chains for use in job deployment.
+        """
+        # Build job chains.
+        job_chains = {}
+        for name, job in self.jobs.iteritems():
+            master = self._get_master_job(job)
+            if not master:
+                continue
+            if master.name not in job_chains:
+                job_chains[master.name] = []
+            if master.name != job.name:
+                job_chains[master.name].append(job.name)
+        self.job_chains = job_chains
+
     def calculate_job_deployment(self):
         """
         Generate the actions necessary to convert the current job state to the
@@ -850,19 +939,8 @@ class ClusterState(object):
         """
         action_generator = ClusterActionGenerator(self.sitter)
 
-        # Build job chains.
-        chains = {}
-        for name, job in self.jobs.iteritems():
-            master = self._get_master_job(job)
-            if not master:
-                continue
-            if master.name not in chains:
-                chains[master.name] = []
-            if master.name != job.name:
-                chains[master.name].append(job.name)
-
         # Assign chain tasks to machines.
-        for master, children in chains.iteritems():
+        for master, children in self.job_chains.iteritems():
             # Find machines where the master is running.
             zoned_master_machines = self.desired_jobs.get_task_machines(master)
             for zone, master_machines in zoned_master_machines.iteritems():
@@ -880,7 +958,7 @@ class ClusterState(object):
         for zone, tasks in pending_tasks.iteritems():
             for master, required in tasks.iteritems():
                 if required > 0:
-                    tasks = [master] + chains.get(master, [])
+                    tasks = [master] + self.job_chains.get(master, [])
 
                     # Find some idle machines.
                     idle_machines = self.get_machines(
@@ -963,7 +1041,7 @@ class ClusterState(object):
                 del self.jobs[job.name]
         self.persist_jobs()
 
-        for job in list(self.repair_jobs):
+        for name, job in dict(self.repair_jobs).iteritems():
             remove = True
             for fillers in job.fillers.values():
                 for filler in fillers:
@@ -972,16 +1050,18 @@ class ClusterState(object):
                         remove = False
                         break
             if remove:
-                self.repair_jobs.remove(job)
+                del self.repair_jobs[name]
 
     def calculate_unreachable_machines(self):
         """
         Redeploy sitters to unreachable machines.
         """
-        zoned_machines = self.get_machines(status=self.Unreachable)
-        for machines in zoned_machines.values():
+        zoned_machines = self.get_machines()
+        for zone, machines in zoned_machines.iteritems():
             for machine in machines:
-                self.repair_machine(machine)
+                if (not self.is_machine_monitored(machine) and
+                        not self.get_machine_repair_job(machine)):
+                    self.repair_machine(machine)
 
     def calculate(self):
         """
@@ -991,9 +1071,6 @@ class ClusterState(object):
         """
         self.calculate_ready_machines()
         self.calculate_current_state()
-        logger.info("machines = %s" % self.machines)
-        logger.info("desired_jobs = %s" % self.desired_jobs.tasks)
-        logger.info("current_jobs = %s" % self.current_jobs.tasks)
         self.calculate_job_deployment()
         self.calculate_job_cleanup()
         self.calculate_idle_cleanup()

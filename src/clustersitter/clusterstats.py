@@ -109,7 +109,7 @@ class ClusterStats(StatsCollector):
         data['monitors'] = monitors
 
         jobs = []
-        check_jobs = state.jobs.values() + state.repair_jobs
+        check_jobs = state.jobs.values() + state.repair_jobs.values()
         for job in check_jobs:
             job_data = {}
             job_data['name'] = job.name

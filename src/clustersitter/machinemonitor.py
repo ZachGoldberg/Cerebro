@@ -22,20 +22,53 @@ class MachineMonitor:
     def num_monitored_machines(self):
         return len(self.monitored_machines) + len(self.add_queue)
 
+    def has_machine(self, monitored_machine):
+        """
+        Check if this monitor has the given machine.
+
+        @param monitored_machine The machine to check for.
+        @return True if the monitor has the machine or False.
+        """
+        return (
+            monitored_machine in self.monitored_machines or
+            monitored_machine in self.add_queue)
+
     def remove_machine(self, monitored_machine):
+        """
+        Remove a monitored machine.
+
+        @param monitored_machine The machine to remove.
+        @return True if the machine was removed or False if the machine was not
+            being monitored.
+        """
+        if monitored_machine in self.add_queue:
+            self.add_queue.remove(monitored_machine)
+            return True
         if monitored_machine in self.monitored_machines:
             self.monitored_machines.remove(monitored_machine)
             if monitored_machine in self.pull_failures:
                 del self.pull_failures[monitored_machine]
+            return True
+        return False
 
-    def add_machines(self, monitored_machines):
-        self.add_queue.extend(monitored_machines)
-        for m in monitored_machines:
-            self.pull_failures[m] = 0
+    def add_machine(self, monitored_machine):
+        """
+        Add a machine to the monitor.
 
-        logger.info("Queued %s for inclusion in next stats run in %s" % (
-                [str(a) for a in monitored_machines],
-                self.number))
+        @param monitored_machine The machine to add to the monitor.
+        @return True if the machine is added to monitoring or False if the
+            machine is already being monitored.
+        """
+        if self.has_machine(monitored_machine):
+            return False
+
+        self.add_queue.append(monitored_machine)
+        self.pull_failures[monitored_machine] = 0
+
+        logger.info(
+            "Queued %s for inclusion in next stats run in %s" %
+            (monitored_machine, self.number))
+        return True
 
     def initialize_machines(self, monitored_machines):
         for m in monitored_machines:
@@ -117,13 +150,9 @@ class MachineMonitor:
                         self.monitored_machines.remove(machine)
                         del self.pull_failures[machine]
                         machine.detected_sitter_failures += 1
-                        logger.warn(
-                            "Removing " +
-                            "%s because we can't contact the sitter! " % (
-                                machine.hostname))
-                        self.clustersitter._register_sitter_failure(
-                            machine, self)
-
+                        logger.warn((
+                            "Removing '%s' because we can't contact "
+                            "the sitter!") % machine.hostname)
             except:
                 import traceback
                 traceback.print_exc()

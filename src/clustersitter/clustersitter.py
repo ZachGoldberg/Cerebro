@@ -248,6 +248,7 @@ class ClusterSitter(object):
     # ----------- END API ----------
 
     def machines_in_queue(self):
+        #TODO: Replace with an equivelent method in ClusterState.
         for monitor, thread in self.state.monitors:
             if monitor.processing_new_machines():
                 return True
@@ -384,38 +385,9 @@ class ClusterSitter(object):
             mm = m
             if not isinstance(mm, MonitoredMachine):
                 mm = MonitoredMachine(m)
-
+            self.state.monitor_machine(mm)
             self.state.add_machine(mm, existing=True)
             monitored_machines.append(mm)
-
-        # Spread the machines out evenly across threads
-        num_threads_to_use = min(self.worker_thread_count, len(machines)) or 1
-        machines_per_thread = int(len(machines) / num_threads_to_use) or 1
-
-        # Take care of individisable # of machines by thread
-        if machines_per_thread * num_threads_to_use != len(machines):
-            machines_per_thread += 1
-
-        self.state.monitors.sort(key=lambda x: x[0].num_monitored_machines())
-        monitors_to_use = self.state.monitors[:num_threads_to_use]
-
-        logger.info(
-            "Add to Monitoring, num_threads_to_use: %s" % num_threads_to_use +
-            "machines_per_thread: %s, " % machines_per_thread)
-
-        for index, monitor in enumerate(monitors_to_use):
-            start_index = index * machines_per_thread
-            end_index = (index + 1) * machines_per_thread
-
-            if end_index > len(machines):
-                end_index = len(machines)
-
-            if start_index > len(machines):
-                start_index = end_index
-
-            if start_index != end_index:
-                monitor[0].add_machines(
-                    monitored_machines[start_index:end_index])
 
         if not update_dns:
             return
@@ -452,6 +424,7 @@ class ClusterSitter(object):
         logger.info(
             "Initializing %s MachineMonitors" % self.worker_thread_count)
         # Spin up all the monitoring threads
+        #TODO: Move monitor thread spinup to ClusterState.
         for threadnum in range(self.worker_thread_count):
             machinemonitor = MachineMonitor(parent=self,
                                             number=threadnum)
@@ -459,6 +432,7 @@ class ClusterSitter(object):
                                       name='Monitoring-%s' % threadnum)
             self.state.monitors.append((machinemonitor, thread))
 
+        #TODO: Don't hard code providers.
         aws = AmazonEC2(self.provider_config['aws'])
         if aws.usable():
             self.state.add_provider('aws', aws)
@@ -484,17 +458,3 @@ class ClusterSitter(object):
         logger.info("Starting metadata calculator")
         self.state.start()
         self.start_state = "Started"
-
-    def _register_sitter_failure(self, monitored_machine, monitor):
-        """
-        Register a machine as unreachable.
-        """
-        status = self.state.get_machine_status(monitored_machine)
-        if status != self.state.Maintenance:
-            logger.info(
-                "Registering an unreachable machine '%s'" % monitored_machine)
-            self.state.update_machine(monitored_machine, self.state.Unreachable)
-        else:
-            logger.info(
-                "Machine '%s' is unreachable but in maintenance, skipping" %
-                monitored_machine)
