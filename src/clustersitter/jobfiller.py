@@ -422,9 +422,18 @@ class JobFiller(object):
         for machine in self.machines:
             ready = False
             while not ready:
+                found = False
+                for monitor, _ in self.job.sitter.state.monitors:
+                    if machine in monitor.monitored_machines:
+                        found = True
+                        break
+                if not found:
+                    raise Exception("Failed to deploy machine sitter to '%s'" %
+                        machine)
+
                 loaded_data = machine.has_loaded_data()
                 has_task = self.job.name in machine.get_tasks()
-                if self.job.name == "Machine Doctor Redeployer":
+                if self.job.name == "Machine Redeployer":
                     has_task = True
 
                 ready = loaded_data and has_task

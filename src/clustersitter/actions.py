@@ -1,7 +1,5 @@
 
 import logging
-from jobfiller import JobFiller
-from productionjob import ProductionJob
 from threading import Thread
 
 logger = logging.getLogger(__name__)
@@ -415,21 +413,24 @@ class DeployMachineAction(ClusterAction):
 class RedeployMachineAction(MachineAction):
     """Redeploy an unreachable machine."""
 
+    def __init__(self, sitter, zone, machine, job):
+        """
+        Redeploy a machinesitter job to a machine.
+
+        @param sitter The cluster sitter object.
+        @param zone The zone the job is being deployed to.
+        @param machine The machine to manage the job on.
+        @param job The repair job to run.
+        """
+        super(RedeployMachineAction, self).__init__(sitter, zone, machine)
+        self.job = job
+
     def run_maintenance(self):
         """Run the action in maintenance mode."""
-        #TODO: Make redeploying less hacky.
-        job = ProductionJob(
-            self.sitter,
-            '', {'name': 'Machine Redeployer'}, {
-                self.zone: {
-                    'mem': self.machine.config.mem,
-                    'cpu': self.machine.config.cpus,
-                },
-            }, None)
-
-        filler = JobFiller(
-            1, job, self.zone, raw_machines=[self.machine], fail_on_error=True)
-        if not filler.run():
+        logger.info("redeploying sitter to '%s'" % self.machine.hostname)
+        if not self.job.deploy(self.zone, self.machine, True):
+            logger.info("failed to redeploy '%s', decomissioning" %
+                self.machine.hostname)
             self.sitter.decomission_machine(self.machine)
 
 

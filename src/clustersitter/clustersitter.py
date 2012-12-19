@@ -487,13 +487,14 @@ class ClusterSitter(object):
 
     def _register_sitter_failure(self, monitored_machine, monitor):
         """
-        !! Fabric is not threadsafe.  Do all work in one thread by appending to
-        a queue !!
-        # Update -- not using fabric anymore, but we still don't want
-        to be mucking with machines in the machinemonitor thread,
-        still a good idea to shift to machinedoctor
-
+        Register a machine as unreachable.
         """
-        logger.info(
-            "Registering an unreachable machine %s" % monitored_machine)
-        self.state.update_machine(monitored_machine, self.state.Unreachable)
+        status = self.state.get_machine_status(monitored_machine)
+        if status != self.state.Maintenance:
+            logger.info(
+                "Registering an unreachable machine '%s'" % monitored_machine)
+            self.state.update_machine(monitored_machine, self.state.Unreachable)
+        else:
+            logger.info(
+                "Machine '%s' is unreachable but in maintenance, skipping" %
+                monitored_machine)

@@ -8,6 +8,7 @@ import time
 from actions import (
     ClusterActionGenerator, DecomissionMachineAction, RedeployMachineAction,
     RestartTaskAction)
+from productionjob import ProductionJob
 from threading import Thread
 
 logger = logging.getLogger(__name__)
@@ -385,6 +386,7 @@ class ClusterState(object):
         self.machines = []
         self.jobs = {}
         self.job_file = "%s/jobs.json" % sitter.log_location
+        self.repair_jobs = []
         self.desired_jobs = JobState()
         self.current_jobs = JobState()
         self.pending_actions = []
@@ -480,7 +482,8 @@ class ClusterState(object):
         @return True if the machine is mutable or False.
         """
         item = self._get_machine_item(machine)
-        allow_status = [self.Maintenance, self.Paused, self.Pending]
+        allow_status = [
+            self.Maintenance, self.Paused, self.Pending, self.Unreachable]
         if not item or item['status'] in allow_status:
             return False
         return True
@@ -630,6 +633,27 @@ class ClusterState(object):
         item = self._get_machine_item(machine)
         if item:
             item['status'] = status
+
+    def repair_machine(self, machine):
+        """
+        Redeploy a machinesitter to a machine.
+
+        @param machine The machine to repair.
+        """
+        #TODO: Handle machine repairs in machine object.
+        zone = self.get_machine_zone(machine)
+        job = ProductionJob(
+            self.sitter,
+            '', {'name': 'Machine Redeployer'}, {
+                zone: {
+                    'mem': machine.config.mem,
+                    'cpu': machine.config.cpus,
+                },
+            }, None)
+
+        self.repair_jobs.append(job)
+        self.pending_actions.append(
+            RedeployMachineAction(self.sitter, zone, machine, job))
 
     def add_job(self, job):
         """
@@ -930,7 +954,7 @@ class ClusterState(object):
         """
         Remove jobs that are no longer deployed to machines. If the job is a
         child job then we remove it if its master is no longer deployed to any
-        machines.
+        machines. Also remove finished repair jobs.
         """
         for job in self.jobs.values():
             master = self._get_master_job(job)
@@ -939,16 +963,25 @@ class ClusterState(object):
                 del self.jobs[job.name]
         self.persist_jobs()
 
+        for job in list(self.repair_jobs):
+            remove = True
+            for fillers in job.fillers.values():
+                for filler in fillers:
+                    # If there are fillers still running then leave it in.
+                    if filler.state.get_state() != 8:
+                        remove = False
+                        break
+            if remove:
+                self.repair_jobs.remove(job)
+
     def calculate_unreachable_machines(self):
         """
         Redeploy sitters to unreachable machines.
         """
         zoned_machines = self.get_machines(status=self.Unreachable)
-        for zone, machines in zoned_machines.iteritems():
+        for machines in zoned_machines.values():
             for machine in machines:
-                logger.info("redeploying sitter to '%s'" % machine.hostname)
-                self.pending_actions.append(
-                    RedeployMachineAction(self.sitter, zone, machine))
+                self.repair_machine(machine)
 
     def calculate(self):
         """
