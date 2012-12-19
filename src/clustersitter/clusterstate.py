@@ -6,7 +6,8 @@ import logging
 import simplejson
 import time
 from actions import (
-    ClusterActionGenerator, DecomissionMachineAction, RestartTaskAction)
+    ClusterActionGenerator, DecomissionMachineAction, RedeployMachineAction,
+    RestartTaskAction)
 from threading import Thread
 
 logger = logging.getLogger(__name__)
@@ -938,6 +939,17 @@ class ClusterState(object):
                 del self.jobs[job.name]
         self.persist_jobs()
 
+    def calculate_unreachable_machines(self):
+        """
+        Redeploy sitters to unreachable machines.
+        """
+        zoned_machines = self.get_machines(status=self.Unreachable)
+        for zone, machines in zoned_machines.iteritems():
+            for machine in machines:
+                logger.info("redeploying sitter to '%s'" % machine.hostname)
+                self.pending_actions.append(
+                    RedeployMachineAction(self.sitter, zone, machine))
+
     def calculate(self):
         """
         Handle all state calculations.
@@ -952,6 +964,7 @@ class ClusterState(object):
         self.calculate_job_deployment()
         self.calculate_job_cleanup()
         self.calculate_idle_cleanup()
+        self.calculate_unreachable_machines()
 
     def process(self):
         """
