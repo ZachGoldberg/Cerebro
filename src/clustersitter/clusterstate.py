@@ -213,8 +213,11 @@ class JobState(object):
         @param name The name of the tasks.
         @param machines The machines to remove the tasks from. Defaults to all
             machines.
+        @return A list of tasks that were removed.
         """
+        removed = []
         if name in self.tasks:
+            removed.append(name)
             if not machines:
                 del self.tasks[name]
             else:
@@ -223,6 +226,7 @@ class JobState(object):
                         self.tasks[name].remove(task)
                 if not self.tasks[name]:
                     del self.tasks[name]
+        return removed
 
     def update_tasks(self, name, status, machines=None):
         """
@@ -670,7 +674,7 @@ class ClusterState(object):
         Remove a job from the cluster. Child jobs will be removed as well.
 
         @param job The job or name of the job to remove.
-        @return True if the job was removed or False (job not deployed).
+        @return A list of job names that were removed.
         """
         tasks = []
         if isinstance(job, basestring):
@@ -682,10 +686,11 @@ class ClusterState(object):
             for child in children:
                 tasks.append(child.name)
 
+        removed = []
         for task in tasks:
-            self.desired_jobs.remove_tasks(task)
-        return True
-        
+            removed.extend(self.desired_jobs.remove_tasks(task))
+        return removed
+
     def persist_jobs(self):
         """
         Persist jobs to the jobs file.
