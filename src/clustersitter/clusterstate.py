@@ -502,7 +502,7 @@ class ClusterState(object):
 
         for item in self.machines:
             if zones is None or item['zone'] in zones:
-                if not status or item['status'] != status:
+                if not status or item['status'] == status:
                     if item['zone'] not in zoned_machines:
                         zoned_machines[item['zone']] = []
                     if idle is None:
