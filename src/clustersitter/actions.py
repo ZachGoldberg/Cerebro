@@ -254,15 +254,15 @@ class SequentialMachineAction(SequentialAction):
         super(SequentialMachineAction, self).__init__(sitter, actions)
         self.name = "%s %s" % (self.__class__.__name__, machine.hostname)
         self.machine = machine
-        self.initial_status = self.state.get_machine_status(machine)
 
     def run(self):
         """Run the action sequence in machine maintenance mode."""
+        initial_status = self.state.get_machine_status(machine)
         self.state.update_machine(self.machine, self.state.Maintenance)
         try:
             super(SequentialMachineAction, self).run()
         finally:
-            self.state.update_machine(self.machine, self.initial_status)
+            self.state.update_machine(self.machine, initial_status)
 
 
 class MachineAction(ClusterAction):
