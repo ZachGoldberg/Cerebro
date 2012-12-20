@@ -1071,6 +1071,7 @@ class ClusterState(object):
         """
         self.calculate_ready_machines()
         self.calculate_current_state()
+        self.calculate_job_chains()
         self.calculate_job_deployment()
         self.calculate_job_cleanup()
         self.calculate_idle_cleanup()
