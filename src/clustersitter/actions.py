@@ -257,7 +257,7 @@ class SequentialMachineAction(SequentialAction):
 
     def run(self):
         """Run the action sequence in machine maintenance mode."""
-        initial_status = self.state.get_machine_status(machine)
+        initial_status = self.state.get_machine_status(self.machine)
         self.state.update_machine(self.machine, self.state.Maintenance)
         try:
             super(SequentialMachineAction, self).run()
