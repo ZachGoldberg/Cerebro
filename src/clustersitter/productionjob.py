@@ -198,21 +198,27 @@ class ProductionJob(object):
 
         return True
 
-    def deploy(self, zone, machine=None, fail_on_error=False):
+    def deploy(self, zone, machine=None, repair=False):
         """
         Deploy the job to a machine.
 
         @param machines The machine to deploy to. If absent a new machine will
             be spun up.
-        @param fail_on_error Whether the job filler should fail on the first
-            error.
+        @param repair Deploy as a repair job. Causes the deployment to treat
+            the machine as raw and enabled fail on error.
         @return The machine the job was deployed to or None if deployment
             failed.
         """
         machines = []
+        raw_machines = []
         if machine:
-            machines.append(machine)
-        filler = JobFiller(1, self, zone, machines, fail_on_error=fail_on_error)
+            if repair:
+                raw_machines.append(machine)
+            else:
+                machines.append(machine)
+
+        filler = JobFiller(1, self, zone, machines, raw_machines=raw_machines,
+            fail_on_error=repair)
         self.fillers[zone].append(filler)
         self.currently_spawning[zone] += 1
         try:
