@@ -483,9 +483,9 @@ class ClusterState(object):
         @return True if the machine is mutable or False.
         """
         item = self._get_machine_item(machine)
-        allow_status = [
+        disallow_status = [
             self.Maintenance, self.Paused, self.Pending]
-        if not item or item['status'] in allow_status:
+        if not item or item['status'] in disallow_status:
             return False
         return True
 
@@ -577,13 +577,13 @@ class ClusterState(object):
         """
         if not self.has_machine(machine):
             if status is None:
-                status = self.Active
-
-            if existing and not machine.is_initialized():
-                logger.info(
-                    "%s not initialized, marked as pending" %
-                    machine.hostname)
-                status = self.Pending
+                if existing and not machine.is_initialized():
+                    logger.info(
+                        "%s not initialized, marked as pending" %
+                        machine.hostname)
+                    status = self.Pending
+                else:
+                    status = self.Active
 
             zone = machine.config.shared_fate_zone
             self.machines.append({
