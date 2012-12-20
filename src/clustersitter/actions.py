@@ -402,12 +402,17 @@ class DeployMachineAction(ClusterAction):
         if not machine:
             fail(self.jobs[0])
 
-        self.state.desired_jobs.set_pending_machines(
-            self.zone, self.jobs[0].name, [machine], True)
+        try:
+            self.state.desired_jobs.set_pending_machines(
+                self.zone, self.jobs[0].name, [machine], True)
 
-        for job in self.jobs[1:]:
-            if not job.deploy(self.zone, machine):
-                fail(job)
+            for job in self.jobs[1:]:
+                if not job.deploy(self.zone, machine):
+                    fail(job)
+        finally:
+            # The filler creates machines in maintenance mode so we activate
+            # our new machine.
+            self.state.update_machine(machine, self.state.Active)
 
 
 class RedeployMachineAction(MachineAction):

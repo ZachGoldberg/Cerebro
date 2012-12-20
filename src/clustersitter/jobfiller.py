@@ -410,7 +410,8 @@ class JobFiller(object):
             if not state.is_machine_monitored(machine):
                 machines_to_add.append(machine)
 
-        sitter.add_machines(machines_to_add, update_dns=False)
+        sitter.add_machines(
+            machines_to_add, update_dns=False, maintenance=True)
 
         # Now wait for the machines to actually be monitored
         for machine in self.machines:
