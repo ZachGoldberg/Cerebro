@@ -50,8 +50,9 @@ class HasMachineSitter(object):
             return False
 
     def _api_identify_sitter(self):
-        logger.info("Attempting to find a machinesitter at %s" % (
-                self.hostname))
+        logger.info(
+            "Attempting to find a machinesitter at %s" %
+            self.hostname)
         if not self.datamanager:
             self.datamanager = MachineData(self.hostname, 40000)
         else:
@@ -65,8 +66,8 @@ class HasMachineSitter(object):
         return self.datamanager.portnum
 
     def _api_get_endpoint(self, path):
-        return "%s/%s" % (self.datamanager.url,
-                                    path)
+        return "%s/%s" % (
+            self.datamanager.url, path)
 
     def _api_get_stats(self):
         logger.debug("Get stats for %s" % str(self))
@@ -79,13 +80,14 @@ class HasMachineSitter(object):
             traceback.print_exc()
             logger.error(traceback.format_exc())
 
-        if tasks != None:
+        if tasks is not None:
             self.loaded = True
         else:
             self.loaded = False
 
-        logger.debug("Get stats for %s result: %s" % (str(self),
-                                                     self.loaded))
+        logger.debug(
+            "Get stats for %s result: %s" % (
+            str(self), self.loaded))
         return self.loaded
 
     def _get_machinename(self):
@@ -107,8 +109,7 @@ class MonitoredMachine(HasMachineSitter):
     downloading data, all calls are accessing LOCAL
     CACHED data and NOT making network calls.
     """
-    def __init__(self, config, machine_number=0,
-                  *args, **kwargs):
+    def __init__(self, config, machine_number=0, *args, **kwargs):
         super(MonitoredMachine, self).__init__(*args, **kwargs)
         self.config = config
         self.running_tasks = []
@@ -140,8 +141,8 @@ class MonitoredMachine(HasMachineSitter):
         if not self.datamanager:
             return []
 
-        return [task for task in self.datamanager.tasks.values() if \
-                    task["running"]]
+        return [task for task in self.datamanager.tasks.values()
+                if task["running"]]
 
     def start_task(self, job):
         if self.is_initialized():

@@ -526,7 +526,8 @@ class ClusterState(object):
                         is_idle = self.desired_jobs.is_machine_idle(
                             item['machine'])
                         if (is_idle and idle) or (not is_idle and not idle):
-                            zoned_machines[item['zone']].append(item['machine'])
+                            zoned_machines[item['zone']].append(
+                                item['machine'])
         return zoned_machines
 
     def get_machine_zone(self, machine):
@@ -760,7 +761,7 @@ class ClusterState(object):
                 num_existing = len(zoned_existing_machines[zone])
                 num_required = job.get_num_required_machines_in_zone(zone)
                 num_needed = max(0, num_required - num_existing)
-                
+
                 idle_machines = zoned_idle_machines[zone][:num_needed]
                 num_create = num_needed - len(idle_machines)
                 self.desired_jobs.add_tasks(
@@ -1023,7 +1024,8 @@ class ClusterState(object):
 
             for zone, machines in decomission.iteritems():
                 for machine in machines:
-                    logger.info("decomissioning idle maching '%s'" %
+                    logger.info(
+                        "decomissioning idle machine '%s'" %
                         machine.hostname)
                     self.pending_actions.append(
                         DecomissionMachineAction(self.sitter, zone, machine))

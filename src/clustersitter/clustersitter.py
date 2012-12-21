@@ -58,7 +58,7 @@ class ClusterSitter(object):
         self.launch_location = launch_location
         self.launch_time = datetime.now()
         self.start_state = "Not Started"
-        
+
         # In seconds
         self.stats_poll_interval = 5
 
@@ -123,8 +123,8 @@ class ClusterSitter(object):
 
         for module in modules:
             name = module.__name__.split('.')[-1]
-            logfile = "%s/%s.log" % (self.log_location,
-                                                 name)
+            logfile = "%s/%s.log" % (
+                self.log_location, name)
             self.logfiles.append(logfile)
             self.logmanager.add_logfile(name, logfile)
             handler = FileHandler(logfile)
@@ -153,7 +153,7 @@ class ClusterSitter(object):
             logger.setLevel(level)
 
         ClusterEventManager.handle(
-                'Updated logging level to %s' % level)
+            "Updated logging level to %s" % level)
 
         return "Level set to %s" % level
 
@@ -171,7 +171,7 @@ class ClusterSitter(object):
             return "Invalid limit"
 
         ClusterEventManager.handle(
-                'Enforce Idle Limit at %s' % int(args['idle_count_per_zone']))
+            "Enforce Idle Limit at %s" % int(args['idle_count_per_zone']))
         return "Limit set"
 
     def api_update_job(self, args):
@@ -209,14 +209,14 @@ class ClusterSitter(object):
         if check:
             return check
         job = ProductionJob(
-                self,
-                args['dns_basename'],
-                args['task_configuration'],
-                args['deployment_layout'],
-                args['deployment_recipe'],
-                args['recipe_options'],
-                args['persistent'],
-                args.get('linked_job'))
+            self,
+            args['dns_basename'],
+            args['task_configuration'],
+            args['deployment_layout'],
+            args['deployment_recipe'],
+            args['recipe_options'],
+            args['persistent'],
+            args.get('linked_job'))
 
         if args.get('linked_job'):
             job.find_linked_job()
@@ -262,9 +262,8 @@ class ClusterSitter(object):
         recipe_cls = None
         if isinstance(recipe_class, basestring):
             try:
-                recipe_cls = __import__(recipe_class,
-                                          globals(),
-                                          locals())
+                recipe_cls = __import__(
+                    recipe_class, globals(), locals())
             except:
                 # Odd?
                 logger.warn("Unable to load recipe %s..." % recipe_class)
@@ -333,7 +332,8 @@ class ClusterSitter(object):
 
     def decomission_machine(self, machine):
         self.state.remove_machine(machine)
-        provider = self.state.get_zone_provider(machine.config.shared_fate_zone)
+        provider = self.state.get_zone_provider(
+            machine.config.shared_fate_zone)
         if not provider:
             logger.warn(
                 "No provider found for %s?" % machine.config.shared_fate_zone)
@@ -366,9 +366,9 @@ class ClusterSitter(object):
         records = self.dns_provider.get_records()
         for record in records:
             if record['value'] == machine.config.ip:
-                logger.info("Removing %s from %s" % (
-                        machine.config.ip,
-                        record['record']))
+                logger.info(
+                    "Removing %s from %s" % (
+                    machine.config.ip, record['record']))
                 self.dns_provider.remove_record(data=machine.config.ip,
                                                 hostName=record['record'])
 
@@ -417,14 +417,15 @@ class ClusterSitter(object):
                 ip = socket.gethostbyname(machine.config.hostname)
                 if ip in record_by_ip:
                     machine.config.dns_name = record_by_ip[ip]
-                    logger.info("Found name %s for %s" % (
-                            machine.config.dns_name,
-                            ip))
+                    logger.info(
+                        "Found name %s for %s" % (
+                        machine.config.dns_name, ip))
 
     def start(self):
         self.http_monitor.start()
-        logger.info("Cluster Sitter Monitor started at " + \
-            "http://localhost:%s" % self.http_monitor.port)
+        logger.info((
+            "Cluster Sitter Monitor started at "
+            "http://localhost:%s") % self.http_monitor.port)
 
         self.start_state = "Starting Up"
 
@@ -452,8 +453,9 @@ class ClusterSitter(object):
         for provider in self.state.get_providers().values():
             # Note: add_machines() has to be called AFTER the monitors
             # are initialized.
-            logger.info("adding %d machines for provider %s" %
-                (len(provider.get_machine_list()), 'aws'))
+            logger.info(
+                "adding %d machines for provider %s" % (
+                len(provider.get_machine_list()), 'aws'))
             self.add_machines(provider.get_machine_list())
 
         logger.info("Zone List: %s" % self.state.get_zones())
@@ -462,8 +464,9 @@ class ClusterSitter(object):
         if self.daemon:
             self.logmanager.setup_all()
 
-        logger.info("Spinning up %s monitoring threads" % (
-                self.worker_thread_count))
+        logger.info(
+            "Spinning up %s monitoring threads" %
+            self.worker_thread_count)
         for monitor in self.state.monitors:
             monitor[1].start()
 

@@ -16,8 +16,9 @@ class MachineMonitor:
         self.pull_failures = {}
         self.failure_threshold = 5
 
-        logger.info("Initialized a machine monitor for %s" % (
-                str(self.monitored_machines)))
+        logger.info(
+            "Initialized a machine monitor for %s" %
+            str(self.monitored_machines))
 
     def num_monitored_machines(self):
         return len(self.monitored_machines) + len(self.add_queue)
@@ -105,8 +106,9 @@ class MachineMonitor:
         while True:
             start_time = datetime.now()
             try:
-                logger.debug("Processing add queue %s at %s" % (self.add_queue,
-                                                               self.number))
+                logger.debug(
+                    "Processing add queue %s at %s" % (
+                    self.add_queue, self.number))
                 while len(self.add_queue) > 0:
                     machine = self.add_queue[-1]
                     self.initialize_machines([machine])
@@ -141,9 +143,9 @@ class MachineMonitor:
                     else:
                         self.initialize_machines([machine])
 
-                logger.debug("Pull Failures: %s" % (
-                        [(m.hostname, count) for m, count in \
-                             self.pull_failures.items()]))
+                logger.debug("Pull Failures: %s" % ([
+                    (m.hostname, count) for m, count in
+                    self.pull_failures.items()]))
 
                 for machine, count in self.pull_failures.items():
                     if count >= self.failure_threshold:

@@ -88,7 +88,7 @@ class ProductionJob(object):
             'recipe_options': self.recipe_options,
             'persistent': self.persistent,
             'linked_job': self.linked_job,
-            }
+        }
 
     def do_update_deployment(self, state, version=None):
         """
@@ -136,7 +136,7 @@ class ProductionJob(object):
     def find_linked_job(self):
         """
         Get the linked job object for this job.
-        
+
         @return The linked job object.
         """
         if self.linked_job and not self.linked_job_object:
@@ -156,8 +156,9 @@ class ProductionJob(object):
         linked_job = self.find_linked_job()
 
         if not linked_job:
-            logger.warn("Couldn't find linked job (%s) for %s!" % (
-                    self.linked_job, str(self)))
+            logger.warn(
+                "Couldn't find linked job (%s) for %s!" % (
+                self.linked_job, str(self)))
             # Returning False stops all other jobs this cycle, which
             # we don't want to do.
             return True
@@ -217,7 +218,8 @@ class ProductionJob(object):
             else:
                 machines.append(machine)
 
-        filler = JobFiller(1, self, zone, machines, raw_machines=raw_machines,
+        filler = JobFiller(
+            1, self, zone, machines, raw_machines=raw_machines,
             fail_on_error=repair)
         self.fillers[zone].append(filler)
         self.currently_spawning[zone] += 1
@@ -256,8 +258,9 @@ class ProductionJob(object):
             # 1) Assume this job has already been added to state.jobs
             # 2) Want to ensure calculator has run at least once to find out
             #    if this job already exists throughout the cluster
-            logger.info("Waiting for calculator thread to kick in before "
-                         "filling jobs")
+            logger.info(
+                "Waiting for calculator thread to kick in before "
+                "filling jobs")
             time.sleep(0.5)
 
         # Clear out finished fillers after 5 minutes
@@ -265,9 +268,10 @@ class ProductionJob(object):
             for filler in fillers:
                 now = datetime.now()
                 if (filler.is_done() and
-                    now - filler.end_time > timedelta(minutes=5)):
-                    logger.info("Removing a filler from %s for %s" % (
-                            zone, self.name))
+                        now - filler.end_time > timedelta(minutes=5)):
+                    logger.info(
+                        "Removing a filler from %s for %s" % (
+                        zone, self.name))
                     self.fillers[zone].remove(filler)
 
         # If we have a linked job then bypass all the normal logic
@@ -311,7 +315,7 @@ class ProductionJob(object):
                 "Currently Spawning: %s " % (currently_spawning) +
                 "idle-available: %s " % (len(idle_available)) +
                 "total_required: %s " % (total_required)
-                )
+            )
 
             usable_machines = []
             if required_new_machine_count <= 0:

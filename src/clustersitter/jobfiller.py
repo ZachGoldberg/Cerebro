@@ -39,29 +39,29 @@ class StateMachine(object):
 class MachineDeploymentState(StateMachine):
     states = {
         -1: 'Error',
-         0: 'None',
-         1: 'Provider.Launching',
-         2: 'TaskSitter.Deployment',
-         3: 'Job.Deployment',
-         4: 'Job.Launching',
-         5: 'AddingMonitoring',
-         6: 'Ready'
-        }
+        0: 'None',
+        1: 'Provider.Launching',
+        2: 'TaskSitter.Deployment',
+        3: 'Job.Deployment',
+        4: 'Job.Launching',
+        5: 'AddingMonitoring',
+        6: 'Ready',
+    }
 
 
 class JobFillerState(StateMachine):
     states = {
         -1: 'Error',
-         0: 'CreatingResources',
-         1: 'EnsureDNS',
-         2: 'DeployingMonitoringCode',
-         3: 'DeployingJobCode',
-         4: 'LaunchingTasks',
-         5: 'AddingtoMonitoring',
-         6: 'EnsureBaseDNS',
-         7: 'Reboot Dependent Jobs',
-         8: 'Done'
-         }
+        0: 'CreatingResources',
+        1: 'EnsureDNS',
+        2: 'DeployingMonitoringCode',
+        3: 'DeployingJobCode',
+        4: 'LaunchingTasks',
+        5: 'AddingtoMonitoring',
+        6: 'EnsureBaseDNS',
+        7: 'Reboot Dependent Jobs',
+        8: 'Done',
+    }
 
 
 class JobFiller(object):
@@ -134,9 +134,9 @@ class JobFiller(object):
         release_attempts = 1
         while self.state.get_state() != 8:
             state = self.state.get_state()
-            logger.info("Running State: %s, attempt #%s" % (
-                    str(self.state),
-                    release_attempts))
+            logger.info(
+                "Running State: %s, attempt #%s" % (
+                str(self.state), release_attempts))
 
             try:
                 if state == 0:
@@ -247,7 +247,7 @@ class JobFiller(object):
                         used_prefixes.append(i)
                         break
 
-                if new_prefix == None:
+                if new_prefix is None:
                     # This only happens if the state of DNS
                     # records somehow doesn't match the state
                     # of this job, which shouldn't happen
@@ -258,13 +258,13 @@ class JobFiller(object):
 
                 machine.config.dns_name = "%s.%s" % (new_prefix,
                                                      basename)
-                logger.info("Assigning %s to %s" % (
-                        machine.config.dns_name, ip))
+                logger.info(
+                    "Assigning %s to %s" % (machine.config.dns_name, ip))
 
-                if not provider.add_record(ip,
-                                          machine.config.dns_name):
-                    logger.error("Couldn't assign DNS for %s" % (
-                            machine.config.dns_name))
+                if not provider.add_record(ip, machine.config.dns_name):
+                    logger.error(
+                        "Couldn't assign DNS for %s" %
+                        machine.config.dns_name)
 
             # Part 2
             if do_basename:
@@ -277,9 +277,9 @@ class JobFiller(object):
                 if ip not in records_for_basename:
                     logger.info("Adding %s to %s" % (ip, basename))
                     if not provider.add_record(ip, basename):
-                        logger.error("Couldn't assign DNS for %s -> %s" % (
-                                ip,
-                                basename))
+                        logger.error(
+                            "Couldn't assign DNS for %s -> %s" % (
+                            ip, basename))
 
         self.state.next()
 
@@ -320,8 +320,8 @@ class JobFiller(object):
 
                 if datetime.now() - start_time > timedelta(minutes=2):
                     self.machine_states[machine].set_state(new_state)
-                    logger.error("Giving up deploying to %s" % str(
-                            machine))
+                    logger.error(
+                        "Giving up deploying to %s" % str(machine))
 
                     raise Exception("Failed to deploy!")
 
@@ -419,8 +419,8 @@ class JobFiller(object):
             while not ready:
                 if not state.is_machine_monitored(machine):
                     # Fail if the machine falls out of monitoring.
-                    raise Exception("Failed to deploy machine sitter to '%s'" %
-                        machine)
+                    raise Exception(
+                        "Failed to deploy machine sitter to '%s'" % machine)
 
                 loaded_data = machine.has_loaded_data()
                 has_task = self.job.name in machine.get_tasks()
@@ -434,7 +434,8 @@ class JobFiller(object):
                         "Waiting for machine to actually be monitored...")
                     time.sleep(0.1)
                 else:
-                    logger.debug("Found '%s' on '%s', good to go!" %
+                    logger.debug(
+                        "Found '%s' on '%s', good to go!" %
                         (self.job.name, machine))
 
         self.state.next()
