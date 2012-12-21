@@ -133,6 +133,10 @@ class ClusterSitter(object):
             module.logger.addHandler(handler)
             self.state.loggers.append(module.logger)
 
+        requests_logger = logging.getLogger(
+            'requests.packages.urllib3.connectionpool')
+        requests_logger.setLevel(logging.WARNING)
+
         socket.setdefaulttimeout(2)
 
     # ----------- API ----------------
