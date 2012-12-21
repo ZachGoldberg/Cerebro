@@ -23,7 +23,7 @@ class Process(object):
         self.system_usage = None
         self.last_system_usage = None
         self.cpu_usage = 0
-        self.mem_usage = None
+        self.mem_usage = [0, 0]
         self.proc_stats = []
         self.start_time = datetime.datetime.now()
 
