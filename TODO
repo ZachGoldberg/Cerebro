@@ -1,4 +1,6 @@
+
 High Priority:
+-- Add machine actions to the overview page
 -- Simplify (one-click) restarting machinesitter process.
 -- Cache job definitions from last run, reload for existing machines
 -- "Undeploy" job code from machines.
