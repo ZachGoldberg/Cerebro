@@ -6,8 +6,8 @@ import logging
 import simplejson
 import time
 from actions import (
-    ClusterActionGenerator, DecomissionMachineAction, RedeployMachineAction,
-    RestartTaskAction)
+    AddTaskAction, ClusterActionGenerator, DecomissionMachineAction,
+    RedeployMachineAction, RestartTaskAction)
 from productionjob import ProductionJob
 from threading import Thread
 
@@ -747,6 +747,11 @@ class ClusterState(object):
                 "job '%s' already deployed, not adding" % job.name)
             return False
 
+        zoned_machines = self.desired_jobs.get_task_machines(job.name)
+        for zone, machines in zoned_machines.iteritems():
+            self.desired_jobs.update_tasks(
+                job.name, JobState.Running, machines)
+
         self.jobs[job.name] = job
         if not job.linked_job:
             # Allocate the master job to machines.
@@ -758,14 +763,23 @@ class ClusterState(object):
             for zone in zones:
                 #TODO: !MACHINEASSUMPTION! Fill jobs based on required CPU and
                 # memory.
-                num_existing = len(zoned_existing_machines[zone])
+                existing_machines = zoned_existing_machines[zone]
+                idle_machines = zoned_idle_machines[zone]
                 num_required = job.get_num_required_machines_in_zone(zone)
-                num_needed = max(0, num_required - num_existing)
 
-                idle_machines = zoned_idle_machines[zone][:num_needed]
-                num_create = num_needed - len(idle_machines)
+                redeploy_machines = existing_machines[:num_required]
+                undeploy_machines = existing_machines[num_required:]
+                num_idle = num_required - len(redeploy_machines)
+                deploy_machines = idle_machines[:num_idle]
+                num_create = num_required - len(deploy_machines)
+
                 self.desired_jobs.add_tasks(
-                    job.name, zone, idle_machines, num_create)
+                    job.name, zone, deploy_machines, num_create)
+                self.desired_jobs.remove_tasks(
+                    job.name, undeploy_machines)
+                for machine in redeploy_machines:
+                    self.pending_actions.append(
+                        AddTaskAction(self.sitter, zone, machine, job.name))
         return True
 
     def remove_job(self, job):
