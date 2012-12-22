@@ -2,7 +2,8 @@ import logging
 import re
 import requests
 import simplejson
-import socket
+import thread
+import threading
 import time
 import urllib
 
@@ -39,11 +40,11 @@ class MachineData(object):
                 found = True
                 self.portnum = port
                 logger.info("Successfully connected to %s:%s" % (
-                        self.hostname, self.portnum))
+                    self.hostname, self.portnum))
             except:
                 import traceback
                 logger.warn("Failed to connect to %s:%s" % (
-                        self.hostname, port))
+                    self.hostname, port))
                 logger.warn(traceback.format_exc().splitlines()[-1])
                 port += 1
                 if port > self.starting_port + 15:
@@ -55,7 +56,14 @@ class MachineData(object):
                                      self.portnum)
         return self.url
 
-    def _make_request(self, function, path, host=None):
+    def _make_request(self, function, path, host=None, async=False):
+        if not async:
+            return self.__make_request(function, path, host)
+        else:
+            thread.start_new_thread(self.__make_request,
+                                    (function, path, host))
+
+    def __make_request(self, function, path, host):
         val = None
         hostname = host
         if not hostname:
@@ -74,7 +82,7 @@ class MachineData(object):
                                timeout=5)
             except:
                 logger.warn("Couldn't execute %s/%s!" % (
-                        hostname, path))
+                    hostname, path))
                 import traceback
                 logger.error(traceback.format_exc())
                 return None
@@ -112,25 +120,39 @@ class MachineData(object):
                 task_data[task_name] = {}
             task_data[task_name][metric] = value
 
+        # Update all tasks in parallel
+        update_threads = []
         for task_name in task_data.keys():
             task_dict = task_data[task_name]
             new_tasks[task_dict['name']] = task_dict
             if task_dict['running']:
-                updated = False
-                tries = 0
-                while not updated and tries < 10:
-                    tries += 1
-                    try:
-                        new_tasks = self.update_task_data(new_tasks,
-                                                         task_dict['name'])
-                        updated = True
-                    except:
-                        # Http server might not be up yet
-                        time.sleep(0.01)
-                        logger.warn("Couldn't update task")
+                t = threading.Thread(target=self.run_update_task_data,
+                                     args=[new_tasks, task_dict['name']])
+                t.start()
+                update_threads.append(t)
+
+        while update_threads:
+            for thread in update_threads:
+                if not thread.isAlive():
+                    update_threads.remove(thread)
+            time.sleep(0.0001)
 
         self.tasks = new_tasks
         return self.tasks
+
+    def run_update_task_data(self, new_tasks, task_name):
+        updated = False
+        tries = 0
+        while not updated and tries < 10:
+            tries += 1
+            try:
+                self.update_task_data(new_tasks,
+                                      task_name)
+                updated = True
+            except:
+                # Http server might not be up yet
+                time.sleep(0.01)
+                logger.warn("Couldn't update task")
 
     def update_task_data(self, tasks, task_name):
         stats_page = self.strip_html(tasks[task_name]['monitoring'])
@@ -174,7 +196,8 @@ class MachineData(object):
         tid = urllib.quote(task['name'])
         val = self._make_request(
             requests.get,
-            path="start_task?task_name=%s" % tid)
+            path="start_task?task_name=%s" % tid,
+            async=True)
 
         if val:
             return val.content
@@ -188,7 +211,8 @@ class MachineData(object):
         tid = urllib.quote(task['name'])
         val = self._make_request(
             requests.get,
-            path="restart_task?task_name=%s" % tid)
+            path="restart_task?task_name=%s" % tid,
+            async=True)
 
         if val:
             return val.content
@@ -202,7 +226,8 @@ class MachineData(object):
         tid = urllib.quote(task['name'])
         val = self._make_request(
             requests.get,
-            path="stop_task?task_name=%s" % tid)
+            path="stop_task?task_name=%s" % tid,
+            async=True)
 
         if val:
             return val.content
@@ -236,7 +261,7 @@ class MachineData(object):
         logs = self.load_generic_page(url,
                                       'logs')
 
-        tasknum = str(int(data['num_task_starts']) - 1)
+        tasknum = str(int(data.get('num_task_starts', 0)) - 1)
         handle = "stdout.%s" % tasknum
         if stderr:
             handle = "stderr.%s" % tasknum
