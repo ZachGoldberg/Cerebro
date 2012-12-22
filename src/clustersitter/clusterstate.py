@@ -978,8 +978,10 @@ class ClusterState(object):
                         zone, tasks, required)
 
         # Calculate changes to existing tasks.
-        desired_tasks = self.desired_jobs.flatten()
-        current_tasks = self.current_jobs.flatten()
+        def filter_valid_tasks(tasks):
+            return set([t for t in tasks if t[2] in self.jobs])
+        desired_tasks = filter_valid_tasks(self.desired_jobs.flatten())
+        current_tasks = filter_valid_tasks(self.current_jobs.flatten())
 
         add_tasks = desired_tasks - current_tasks
         remove_tasks = current_tasks - desired_tasks
