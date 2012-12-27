@@ -6,8 +6,9 @@ import logging
 import simplejson
 import time
 from actions import (
-    AddTaskAction, ClusterActionGenerator, DecomissionMachineAction,
-    RedeployMachineAction, RestartTaskAction)
+    AddTaskAction, ClusterActionManager, DecomissionMachineAction,
+    DeployMachineAction, RedeployMachineAction, RemoveTaskAction,
+    RestartTaskAction, StartTaskAction, StopTaskAction)
 from productionjob import ProductionJob
 from threading import Thread
 
@@ -20,10 +21,12 @@ class JobState(object):
 
     Some static status attributes are defined as part of the class. These are:
 
+    Deploying -- The task is being deployed.
     Running -- The task is running.
     Stopped -- The task is stopped.
     """
 
+    Deploying = 'deploying'
     Running = 'running'
     Stopped = 'stopped'
 
@@ -110,6 +113,17 @@ class JobState(object):
             return self._get_task_item(name, machine) is not None
         else:
             return name in self.tasks
+
+    def is_task_deploying(self, name, machine):
+        """
+        Check if a task is being deployed.
+
+        @param name The name of the task to check.
+        @param machine The machine the task is being deployed to.
+        @return True if the task is being deployed or False.
+        """
+        item = self._get_task_item(name, machine)
+        return item and item['status'] == self.Deploying
 
     def get_task_status(self, name, machine):
         """
@@ -220,7 +234,7 @@ class JobState(object):
         removed = []
         if name in self.tasks:
             removed.append(name)
-            if not machines:
+            if machines is None:
                 del self.tasks[name]
             else:
                 for task in list(self.tasks[name]):
@@ -255,7 +269,7 @@ class JobState(object):
             for task in self.tasks[name]:
                 if not task['machine'] and task['zone'] == zone:
                     flagged += 1
-                    task['deploying'] = True
+                    task['status'] = self.Deploying
                     if flagged >= count:
                         break
 
@@ -278,7 +292,7 @@ class JobState(object):
                     required[zone] = {}
                 if name not in required[zone]:
                     required[zone][name] = 0
-                if not task['machine'] and not task.get('deploying', False):
+                if not task['machine'] and task['status'] != self.Deploying:
                     required[zone][name] += 1
         return required
 
@@ -296,7 +310,7 @@ class JobState(object):
         for machine in machines:
             for task in self.tasks.get(name, []):
                 if (not task['machine'] and task['zone'] == zone and
-                        task.get('deploying', False) == deploying):
+                        task['status'] == self.Deploying):
                     task['machine'] = machine
                     break
 
@@ -341,17 +355,16 @@ class ClusterState(object):
     Some static status attributes are defined as part of the class. These are:
 
     Active -- Machine is operating normally.
-    Paused -- Machine is paused by admin for maintenance.
-    Maintenance -- Maintenance is being performed by the cluster sitter on the
-        machine.
+    Deploying -- The machine is being deployed.
+    Maintenance -- Machine is paused by admin for maintenance.
     Pending -- Waiting for the machine monitor to initialize the machine so
         that tasks can be added to state tracking.
     Unreachable -- Machine is unreachable.
     """
 
     Active = 'active'
+    Deploying = 'deploying'
     Maintenance = 'maint'
-    Paused = 'paused'
     Pending = 'pending'
     Unreachable = 'unreachable'
 
@@ -390,8 +403,7 @@ class ClusterState(object):
         self.repair_jobs = {}
         self.desired_jobs = JobState()
         self.current_jobs = JobState()
-        self.pending_actions = []
-        self.running_actions = []
+        self.actions = ClusterActionManager()
 
         #TODO: Move this to the sitter. State is not a catch-all.
         self.loggers = []
@@ -483,16 +495,36 @@ class ClusterState(object):
         @return True if the machine is mutable or False.
         """
         item = self._get_machine_item(machine)
-        disallow_status = [
-            self.Maintenance, self.Paused, self.Pending]
+        disallow_status = [self.Maintenance, self.Pending]
         if not item or item['status'] in disallow_status:
             return False
         return True
+
+    def is_machine_deploying(self, machine):
+        """
+        Check if a machine is being deployed.
+
+        @param machine The machine to check.
+        @return True if the machine is being deployed or False.
+        """
+        item = self._get_machine_item(machine)
+        return item and item['status'] == self.Deploying
+
+    def is_machine_idle(self, machine):
+        """
+        Check if a machine is being deployed.
+
+        @param machine The machine to check.
+        @return True if the machine is being deployed or False.
+        """
+        item = self._get_machine_item(machine)
+        return item and self.desired_jobs.is_machine_idle(machine)
 
     def is_machine_monitored(self, machine):
         """
         Check if a machine is being or is queued to be monitored.
 
+        @param machine The machine to check.
         @return True if the machine is monitored or False.
         """
         for monitor, thread in self.monitors:
@@ -500,14 +532,29 @@ class ClusterState(object):
                 return True
         return False
 
-    def get_machines(self, zones=None, status=None, idle=None):
+    def is_machine_unreachable(self, machine):
+        """
+        Check if a machine is unreachable.
+
+        @param machine The machine to check.
+        @return True if the machine is unreachable or False.
+        """
+        item = self._get_machine_item(machine)
+        return (
+            item and not self.is_machine_monitored(machine) and
+            not self.get_machine_repair_job(machine))
+
+    def get_machines(self, zones=None, status=None, idle=None,
+                     unreachable=None):
         """
         Get the machines running in the given zones.
 
         @param zones The zones to find machines in.
         @param status Only return machines with this status.
-        @param idle True to return idle machines, False to return active
+        @param idle True to return idle machines, False to return non-idle
             machines. Defaults to both.
+        @param unreachable True to return unreachable machine, False to return
+            reachable machines. Defaults to both.
         @return A dictionary of zone to machine list mappings.
         """
         if zones:
@@ -516,18 +563,32 @@ class ClusterState(object):
             zoned_machines = {}
 
         for item in self.machines:
-            if zones is None or item['zone'] in zones:
-                if not status or item['status'] == status:
-                    if item['zone'] not in zoned_machines:
-                        zoned_machines[item['zone']] = []
-                    if idle is None:
-                        zoned_machines[item['zone']].append(item['machine'])
-                    else:
-                        is_idle = self.desired_jobs.is_machine_idle(
-                            item['machine'])
-                        if (is_idle and idle) or (not is_idle and not idle):
-                            zoned_machines[item['zone']].append(
-                                item['machine'])
+            zone = item['zone']
+            machine = item['machine']
+            if item['zone'] not in zoned_machines:
+                zoned_machines[item['zone']] = []
+
+            # Check for the requested zone.
+            if zones is not None and zone not in zones:
+                continue
+
+            # Check for the requested status.
+            if status and item['status'] != status:
+                continue
+
+            # Check for the requested idle state.
+            is_idle = self.is_machine_idle(machine)
+            if idle is not None and idle != is_idle:
+                continue
+
+            # Check for the requested unreachable state.
+            is_unreachable = self.is_machine_unreachable(machine)
+            if (unreachable is not None
+                    and is_unreachable != unreachable):
+                continue
+
+            # Append the machine to the results if all checks passed.
+            zoned_machines[zone].append(machine)
         return zoned_machines
 
     def get_machine_zone(self, machine):
@@ -694,6 +755,7 @@ class ClusterState(object):
         #TODO: Handle machine repairs in machine object.
         if machine.hostname in self.repair_jobs:
             return False
+        self.update_machine(machine, self.Deploying)
 
         zone = self.get_machine_zone(machine)
         job = ProductionJob(
@@ -706,7 +768,7 @@ class ClusterState(object):
             }, None)
 
         self.repair_jobs[machine.hostname] = job
-        self.pending_actions.append(
+        self.actions.add(
             RedeployMachineAction(self.sitter, zone, machine, job))
         return True
 
@@ -742,43 +804,43 @@ class ClusterState(object):
             the required zones and number of machines.
         @return True if the job was added or False if it was not.
         """
-        if job.name in self.jobs:
-            logger.warn(
-                "job '%s' already deployed, not adding" % job.name)
-            return False
-
-        zoned_machines = self.desired_jobs.get_task_machines(job.name)
-        for zone, machines in zoned_machines.iteritems():
-            self.desired_jobs.update_tasks(
-                job.name, JobState.Running, machines)
-
         self.jobs[job.name] = job
-        if not job.linked_job:
-            # Allocate the master job to machines.
-            zones = job.get_shared_fate_zones()
-            zoned_idle_machines = self.get_machines(zones, idle=True)
-            zoned_existing_machines = self.desired_jobs.get_task_machines(
-                job.name, zones)
+        zoned_existing_machines = self.desired_jobs.get_task_machines(job.name)
+        zoned_idle_machines = self.get_machines(idle=True)
+        job_zones = job.get_shared_fate_zones()
+        all_zones = set(job_zones) | set(zoned_existing_machines.keys())
 
-            for zone in zones:
-                #TODO: !MACHINEASSUMPTION! Fill jobs based on required CPU and
-                # memory.
-                existing_machines = zoned_existing_machines[zone]
-                idle_machines = zoned_idle_machines[zone]
+        for zone in all_zones:
+            existing_machines = zoned_existing_machines.get(zone, [])
+
+            if zone not in job_zones:
+                # Remove the zone if it's not in the job.
+                self.desired_jobs.remove_tasks(
+                    job.name, existing_machines)
+            elif job.linked_job:
+                # Redeploy child tasks to their current machines..
+                for machine in existing_machines:
+                    self.actions.add(
+                        AddTaskAction(self.sitter, zone, machine, job.name))
+            else:
+                # Redeploy master job across the cluster.
+                idle_machines = zoned_idle_machines.get(zone, [])
                 num_required = job.get_num_required_machines_in_zone(zone)
 
                 redeploy_machines = existing_machines[:num_required]
                 undeploy_machines = existing_machines[num_required:]
                 num_idle = num_required - len(redeploy_machines)
                 deploy_machines = idle_machines[:num_idle]
-                num_create = num_required - len(deploy_machines)
+                num_create = (
+                    num_required - len(redeploy_machines) -
+                    len(deploy_machines))
 
                 self.desired_jobs.add_tasks(
                     job.name, zone, deploy_machines, num_create)
                 self.desired_jobs.remove_tasks(
                     job.name, undeploy_machines)
                 for machine in redeploy_machines:
-                    self.pending_actions.append(
+                    self.actions.add(
                         AddTaskAction(self.sitter, zone, machine, job.name))
         return True
 
@@ -870,7 +932,9 @@ class ClusterState(object):
                     machine.hostname)
                 return False
 
-            self.pending_actions.append(RestartTaskAction(machine, task))
+            zone = self.get_machine_zone(machine)
+            self.actions.add(
+                RestartTaskAction(self.sitter, zone, machine, task))
             logger.info(
                 "restart action queued for task '%s' on machine '%s'" %
                 (task, machine.hostname))
@@ -952,8 +1016,6 @@ class ClusterState(object):
         Generate the actions necessary to convert the current job state to the
         desired job state.
         """
-        action_generator = ClusterActionGenerator(self.sitter)
-
         # Assign chain tasks to machines.
         for master, children in self.job_chains.iteritems():
             # Find machines where the master is running.
@@ -973,7 +1035,7 @@ class ClusterState(object):
         for zone, tasks in pending_tasks.iteritems():
             for master, required in tasks.iteritems():
                 if required > 0:
-                    tasks = [master] + self.job_chains.get(master, [])
+                    master_job = self.get_job(master)
 
                     # Find some idle machines.
                     idle_machines = self.get_machines(
@@ -985,11 +1047,12 @@ class ClusterState(object):
                     self.desired_jobs.set_pending_machines(
                         zone, master, idle_machines)
 
-                    # Deploy job chain to new machines.
+                    # Deploy master job to new machines.
                     self.desired_jobs.set_pending_deploying(
                         zone, master, required)
-                    action_generator.deploy_machines(
-                        zone, tasks, required)
+                    for n in range(required):
+                        self.actions.add(
+                            DeployMachineAction(self.sitter, zone, master_job))
 
         # Calculate changes to existing tasks.
         def filter_valid_tasks(tasks):
@@ -1003,16 +1066,18 @@ class ClusterState(object):
 
         # Add actions for existing tasks.
         for task in add_tasks:
-            if self.is_machine_mutable(task[1]):
-                action_generator.add_task(*task)
+            if not self.desired_jobs.is_task_deploying(task[2], task[1]):
+                self.desired_jobs.update_tasks(
+                    task[2], JobState.Deploying, [task[1]])
+                self.actions.add(AddTaskAction(self.sitter, *task))
 
         for task in remove_tasks:
-            #TODO: Remove status check when undeploying jobs works.
+            #TODO: Remove status check when undeploying job code works.
             if (self.current_jobs.get_task_status(task[2], task[1]) ==
                     JobState.Stopped):
                 continue
             if self.is_machine_mutable(task[1]):
-                action_generator.remove_task(*task)
+                self.actions.add(RemoveTaskAction(self.sitter, *task))
 
         for task in check_tasks:
             if self.is_machine_mutable(task[1]):
@@ -1021,10 +1086,10 @@ class ClusterState(object):
                 current_status = self.current_jobs.get_task_status(
                     task[2], task[1])
                 if desired_status != current_status:
-                    args = task + (desired_status,)
-                    action_generator.update_task(*args)
-
-        self.pending_actions.extend(action_generator.generate())
+                    if desired_status == JobState.Running:
+                        self.actions.add(StartTaskAction(self.sitter, *task))
+                    else:
+                        self.actions.add(StopTaskAction(self.sitter, *task))
 
     def calculate_idle_cleanup(self):
         """
@@ -1043,7 +1108,7 @@ class ClusterState(object):
                     logger.info(
                         "decomissioning idle machine '%s'" %
                         machine.hostname)
-                    self.pending_actions.append(
+                    self.actions.add(
                         DecomissionMachineAction(self.sitter, zone, machine))
 
     def calculate_job_cleanup(self):
@@ -1097,18 +1162,9 @@ class ClusterState(object):
 
     def process(self):
         """
-        Process actions in their own threads.
+        Process actions asynchronously.
         """
-        # Clean up finished actions.
-        for action in list(self.running_actions):
-            if action.is_finished():
-                self.running_actions.remove(action)
-
-        # Run pending actions.
-        while len(self.pending_actions) > 0:
-            action = self.pending_actions.pop(0)
-            action.start()
-            self.running_actions.append(action)
+        self.actions.process()
 
     def run(self):
         """

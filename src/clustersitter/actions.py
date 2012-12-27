@@ -2,145 +2,289 @@
 import logging
 from threading import Thread
 
+try:
+    from Queue import Empty, Full, Queue
+    (Empty, Full, Queue)  # pyflakes fix
+except ImportError:
+    from queue import Empty, Full, Queue
+
 logger = logging.getLogger(__name__)
 
 
-class ClusterActionError(Exception):
-    """Raised on Action error."""
-
-
-class ClusterActionStatus(object):
+class ClusterActionRunner(Thread):
     """
-    Action status.
-
-    Pending -- Has not been run.
-    Running -- Is running,
-    Finished -- Finished running.
-    """
-    Pending = 'pending'
-    Running = 'running'
-    Finished = 'finished'
-
-
-class ClusterActionGenerator(object):
-    """
-    Generate optimized actions for a state diff.
+    Run a cluster action in a thread.
     """
 
-    def __init__(self, sitter):
-        """Initialize the generator."""
-        self.update_actions = {}
-        self.deploy_actions = {}
-        self.sitter = sitter
+    def __init__(self, action):
+        """Initialize the runner."""
+        self.thread = None
+        self.action = action
 
-    def _ensure_update(self, zone, machine):
-        """Ensure there is space in the update_actions dict."""
-        if zone not in self.update_actions:
-            self.update_actions[zone] = {}
-        if machine.hostname not in self.update_actions[zone]:
-            self.update_actions[zone][machine.hostname] = {
-                'machine': machine,
-                'add': [],
-                'remove': [],
-                'update': {},
-            }
-
-    def _ensure_deploy(self, zone):
-        """Ensure there is space in the deploy_actions dict."""
-        if zone not in self.deploy_actions:
-            self.deploy_actions[zone] = []
-
-    def add_task(self, zone, machine, task):
+    def is_running(self):
         """
-        Add an "add task" action.
+        Check if the queue consumer is running.
 
-        @param zone The zone the task should run in.
-        @param machine The machine to add the task to.
-        @param task The name of the task to add.
+        @return True if the consumer is running or False.
         """
-        self._ensure_update(zone, machine)
-        self.update_actions[zone][machine.hostname]['add'].append(task)
+        return self.thread is not None and self.thread.is_alive()
 
-    def remove_task(self, zone, machine, task):
+    def start(self):
         """
-        Add a "remove task" action.
+        Start the action thread.
 
-        @param zone The zone the task is running in.
-        @param machine The machine the task is running on.
-        @param task The name of the task to remove.
+        @return True if the thread was started or False if it was already
+            running.
         """
-        self._ensure_update(zone, machine)
-        self.update_actions[zone][machine.hostname]['remove'].append(task)
+        if self.is_running():
+            return False
 
-    def update_task(self, zone, machine, task, status):
+        def run():
+            try:
+                logger.info("action '%s' running" % self.action.name)
+                self.action.run()
+                logger.info("action '%s' complete" % self.action.name)
+            except:
+                import traceback
+                logger.error("action '%s' failed" % self.action.name)
+                logger.error(traceback.format_exc())
+            finally:
+                self.queue.task_done()
+
+        self.thread = Thread(target=run, name=self.action.name)
+        self.thread.start()
+        return True
+
+    def stop(self):
         """
-        Add an "update task" action.
+        Signal the action to stop if supported. A method called stop() is
+        checked for on the action and should return True on success. This
+        method does not block.
 
-        @param zone The zone the task is running in.
-        @param machine The machine the task is running on.
-        @param task The name of the task to update.
-        @param status The new status of the task.
+        @return True if the action was signaled to stop or False if the thread
+            was not running or the action does not support stopping.
         """
-        self._ensure_update(zone, machine)
-        self.update_actions[zone][machine.hostname]['update'][task] = status
+        if self.is_running() and hasattr(self.action, 'stop'):
+            return self.action.stop()
+        return False
 
-    def deploy_machines(self, zone, tasks, machines):
+    def join(self, timeout=None):
         """
-        Deploy new machines to run a task.
+        Block until the thread completes or the given timeout expires.
 
-        @param zone The zone to deploy the machines to.
-        @param tasks The tasks to deploy to the machine.
-        @param machines The number of new machines to deploy.
+        @param timeout The number of seconds to wait for the thread to
+            complete. Defaults to infinite.
+        @return True if the thread has stopped or False if it is still running.
+            If a timeout is not specified it will always be True.
         """
-        self._ensure_deploy(zone)
-        self.deploy_actions[zone].append({
-            'tasks': tasks,
-            'machines': machines,
-        })
+        if self.thread is not None:
+            self.thread.join(timeout)
+        return not self.is_running()
 
-    def generate(self):
+
+class MachineActionQueue(object):
+    """
+    Queue for running machine actions. Runs queues actions in a single thread
+    until the queue empties.
+    """
+
+    timeout = 30
+
+    def __init__(self, machine):
         """
-        Generate the actions. Each generated action will be a SequentialAction
-        containing each of the actions for a particular machine.
+        Initialize the queue.
 
-        @return A list of generated actions.
+        @param machine The machine this queue is operating on.
         """
-        actions = []
-        for zone, machines in self.update_actions.iteritems():
-            for machine in machines.values():
-                sequence = []
-                for task, status in machine['update'].iteritems():
-                    if status == self.sitter.state.desired_jobs.Running:
-                        sequence.append(StartTaskAction(
-                            self.sitter, zone, machine['machine'], task))
-                    else:
-                        sequence.append(StopTaskAction(
-                            self.sitter, zone, machine['machine'], task))
+        self.machine = machine
+        self.name = "ActionQueue(%s)" % machine
+        self.queue = Queue()
+        self.stop = False
+        self.thread = None
 
-                for task in machine['remove']:
-                    sequence.append(RemoveTaskAction(
-                        self.sitter, zone, machine['machine'], task))
+    def add(self, action):
+        """
+        Queue an action.
 
-                for task in machine['add']:
-                    sequence.append(AddTaskAction(
-                        self.sitter, zone, machine['machine'], task))
+        @param action The action to queue.
+        @return True on success or False if the action's machine does not match
+        the queue's machine or if the queue add times out.
+        """
+        if self.machine == getattr(action, 'machine', None):
+            try:
+                self.queue.put(action, True, self.timeout)
+                return True
+            except Full:
+                logger.error("%s: timed out while queuing" % action.name)
+        return False
 
-                sequence_action = SequentialMachineAction(
-                    self.sitter, machine['machine'], sequence)
-                actions.append(sequence_action)
+    def is_empty(self):
+        """
+        Check if the queue is empty.
 
-        for zone, items in self.deploy_actions.iteritems():
-            for item in items:
-                for n in range(item['machines']):
-                    actions.append(
-                        DeployMachineAction(self.sitter, zone, item['tasks']))
+        @return True if the queue is empty or False.
+        """
+        return self.queue.empty()
 
-        return actions
+    def is_running(self):
+        """
+        Check if the queue consumer is running.
+
+        @return True if the consumer is running or False.
+        """
+        return self.thread is not None and self.thread.is_alive()
+
+    def start(self):
+        """
+        Start the queue consumer thread. The thread will only be run if the
+        queue is non-empty. The thread will terminate once the queue is empty.
+
+        @return True if the consumer thread was started or False if the thread
+            is already running or the queue is empty.
+        """
+        if self.is_running() or self.is_empty():
+            return False
+
+        def run():
+            #import pdb
+            #pdb.set_trace()
+
+            logger.info("action queue consumer started")
+            self.stop = False
+            while not self.queue.empty() and not self.stop:
+                try:
+                    action = self.queue.get(True, self.timeout)
+                except Empty:
+                    logger.warn("queue timed out, retrying")
+                    continue
+
+                try:
+                    logger.info("action '%s' running" % action.name)
+                    action.run()
+                    logger.info("action '%s' complete" % action.name)
+                except:
+                    import traceback
+                    logger.error("action '%s' failed" % action.name)
+                    logger.error(traceback.format_exc())
+                finally:
+                    self.queue.task_done()
+            logger.info("action queue thread stopped")
+
+        self.thread = Thread(target=run, name=self.name)
+        self.thread.start()
+        return True
+
+    def stop(self):
+        """
+        Signal the queue consumer thread to stop. This method does not block.
+
+        @return True if the consumer thread was signalled to stop or False if
+            the thread is not running.
+        """
+        if not self.is_running():
+            return False
+        self.stop = True
+        return True
+
+    def join(self, timeout=None):
+        """
+        Block until the consumer thread completes or the given timeout expires.
+
+        @param timeout The number of seconds to wait for the thread to
+            complete. Defaults to infinite.
+        @return True if the thread has stopped or False if it is still running.
+            If a timeout is not specified it will always be True.
+        """
+        if self.thread is not None:
+            self.thread.join(timeout)
+        return not self.is_running()
+
+
+class ClusterActionManager(object):
+    """
+    Manage cluster actions. Each machine has a dedicated queue for actions
+    which need to be performed. Each queue has a single consumer thread.
+    Threads are cleaned up when their associated queues empty.
+    """
+
+    def __init__(self):
+        """Initialize the manager."""
+        self.pending = []
+        self.queues = {}
+        self.runners = []
+
+    def add(self, action):
+        """
+        Add an action to the queue. The action is not actually queued until
+        process() is called.
+        """
+        self.pending.append(action)
+
+    def process(self):
+        """
+        Process pending actions. If the action is related to a machine it is
+        queued in the associated machine queue. Otherwise the action is run
+        immediately. This method also cleans up completed actions and empty
+        machine queues.
+        """
+        while len(self.pending):
+            action = self.pending.pop(0)
+            if hasattr(action, 'machine'):
+                queue = self.queues.get(action.machine)
+                if not queue:
+                    queue = MachineActionQueue(action.machine)
+                    self.queues[action.machine] = queue
+                if not queue.add(action):
+                    logger.error("%s: failed to queue action" % action.name)
+                if not queue.is_running():
+                    queue.start()
+            else:
+                runner = ClusterActionRunner(action)
+                result = runner.start()
+                if result:
+                    self.runners.append(runner)
+                else:
+                    logger.error("%: failed to start action" % action.name)
+
+        for name, queue in dict(self.queues).iteritems():
+            if not queue.is_running() and queue.is_empty():
+                del self.queues[name]
+
+        for runner in list(self.runners):
+            if not runner.is_running():
+                self.runners.remove(runner)
+
+    def stop(self):
+        """
+        Signal all actions to stop.
+        """
+        for queue in self.queues.values():
+            queue.stop()
+        for runner in self.runners:
+            runner.stop()
+
+    def join(self, timeout=None):
+        """
+        Wait for all thread queues to complete.
+
+        @param timeout The number of seconds to block waiting for a queue
+            thread to join. This will be applied to each queue thread. Defaults
+            to infinite.
+        @return True if all threads are stopped or False if some threads
+            continue to run.
+        """
+        running = True
+        for queue in self.queues.values():
+            running = running and queue.join(timeout)
+        for runner in self.runners:
+            running = running and runner.join(timeout)
+        return running
 
 
 class ClusterAction(object):
     """
-    Base class for threaded state actions.
+    Base class for all actions. Inheriting classes must implement the run()
+    method.
     """
 
     def __init__(self, sitter):
@@ -149,125 +293,18 @@ class ClusterAction(object):
 
         @param sitter The cluster sitter object.
         """
+        self.name = "%s" % self.__class__.__name__
         self.sitter = sitter
         self.state = sitter.state
-        self.status = ClusterActionStatus.Pending
-        self.thread = None
-
-    def is_running(self):
-        """
-        Check if the action is running.
-
-        @return True if the action is running or False.
-        """
-        return self.status == ClusterActionStatus.Running
-
-    def is_finished(self):
-        """
-        Check if the action has completed.
-
-        @return True if the action has finished or False.
-        """
-        return self.status == ClusterActionStatus.Finished
-
-    def execute(self):
-        """
-        Run the action synchronously.
-
-        @raise ClusterActionError If the action has already been run.
-        """
-        if self.status != ClusterActionStatus.Pending:
-            raise ClusterActionError("action may not be run more than once")
-        self.status = ClusterActionStatus.Running
-        try:
-            self.run()
-        finally:
-            self.status = ClusterActionStatus.Finished
-
-    def start(self):
-        """
-        Run the action asynchronously.
-
-        @raise ClusterActionError If the action has already been run.
-        """
-        if self.status != ClusterActionStatus.Pending:
-            raise ClusterActionError("action may not be run more than once")
-        if hasattr(self, 'name'):
-            name = self.name
-        else:
-            name = self.__class__.__name__
-        self.thread = Thread(name=name, target=self.execute)
-        self.thread.start()
-
-    def join(self):
-        """
-        Wait for the asyncrhonous running of the action to complete.
-
-        @raise ClusterActionError If the action is not being run
-            asynchronously.
-        """
-        if self.thread is None:
-            raise ClusterActionError("action is not being run asynchronously")
-        self.thread.join()
-
-
-class SequentialAction(ClusterAction):
-    """
-    Execute a series of actions in sequence.
-    """
-
-    def __init__(self, sitter, actions):
-        """
-        Initialize the action.
-
-        @param sitter The cluster sitter object.
-        @param actions The actions to execute.
-        """
-        super(SequentialAction, self).__init__(sitter)
-        self.actions = actions
 
     def run(self):
         """Run the action."""
-        for action in self.actions:
-            try:
-                action.execute()
-            except:
-                import traceback
-                logger.error("failure in sequential action, continuing")
-                logger.error(traceback.format_exc())
-
-
-class SequentialMachineAction(SequentialAction):
-    """
-    Execute a series of actions in sequence on a single machine. Puts the
-    machine in maintenance mode during the run.
-    """
-
-    def __init__(self, sitter, machine, actions):
-        """
-        Initialize the action.
-
-        @param sitter The cluster sitter object.
-        @param machine The machine to operate on.
-        @param actions The actions to execute.
-        """
-        super(SequentialMachineAction, self).__init__(sitter, actions)
-        self.name = "%s %s" % (self.__class__.__name__, machine.hostname)
-        self.machine = machine
-
-    def run(self):
-        """Run the action sequence in machine maintenance mode."""
-        initial_status = self.state.get_machine_status(self.machine)
-        self.state.update_machine(self.machine, self.state.Maintenance)
-        try:
-            super(SequentialMachineAction, self).run()
-        finally:
-            self.state.update_machine(self.machine, initial_status)
 
 
 class MachineAction(ClusterAction):
     """
-    Base class for running action against a machine.
+    Base class for action executed against a machine. Inheriting classes must
+    implement the run() method.
     """
 
     def __init__(self, sitter, zone, machine):
@@ -279,26 +316,15 @@ class MachineAction(ClusterAction):
         @param machine The machine to manage the job on.
         """
         super(MachineAction, self).__init__(sitter)
-        self.name = "%s %s" % (self.__class__.__name__, machine.hostname)
-        self.zone = zone
         self.machine = machine
-        self.initial_state = self.state.get_machine_status(machine)
-
-    def run(self):
-        """
-        Run the action. Sets all machines to maintenance and calls
-        run_maintenance.
-        """
-        try:
-            self.state.update_machine(self.machine, self.state.Maintenance)
-            self.run_maintenance()
-        finally:
-            self.state.update_machine(self.machine, self.initial_state)
+        self.name = "%s(%s)" % (self.__class__.__name__, machine)
+        self.zone = zone
 
 
 class TaskAction(MachineAction):
     """
-    Base class for managing a task on a machine.
+    Base class for managing a task on a machine. Inheriting classes must
+    implement the run() method.
     """
 
     def __init__(self, sitter, zone, machine, task):
@@ -311,108 +337,99 @@ class TaskAction(MachineAction):
         @param task The task to run the action against.
         """
         super(TaskAction, self).__init__(sitter, zone, machine)
-        self.name = "%s %s %s" % (
-            self.__class__.__name__, machine.hostname, task)
-        self.job = self.state.get_job(task)
+        self.name = "%s(%s, %s)" % (self.__class__.__name__, machine, task)
+        self.task = task
 
 
 class StartTaskAction(TaskAction):
     """Start a task."""
 
-    def run_maintenance(self):
-        """Run the action in maintenance mode."""
-        if not self.machine.start_task(self.job):
-            raise ClusterActionError(
-                "failed to start job '%s' on machine '%s'" %
-                (self.job.name, self.machine.hostname))
+    def run(self):
+        """Run the action."""
+        job = self.state.get_job(self.task)
+        if not job:
+            logger.error("%s: job does not exist" % self.name)
+        elif not self.machine.start_task(job):
+            logger.error("%s: failed to start task" % self.name)
 
 
 class RestartTaskAction(TaskAction):
     """Restart a task."""
 
-    def run_maintenance(self):
-        """Run the action in maintenance mode."""
-        if not self.machine.restart_task(self.job):
-            raise ClusterActionError(
-                "failed to restart job '%s' on machine '%s'" %
-                (self.job.name, self.machine.hostname))
+    def run(self):
+        """Run the action."""
+        job = self.state.get_job(self.task)
+        if not job:
+            logger.error("%s: job does not exist" % self.name)
+        elif not self.machine.restart_task(job):
+            logger.error("%s: failed to restart task" % self.name)
 
 
 class StopTaskAction(TaskAction):
     """Stop a task."""
 
-    def run_maintenance(self):
+    def run(self):
         """Run the action."""
-        if not self.machine.stop_task(self.job):
-            raise ClusterActionError(
-                "failed to stop job '%s' on machine '%s'" %
-                (self.job.name, self.machine.hostname))
+        job = self.state.get_job(self.task)
+        if not job:
+            logger.error("%s: job does not exist" % self.name)
+        elif not self.machine.stop_task(job):
+            logger.error("%s: failed to stop task" % self.name)
 
 
 class AddTaskAction(TaskAction):
     """Add a task to a machine."""
 
-    def run_maintenance(self):
-        """Run the action in maintenance mode."""
-        if not self.job.deploy(self.zone, self.machine):
+    def run(self):
+        """Run the action."""
+        job = self.state.get_job(self.task)
+        if not job:
+            logger.error("%s: job does not exist" % self.name)
+        elif not job.deploy(self.zone, self.machine):
+            logger.error("%s: failed to deploy task" % self.name)
+        elif not self.state.start_task(self.machine, self.task):
             logger.error(
-                "failed to deploy job '%s' to machine '%s'" %
-                (self.job.name, self.machine.hostname))
+                "%s: failed to start task after deploying" % self.name)
 
 
 class RemoveTaskAction(TaskAction):
     """Remove a task from a machine."""
 
-    def run_maintenance(self):
-        """Run the action in maintenance mode."""
-        #TODO: Undeploy the job code.
-        if not self.machine.stop_task(self.job):
-            raise ClusterActionError(
-                "failed to stop job '%s' on machine '%s'" %
-                (self.job.name, self.machine.hostname))
+    def run(self):
+        """Run the action."""
+        job = self.state.get_job(self.task)
+        if not job:
+            logger.error("%s: job does not exist" % self.name)
+        elif not self.machine.stop_task(job):
+            logger.error("%s: failed to remove task" % self.name)
 
 
 class DeployMachineAction(ClusterAction):
-    """Deploy a set of tasks to a new machine."""
+    """Deploy a master job to a new machine."""
 
-    def __init__(self, sitter, zone, tasks):
+    def __init__(self, sitter, zone, job):
         """
         Initialize the action.
 
+        @param sitter The cluster sitter object.
         @param zone The zone to deploy the tasks to.
-        @param tasks The tasks to deploy.
+        @param job The job to deploy.
         """
         super(DeployMachineAction, self).__init__(sitter)
-        self.name = "%s %s" % (self.__class__.__name__, ",".join(tasks))
+        self.job = job
+        self.name = "%s(%s, %s)" % (
+            self.__class__.__name__, zone, job.name)
+        self.stop = False
         self.zone = zone
-        self.jobs = [self.state.get_job(t) for t in tasks]
 
     def run(self):
         """Run the action."""
-        def fail(job):
-            for job in self.jobs:
-                self.state.remove_job(job)
-            raise ClusterActionError(
-                "failed to deploy job '%s' on new machine" %
-                job.name)
-
-        # Perform first run and grab the new machine.
-        job = self.jobs[0]
-        machine = self.jobs[0].deploy(self.zone)
-        if not machine:
-            fail(self.jobs[0])
-
-        try:
-            self.state.desired_jobs.set_pending_machines(
-                self.zone, self.jobs[0].name, [machine], True)
-
-            for job in self.jobs[1:]:
-                if not job.deploy(self.zone, machine):
-                    fail(job)
-        finally:
-            # The filler creates machines in maintenance mode so we activate
-            # our new machine.
-            self.state.update_machine(machine, self.state.Active)
+        if not self.job.deploy(self.zone):
+            logger.error(
+                "%s: failed to deploy new machine" % self.name)
+            return
+        # Take our new machine out of Deploying mode.
+        self.state.update_machine(self.machine, self.state.Active)
 
 
 class RedeployMachineAction(MachineAction):
@@ -430,13 +447,17 @@ class RedeployMachineAction(MachineAction):
         super(RedeployMachineAction, self).__init__(sitter, zone, machine)
         self.job = job
 
-    def run_maintenance(self):
-        """Run the action in maintenance mode."""
-        logger.info("redeploying sitter to '%s'" % self.machine.hostname)
-        if not self.job.deploy(self.zone, self.machine, True):
-            logger.info((
-                "failed to redeploy '%s', decomissioning and deploying "
-                "jobs elsewhere") % self.machine.hostname)
+    def run(self):
+        """Run the action."""
+        logger.info("%s: redeploying machine sitter" % self.name)
+        if self.job.deploy(self.zone, self.machine, True):
+            self.state.update_machine(self.machine, self.state.Active)
+            logger.info(
+                "%s: successfully redeployed machine")
+        else:
+            logger.info(
+                "%s: failed to redeploy, decomissioning and reassigning jobs" %
+                self.name)
             self.state.detach_machine(self.machine)
             self.sitter.decomission_machine(self.machine)
 
@@ -444,6 +465,6 @@ class RedeployMachineAction(MachineAction):
 class DecomissionMachineAction(MachineAction):
     """Decomission an existing machine."""
 
-    def run_maintenance(self):
-        """Run the action in maintenance mode."""
+    def run(self):
+        """Run the action."""
         self.sitter.decomission_machine(self.machine)

@@ -411,7 +411,7 @@ class JobFiller(object):
                 machines_to_add.append(machine)
 
         sitter.add_machines(
-            machines_to_add, update_dns=False, maintenance=True)
+            machines_to_add, update_dns=False, deploying=True)
 
         # Now wait for the machines to actually be monitored
         for machine in self.machines:

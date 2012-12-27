@@ -379,15 +379,15 @@ class ClusterSitter(object):
         ClusterEventManager.handle(
             "Decomissioning of %s complete!" % str(machine))
 
-    def add_machines(self, machines, update_dns=True, maintenance=False):
+    def add_machines(self, machines, update_dns=True, deploying=False):
         """
         Add machines to the sitter.
 
         @param machines A list of machines to add.
         @param update_dns Whethor or not to update the DNS for the machines.
             Defaults to True.
-        @param maintenance Whether or not to add the machines in maintenance
-            mode. Defaults to False.
+        @param deploying Whether or not to flag the machines as currently being
+            deployed. Defaults to False.
         """
         if not machines:
             return
@@ -399,8 +399,8 @@ class ClusterSitter(object):
             if not isinstance(mm, MonitoredMachine):
                 mm = MonitoredMachine(m)
             status = None
-            if maintenance:
-                status = self.state.Maintenance
+            if deploying:
+                status = self.state.Deploying
             self.state.monitor_machine(mm)
             self.state.add_machine(mm, status=status, existing=True)
             monitored_machines.append(mm)

@@ -41,7 +41,7 @@ class ClusterStats(StatsCollector):
         data['job_fill'] = str(job_fill)
         data['idle_machines'] = str(state.get_machines(idle=True))
         data['unreachable_machines'] = [
-            str(m) for m in state.get_machines(status=state.Unreachable)]
+            str(m) for m in state.get_machines(unreachable=True)]
 
         monitors = []
         machines = []
