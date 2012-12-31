@@ -135,6 +135,7 @@ class AmazonEC2(MachineProvider):
                 placement=aws_placement,
                 monitoring_enabled=False
                 )
+            time.sleep(0.5)
         except:
             import traceback
             logger.error(traceback.format_exc())
