@@ -91,6 +91,7 @@ class ProductionJob(object):
         }
 
     def do_update_deployment(self, state, version=None):
+        #TODO: Implement versioning in state tracking so we can be rid of this.
         """
         1. Find all machines running this job
         2. Build a JobFiller with all those machines
@@ -199,7 +200,7 @@ class ProductionJob(object):
 
         return True
 
-    def deploy(self, zone, machine=None, repair=False):
+    def deploy(self, zone, machine=None, repair=False, version=None):
         """
         Deploy the job to a machine.
 
@@ -207,6 +208,8 @@ class ProductionJob(object):
             be spun up.
         @param repair Deploy as a repair job. Causes the deployment to treat
             the machine as raw and enabled fail on error.
+        @param version The version to deploy. Defaults to the latest or
+            currently set version.
         @return The machine the job was deployed to or None if deployment
             failed.
         """
@@ -217,6 +220,9 @@ class ProductionJob(object):
                 raw_machines.append(machine)
             else:
                 machines.append(machine)
+
+        if version is not None:
+            self.recipe_options['version'] = version
 
         filler = JobFiller(
             1, self, zone, machines, raw_machines=raw_machines,
