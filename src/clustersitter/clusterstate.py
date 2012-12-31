@@ -737,6 +737,8 @@ class ClusterState(object):
         item = self._get_machine_item(machine)
         if item:
             item['status'] = status
+            return True
+        return False
 
     @lock
     def monitor_machine(self, machine):
