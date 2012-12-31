@@ -10,9 +10,24 @@ from actions import (
     DeployMachineAction, RedeployMachineAction, RemoveTaskAction,
     RestartTaskAction, StartTaskAction, StopTaskAction)
 from productionjob import ProductionJob
-from threading import Thread
+from threading import RLock, Thread
 
 logger = logging.getLogger(__name__)
+
+
+def lock(fn):
+    """
+    Lock the reentrant lock stored in self.lock during method execution.
+
+    @param fn The method to lock.
+    """
+    def lock_wrapper(self, *args, **kwargs):
+        self.lock.acquire()
+        try:
+            return fn(self, *args, **kwargs)
+        finally:
+            self.lock.release()
+    return lock_wrapper
 
 
 class JobState(object):
@@ -404,10 +419,12 @@ class ClusterState(object):
         self.desired_jobs = JobState()
         self.current_jobs = JobState()
         self.actions = ClusterActionManager()
+        self.lock = RLock()
 
         #TODO: Move this to the sitter. State is not a catch-all.
         self.loggers = []
 
+    @lock
     def _get_machine_item(self, machine):
         """
         Get the list item from self.machines that contains the given machine.
@@ -417,6 +434,7 @@ class ClusterState(object):
                 return item
         return None
 
+    @lock
     def _get_master_job(self, job):
         """Get the master job in a job chain."""
         if job.name not in self.jobs:
@@ -452,6 +470,7 @@ class ClusterState(object):
         """
         return dict(self.providers)
 
+    @lock
     def add_provider(self, name, provider):
         """
         Add a machine provider to state tracking. Zones in the provider will
@@ -474,9 +493,7 @@ class ClusterState(object):
         @param zone The name of the zone.
         @return The provider for the zone or None if not present.
         """
-        if zone in self.zones:
-            return self.providers[self.zones[zone]]
-        return None
+        return self.providers.get(self.zones.get(zone))
 
     def has_machine(self, machine):
         """
@@ -510,6 +527,7 @@ class ClusterState(object):
         item = self._get_machine_item(machine)
         return item and item['status'] == self.Deploying
 
+    @lock
     def is_machine_idle(self, machine):
         """
         Check if a machine is being deployed.
@@ -520,6 +538,7 @@ class ClusterState(object):
         item = self._get_machine_item(machine)
         return item and self.desired_jobs.is_machine_idle(machine)
 
+    @lock
     def is_machine_monitored(self, machine):
         """
         Check if a machine is being or is queued to be monitored.
@@ -532,6 +551,7 @@ class ClusterState(object):
                 return True
         return False
 
+    @lock
     def is_machine_unreachable(self, machine):
         """
         Check if a machine is unreachable.
@@ -544,6 +564,7 @@ class ClusterState(object):
             item and not self.is_machine_monitored(machine) and
             not self.get_machine_repair_job(machine))
 
+    @lock
     def get_machines(self, zones=None, status=None, idle=None,
                      unreachable=None):
         """
@@ -625,6 +646,7 @@ class ClusterState(object):
         """
         return self.repair_jobs.get(machine.hostname)
 
+    @lock
     def add_machine(self, machine, status=None, existing=False):
         """
         Add a machine to state tracking.
@@ -659,6 +681,7 @@ class ClusterState(object):
             return True
         return False
 
+    @lock
     def add_machine_tasks(self, machine):
         """
         Add tasks from a running machine to state tracking.
@@ -688,6 +711,7 @@ class ClusterState(object):
                 name, zone, [machine], status=task_status)
         return True
 
+    @lock
     def remove_machine(self, machine):
         """
         Remove a machine from state tracking and monitoring. Tasks associated
@@ -701,6 +725,7 @@ class ClusterState(object):
         if item:
             self.machines.remove(item)
 
+    @lock
     def update_machine(self, machine, status):
         """
         Update the status of a machine.
@@ -713,6 +738,7 @@ class ClusterState(object):
         if item:
             item['status'] = status
 
+    @lock
     def monitor_machine(self, machine):
         """
         Add a machine to monitoring.
@@ -731,6 +757,7 @@ class ClusterState(object):
         self.monitors.sort(key=sort_monitors)
         return self.monitors[0][0].add_machine(machine)
 
+    @lock
     def unmonitor_machine(self, machine):
         """
         Remove a machine from monitoring.
@@ -744,6 +771,7 @@ class ClusterState(object):
                 return True
         return False
 
+    @lock
     def repair_machine(self, machine):
         """
         Redeploy a machinesitter to a machine.
@@ -772,6 +800,7 @@ class ClusterState(object):
             RedeployMachineAction(self.sitter, zone, machine, job))
         return True
 
+    @lock
     def detach_machine(self, machine):
         """
         Undeploy all jobs from a machine. Jobs removed in this manner will be
@@ -791,6 +820,7 @@ class ClusterState(object):
         for master in job_chains.keys():
             self.desired_jobs.add_tasks(master, zone, [], 1)
 
+    @lock
     def add_job(self, job):
         """
         Add a job to the cluster. Master jobs are immediately allocated to
@@ -843,6 +873,7 @@ class ClusterState(object):
                         AddTaskAction(self.sitter, zone, machine, job.name))
         return True
 
+    @lock
     def update_job(self, job, version=None):
         """
         Update the job. The job is redeployed to existing machines.
@@ -859,6 +890,7 @@ class ClusterState(object):
         job.do_update_deployment(self, version)
         return False
 
+    @lock
     def remove_job(self, job):
         """
         Remove a job from the cluster. Child jobs will be removed as well.
@@ -881,6 +913,7 @@ class ClusterState(object):
             removed.extend(self.desired_jobs.remove_tasks(task))
         return removed
 
+    @lock
     def persist_jobs(self):
         """
         Persist jobs to the jobs file.
@@ -889,6 +922,7 @@ class ClusterState(object):
         with open(self.job_file, 'w') as fd:
             fd.write(simplejson.dumps([j.to_dict() for j in jobs]))
 
+    @lock
     def start_task(self, machine, task):
         """
         Start a task on a machine.
@@ -904,6 +938,7 @@ class ClusterState(object):
         self.desired_jobs.update_tasks(task, JobState.Running, [machine])
         return True
 
+    @lock
     def stop_task(self, machine, task):
         """
         Stop a task on a machine.
@@ -919,6 +954,7 @@ class ClusterState(object):
         self.desired_jobs.update_tasks(task, JobState.Running, [machine])
         return True
 
+    @lock
     def restart_task(self, machine, task):
         """
         Restart a task on a machine.
@@ -1161,6 +1197,7 @@ class ClusterState(object):
                         not self.get_machine_repair_job(machine)):
                     self.repair_machine(machine)
 
+    @lock
     def calculate(self):
         """
         Handle all state calculations.
