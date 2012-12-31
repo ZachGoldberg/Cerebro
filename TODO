@@ -6,6 +6,7 @@ High Priority:
 -- "Undeploy" job code from machines.
 -- Need signal handling for clean exits
 -- Clean up thread handling (need stops and joins)
+-- Track job version in state and allow updating.
 
 Other:
 -- Support dashes in task names!  
