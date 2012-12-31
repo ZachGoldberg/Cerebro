@@ -186,20 +186,11 @@ class ClusterSitter(object):
             return check
 
         job_name = args['job_name']
-        job = None
-        for state_job in self.state.jobs:
-            if state_job.name == job_name:
-                job = state_job
-                break
-
-        if not job:
+        if not self.state.update_job(job_name):
             return "Error updating job: %s doesn't exist" % job_name
 
-        job.do_update_deployment(self.state, args.get('version'))
-        # Now build a deployment recipe for this job
         ClusterEventManager.handle(
             'Update %s started' % job_name)
-
         return "Job update initiated"
 
     def api_add_job(self, args):

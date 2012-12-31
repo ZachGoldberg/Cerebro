@@ -795,10 +795,9 @@ class ClusterState(object):
         """
         Add a job to the cluster. Master jobs are immediately allocated to
         machines. Child jobs are attached to their associated master job and
-        deployed simultenously as a job "chain". To deploy a job with the same
-        name the existing job must first be removed. If the name of this job
-        matches existing tasks that do not have jobs then those tasks will be
-        assigned to this job.
+        deployed simultenously as a job "chain". Existing jobs will be
+        redeployed. If the name of this job matches existing tasks that do not
+        have jobs then those tasks will be assigned to this job.  
 
         @param job The job to add to the cluster. The job is configured with
             the required zones and number of machines.
@@ -843,6 +842,22 @@ class ClusterState(object):
                     self.actions.add(
                         AddTaskAction(self.sitter, zone, machine, job.name))
         return True
+
+    def update_job(self, job, version=None):
+        """
+        Update the job. The job is redeployed to existing machines.
+
+        @param job The job or name of the job to update.
+        @param version The version to update to. Optional.
+        @return True if successful or False if the job does not exist.
+        """
+        name = str(job)
+        job = self.get_job(name)
+
+        if not job:
+            return False
+        job.do_update_deployment(self, version)
+        return False
 
     def remove_job(self, job):
         """

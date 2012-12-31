@@ -176,6 +176,9 @@ class JobFiller(object):
         logger.info("Job Filler: Done!")
         self.end_time = datetime.now()
 
+        if self in self.job.fillers.get(self.zone, []):
+            self.job.fillers[self.zone].remove(self)
+
         if self.post_callback:
             self.post_callback(success=True)
 
