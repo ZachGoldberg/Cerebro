@@ -41,17 +41,17 @@ class ClusterActionRunner(Thread):
 
         def run():
             try:
-                logger.info("action '%s' running" % self.action.name)
+                logger.info("action '%s' running" % self.action)
                 self.action.run()
-                logger.info("action '%s' complete" % self.action.name)
+                logger.info("action '%s' complete" % self.action)
             except:
                 import traceback
-                logger.error("action '%s' failed" % self.action.name)
+                logger.error("action '%s' failed" % self.action)
                 logger.error(traceback.format_exc())
             finally:
                 self.queue.task_done()
 
-        self.thread = Thread(target=run, name=self.action.name)
+        self.thread = Thread(target=run, name=self.action)
         self.thread.start()
         return True
 
@@ -115,7 +115,7 @@ class MachineActionQueue(object):
                 self.queue.put(action, True, self.timeout)
                 return True
             except Full:
-                logger.error("%s: timed out while queuing" % action.name)
+                logger.error("%s: timed out while queuing" % action)
         return False
 
     def is_empty(self):
@@ -159,18 +159,18 @@ class MachineActionQueue(object):
                     continue
 
                 try:
-                    logger.info("action '%s' running" % action.name)
+                    logger.info("action '%s' running" % action)
                     action.run()
-                    logger.info("action '%s' complete" % action.name)
+                    logger.info("action '%s' complete" % action)
                 except:
                     import traceback
-                    logger.error("action '%s' failed" % action.name)
+                    logger.error("action '%s' failed" % action)
                     logger.error(traceback.format_exc())
                 finally:
                     self.queue.task_done()
             logger.info("action queue thread stopped")
 
-        self.thread = Thread(target=run, name=self.name)
+        self.thread = Thread(target=run, name=str(self))
         self.thread.start()
         return True
 
@@ -198,6 +198,14 @@ class MachineActionQueue(object):
         if self.thread is not None:
             self.thread.join(timeout)
         return not self.is_running()
+
+    def __str__(self):
+        """Return the name of the action queue."""
+        return self.name
+
+    def __repr__(self):
+        """Return the name of the action queue."""
+        return self.name
 
 
 class ClusterActionManager(object):
@@ -235,7 +243,7 @@ class ClusterActionManager(object):
                     queue = MachineActionQueue(action.machine)
                     self.queues[action.machine] = queue
                 if not queue.add(action):
-                    logger.error("%s: failed to queue action" % action.name)
+                    logger.error("%s: failed to queue action" % action)
                 if not queue.is_running():
                     queue.start()
             else:
@@ -244,7 +252,7 @@ class ClusterActionManager(object):
                 if result:
                     self.runners.append(runner)
                 else:
-                    logger.error("%: failed to start action" % action.name)
+                    logger.error("%: failed to start action" % action)
 
         for name, queue in dict(self.queues).iteritems():
             if not queue.is_running() and queue.is_empty():
@@ -300,6 +308,14 @@ class ClusterAction(object):
     def run(self):
         """Run the action."""
 
+    def __str__(self):
+        """Return the name of the action."""
+        return self.name
+
+    def __repr__(self):
+        """Return the name of the action."""
+        return self.name
+
 
 class MachineAction(ClusterAction):
     """
@@ -348,9 +364,9 @@ class StartTaskAction(TaskAction):
         """Run the action."""
         job = self.state.get_job(self.task)
         if not job:
-            logger.error("%s: job does not exist" % self.name)
+            logger.error("%s: job does not exist" % self)
         elif not self.machine.start_task(job):
-            logger.error("%s: failed to start task" % self.name)
+            logger.error("%s: failed to start task" % self)
 
 
 class RestartTaskAction(TaskAction):
@@ -360,9 +376,9 @@ class RestartTaskAction(TaskAction):
         """Run the action."""
         job = self.state.get_job(self.task)
         if not job:
-            logger.error("%s: job does not exist" % self.name)
+            logger.error("%s: job does not exist" % self)
         elif not self.machine.restart_task(job):
-            logger.error("%s: failed to restart task" % self.name)
+            logger.error("%s: failed to restart task" % self)
 
 
 class StopTaskAction(TaskAction):
@@ -372,9 +388,9 @@ class StopTaskAction(TaskAction):
         """Run the action."""
         job = self.state.get_job(self.task)
         if not job:
-            logger.error("%s: job does not exist" % self.name)
+            logger.error("%s: job does not exist" % self)
         elif not self.machine.stop_task(job):
-            logger.error("%s: failed to stop task" % self.name)
+            logger.error("%s: failed to stop task" % self)
 
 
 class AddTaskAction(TaskAction):
@@ -384,12 +400,12 @@ class AddTaskAction(TaskAction):
         """Run the action."""
         job = self.state.get_job(self.task)
         if not job:
-            logger.error("%s: job does not exist" % self.name)
+            logger.error("%s: job does not exist" % self)
         elif not job.deploy(self.zone, self.machine):
-            logger.error("%s: failed to deploy task" % self.name)
+            logger.error("%s: failed to deploy task" % self)
         elif not self.state.start_task(self.machine, self.task):
             logger.error(
-                "%s: failed to start task after deploying" % self.name)
+                "%s: failed to start task after deploying" % self)
 
 
 class RemoveTaskAction(TaskAction):
@@ -399,9 +415,9 @@ class RemoveTaskAction(TaskAction):
         """Run the action."""
         job = self.state.get_job(self.task)
         if not job:
-            logger.error("%s: job does not exist" % self.name)
+            logger.error("%s: job does not exist" % self)
         elif not self.machine.stop_task(job):
-            logger.error("%s: failed to remove task" % self.name)
+            logger.error("%s: failed to remove task" % self)
 
 
 class DeployMachineAction(ClusterAction):
@@ -426,7 +442,7 @@ class DeployMachineAction(ClusterAction):
         """Run the action."""
         if not self.job.deploy(self.zone):
             logger.error(
-                "%s: failed to deploy new machine" % self.name)
+                "%s: failed to deploy new machine" % self)
             return
         # Take our new machine out of Deploying mode.
         self.state.update_machine(self.machine, self.state.Active)
@@ -449,7 +465,7 @@ class RedeployMachineAction(MachineAction):
 
     def run(self):
         """Run the action."""
-        logger.info("%s: redeploying machine sitter" % self.name)
+        logger.info("%s: redeploying machine sitter" % self)
         if self.job.deploy(self.zone, self.machine, True):
             self.state.update_machine(self.machine, self.state.Active)
             logger.info(
@@ -457,7 +473,7 @@ class RedeployMachineAction(MachineAction):
         else:
             logger.info(
                 "%s: failed to redeploy, decomissioning and reassigning jobs" %
-                self.name)
+                self)
             self.state.detach_machine(self.machine)
             self.sitter.decomission_machine(self.machine)
 
