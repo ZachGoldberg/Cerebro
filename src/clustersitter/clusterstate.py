@@ -829,7 +829,7 @@ class ClusterState(object):
         machines. Child jobs are attached to their associated master job and
         deployed simultenously as a job "chain". Existing jobs will be
         redeployed. If the name of this job matches existing tasks that do not
-        have jobs then those tasks will be assigned to this job.  
+        have jobs then those tasks will be assigned to this job.
 
         @param job The job to add to the cluster. The job is configured with
             the required zones and number of machines.
