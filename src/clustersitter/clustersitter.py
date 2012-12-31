@@ -6,12 +6,12 @@ import threading
 from datetime import datetime
 from logging import FileHandler
 
+import actions
 import clusterstate
 import deploymentrecipe
 import dynect
 import eventmanager
 import jobfiller
-import machinedoctor
 import machinemonitor
 import monitoredmachine
 import productionjob
@@ -96,18 +96,20 @@ class ClusterSitter(object):
                                       self.api_update_job)
 
         # Do lots of logging configuration
-        modules = [sys.modules[__name__],
-                   machinemonitor,
-                   monitoredmachine,
-                   productionjob,
-                   providers.aws,
-                   deploymentrecipe,
-                   sittercommon.machinedata,
-                   jobfiller,
-                   eventmanager,
-                   clusterstate,
-                   machinedoctor,
-                   dynect]
+        modules = [
+            sys.modules[__name__],
+            actions,
+            clusterstate,
+            deploymentrecipe,
+            dynect,
+            eventmanager,
+            jobfiller,
+            machinemonitor,
+            monitoredmachine,
+            productionjob,
+            providers.aws,
+            sittercommon.machinedata,
+        ]
 
         formatter = logging.Formatter(
             '%(asctime)s - %(name)s:%(threadName)s'
