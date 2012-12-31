@@ -146,9 +146,6 @@ class MachineActionQueue(object):
             return False
 
         def run():
-            #import pdb
-            #pdb.set_trace()
-
             logger.info("action queue consumer started")
             self.stop = False
             while not self.queue.empty() and not self.stop:
