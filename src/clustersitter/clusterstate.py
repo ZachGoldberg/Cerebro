@@ -823,16 +823,17 @@ class ClusterState(object):
             self.desired_jobs.add_tasks(master, zone, [], 1)
 
     @lock
-    def add_job(self, job):
+    def add_job(self, job, redeploy=False):
         """
         Add a job to the cluster. Master jobs are immediately allocated to
         machines. Child jobs are attached to their associated master job and
         deployed simultenously as a job "chain". Existing jobs will be
-        redeployed. If the name of this job matches existing tasks that do not
-        have jobs then those tasks will be assigned to this job.
+        redeployed if requested. If the name of this job matches existing tasks
+        that do not have jobs then those tasks will be assigned to this job.
 
         @param job The job to add to the cluster. The job is configured with
             the required zones and number of machines.
+        @param redeploy Whether or not to redeploy existing jobs.
         @return True if the job was added or False if it was not.
         """
         self.jobs[job.name] = job
@@ -850,11 +851,12 @@ class ClusterState(object):
                     job.name, existing_machines)
             elif job.linked_job:
                 # Redeploy child tasks to their current machines.
-                self.desired_jobs.update_tasks(
-                    job.name, JobState.Deploying, existing_machines)
-                for machine in existing_machines:
-                    self.actions.add(
-                        AddTaskAction(self.sitter, zone, machine, job.name))
+                if redeploy:
+                    self.desired_jobs.update_tasks(
+                        job.name, JobState.Deploying, existing_machines)
+                    for machine in existing_machines:
+                        self.actions.add(
+                            AddTaskAction(self.sitter, zone, machine, job.name))
             else:
                 # Redeploy master job across the cluster.
                 idle_machines = zoned_idle_machines.get(zone, [])
@@ -869,13 +871,16 @@ class ClusterState(object):
                     len(deploy_machines))
 
                 self.desired_jobs.add_tasks(
-                    job.name, zone, deploy_machines, num_create,
-                    JobState.Deploying)
+                    job.name, zone, deploy_machines, num_create)
                 self.desired_jobs.remove_tasks(
                     job.name, undeploy_machines)
-                for machine in redeploy_machines:
-                    self.actions.add(
-                        AddTaskAction(self.sitter, zone, machine, job.name))
+
+                if redeploy:
+                    self.desired_jobs.update_tasks(
+                        job.name, JobState.Deploying, redeploy_machines)
+                    for machine in redeploy_machines:
+                        self.actions.add(
+                            AddTaskAction(self.sitter, zone, machine, job.name))
         return True
 
     @lock
