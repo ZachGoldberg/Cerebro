@@ -233,7 +233,8 @@ class ProductionJob(object):
             if filler.run():
                 return filler.machines[0]
         finally:
-            self.fillers[zone].remove(filler)
+            if filler in self.fillers[zone]:
+                self.fillers[zone].remove(filler)
             self.currently_spawning[zone] -= 1
         return None
 
