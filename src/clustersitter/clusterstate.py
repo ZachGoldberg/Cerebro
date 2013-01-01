@@ -849,7 +849,9 @@ class ClusterState(object):
                 self.desired_jobs.remove_tasks(
                     job.name, existing_machines)
             elif job.linked_job:
-                # Redeploy child tasks to their current machines..
+                # Redeploy child tasks to their current machines.
+                self.desired_jobs.update_tasks(
+                    job.name, JobState.Deploying, existing_machines)
                 for machine in existing_machines:
                     self.actions.add(
                         AddTaskAction(self.sitter, zone, machine, job.name))
@@ -867,7 +869,8 @@ class ClusterState(object):
                     len(deploy_machines))
 
                 self.desired_jobs.add_tasks(
-                    job.name, zone, deploy_machines, num_create)
+                    job.name, zone, deploy_machines, num_create,
+                    JobState.Deploying)
                 self.desired_jobs.remove_tasks(
                     job.name, undeploy_machines)
                 for machine in redeploy_machines:
@@ -1133,7 +1136,8 @@ class ClusterState(object):
                 self.actions.add(RemoveTaskAction(self.sitter, *task))
 
         for task in check_tasks:
-            if self.is_machine_mutable(task[1]):
+            if (not self.desired_jobs.is_task_deploying(task[2], task[1])
+                    and self.is_machine_mutable(task[1])):
                 desired_status = self.desired_jobs.get_task_status(
                     task[2], task[1])
                 current_status = self.current_jobs.get_task_status(
