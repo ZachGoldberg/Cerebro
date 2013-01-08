@@ -898,7 +898,7 @@ class ClusterState(object):
         if not job:
             return False
         job.do_update_deployment(self, version)
-        return False
+        return True
 
     @lock
     def remove_job(self, job):
