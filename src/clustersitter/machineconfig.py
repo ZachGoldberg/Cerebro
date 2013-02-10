@@ -15,10 +15,12 @@ class MachineConfig(object):
         self.ip = ip
 
     def __str__(self):
-        return self.hostname
+        return self.__repr__()
 
     def __repr__(self):
-        return str(self)
+        return "%s %sx %s-bit %sMBx%sGB" % (
+            self.shared_fate_zone, self.cpus,
+            self.bits, self.mem, self.disk)
 
     def serialize(self):
         return {

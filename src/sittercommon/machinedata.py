@@ -266,10 +266,9 @@ class MachineData(object):
         if stderr:
             handle = "stderr.%s" % tasknum
 
-        return logs[handle]
+        return logs.get(handle)
 
 if __name__ == '__main__':
-    import subprocess
     d = MachineData("localhost", 40000)
     d.reload()
     print d.tasks

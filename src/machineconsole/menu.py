@@ -135,13 +135,13 @@ class Menu(object):
             self.write(" " * 20 + self.title)
         else:
             self.write(" " * 20 + self.title + " (%s/%s)" % (
-                    self.page + 1, pages))
+                self.page + 1, pages))
 
         index = 0
         for option in option_list:
             if not option.hidden:
                 if (index >= (self.page * max_per_page) and
-                    index < ((self.page + 1) * max_per_page)):
+                        index < ((self.page + 1) * max_per_page)):
 
                     self.write(str(option))
 
