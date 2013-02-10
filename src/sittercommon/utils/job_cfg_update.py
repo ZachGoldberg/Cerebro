@@ -7,12 +7,12 @@ def get_help_string():
 
 
 def get_command():
-    return "update_job_cfg"
+    return "updatejobcfg"
 
 
 def get_parser(parser):
-    parser.add_argument("--job-config", dest="job_config",
-                        required=True, nargs='+',
+    parser.add_argument(dest="job_config",
+                        nargs='+',
                         help='JSON file of Job configuration')
 
     return parser
@@ -31,7 +31,9 @@ def add_config_from_file(clustersitter_url, filename):
     for job in jobs:
         data = {'data': json.dumps(job)}
         resp = requests.post("%s/add_job" % clustersitter_url, data=data)
-        print "Response for %s: %s" % (job['task_configuration']['name'], resp.content)
+        print "Response for %s: %s" % (
+            job['task_configuration']['name'],
+            resp.content)
 
 
 def run_command(clustersitter_url=None,

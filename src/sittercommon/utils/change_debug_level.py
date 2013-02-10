@@ -1,6 +1,5 @@
 import json
 import requests
-import sys
 
 
 def get_help_string():
@@ -8,12 +7,11 @@ def get_help_string():
 
 
 def get_command():
-    return "update_log_level"
+    return "updateloglevel"
 
 
 def get_parser(parser):
-    parser.add_argument("--level", dest="level",
-                        required=True,
+    parser.add_argument(dest="level",
                         help='New Debug Level '
                         '(10=debug,20=info,30=warning,40=error)',
                         type=int)

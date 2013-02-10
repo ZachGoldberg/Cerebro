@@ -22,7 +22,7 @@ def get_parser(default_options):
         description="Cerebro Command Line Interaction Tool")
 
     parser.add_argument(
-        "--clustersitter-url", dest="clustersitter_url",
+        "--clustersitterurl", dest="clustersitter_url",
         help="URL to the root of the clustersitter",
         default=default_options.get('clustersitter_url'))
 

@@ -9,12 +9,11 @@ def get_help_string():
 
 
 def get_command():
-    return "update_job"
+    return "updatejob"
 
 
 def get_parser(parser):
-    parser.add_argument("--job-name", dest="job_name",
-                        required=True,
+    parser.add_argument(dest="job_name",
                         help='The name of the file to upload in'
                         ' the appropriate releases folder.  Leave blank for '
                         'latest.')

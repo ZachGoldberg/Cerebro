@@ -1,20 +1,17 @@
 import json
 import requests
 
-from sittercommon import arg_parser
-
 
 def get_help_string():
     return "Update clustersitter idle machine limit"
 
 
 def get_command():
-    return "update_idle_limit"
+    return "updateidlelimit"
 
 
 def get_parser(parser):
-    parser.add_argument("--idle-limit", dest="idle_limit",
-                        required=True,
+    parser.add_argument(dest="idle_limit",
                         help='Maximum number of idle machines per zone')
 
     return parser
