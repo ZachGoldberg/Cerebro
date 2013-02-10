@@ -15,4 +15,7 @@ def get_parser(parser):
 
 def run_command(clustersitter_url=None):
     state = ClusterState(clustersitter_url)
-    print '\n'.join([j.name for j in state.jobs])
+    for job in state.jobs:
+        print "%s - %s instances" % (
+            job.name,
+            sum([len(v) for v in job.fill_machines.values()]))

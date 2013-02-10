@@ -16,4 +16,13 @@ def get_parser(parser):
 def run_command(clustersitter_url=None):
 
     state = ClusterState(clustersitter_url)
-    print '\n'.join([m.config.ip for m in state.machines])
+    for machine in state.machines:
+        print "%s (%s)" % (machine.hostname, machine.config.ip)
+        for taskname, taskdata in machine.tasks.iteritems():
+            running = "Not Running"
+            if taskdata['running']:
+                running = "Running    "
+            print "  - %s %s (%s)" % (
+                running, taskname, taskdata['command'],)
+
+        print ""

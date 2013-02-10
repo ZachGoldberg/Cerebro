@@ -24,7 +24,7 @@ def get_parser(parser):
 def get_options(state, name):
     if not name:
         # Show all jobs, then show machines
-        return state.jobs
+        return state.jobs + state.machines
     else:
         name = name.lower()
         algos = [
