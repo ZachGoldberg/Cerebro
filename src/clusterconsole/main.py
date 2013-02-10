@@ -15,8 +15,6 @@ from sittercommon.api import ClusterState
 from sittercommon.machinedata import MachineData
 from sittercommon.utils import load_defaults, write_defaults, strip_html
 
-CLUSTER_DATA = None
-
 
 class ClusterManagementScreen(MachineManagementScreen):
     def __init__(self, cluster_data, *args, **kwargs):
@@ -161,14 +159,12 @@ def main(sys_args=None):
     logging.basicConfig()
     logging.getLogger().setLevel(logging.CRITICAL)
 
-    global CLUSTER_DATA
-    if not CLUSTER_DATA:
-        CLUSTER_DATA = ClusterState(default_options['clustersitter_url'])
+    cluster_data = ClusterState(default_options['clustersitter_url'])
 
-    screen = ClusterManagementScreen(CLUSTER_DATA)
+    screen = ClusterManagementScreen(cluster_data)
 
     try:
-        if not CLUSTER_DATA.url:
+        if not cluster_data.url:
             print "Couldn't find a running cluster sitter!"
             return
 
