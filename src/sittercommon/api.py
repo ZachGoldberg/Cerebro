@@ -2,6 +2,7 @@ import requests
 import simplejson
 import sys
 
+from clustersitter.monitoredmachine import MonitoredMachine
 from clustersitter.productionjob import ProductionJob
 
 
@@ -22,6 +23,5 @@ class ClusterState(object):
 
         data = simplejson.loads(response.content)
         self.jobs = [ProductionJob.deserialize(j) for j in data['jobs']]
-        self.machines = data['machines']
-
-        print self.machines[0].keys()
+        self.machines = [MonitoredMachine.deserialize(
+            m) for m in data['machines']]
