@@ -177,11 +177,7 @@ class MachineManagementScreen(ManagementScreen):
             self.factory.add_default_option(option)
             hotkey += 1
 
-        show_table = str(table).split('\n')
-        self.add_line("   %s" % show_table[0])
-
-        for num, l in enumerate(show_table[1:]):
-            self.add_line("%s. %s" % ((num + 1), l))
+        table.render(self)
 
         self.add_line("Stopped Tasks:")
         for num, l in enumerate(not_running_lines):

@@ -10,9 +10,12 @@ class Table(object):
             raise Exception("Invalid number of items in this row!")
         self.rows.append(items)
 
-    def render_cell(self, columnnum, column):
+    def render_cell(self, columnnum, rownum, column):
         col_len = len(str(column))
         padding = int((self.column_widths[columnnum] - col_len))
+        if rownum > 9 and columnnum == 0:
+            padding -= 1
+
         return "%s%s" % (column, " " * padding)
 
     def __str__(self):
@@ -34,11 +37,19 @@ class Table(object):
                     (self.max_width - total_width) / len(self.column_widths))
 
         lines = []
-        for row in self.rows:
+        for rownum, row in enumerate(self.rows):
             line = spacer.join(
-                [self.render_cell(i, cell) for i, cell in enumerate(row)])
+                [self.render_cell(
+                    i, rownum, cell) for i, cell in enumerate(row)])
             lines.append(line)
         return '\n'.join(lines)
+
+    def render(self, console):
+        show_table = str(self).split('\n')
+        console.add_line("   %s" % show_table[0])
+
+        for num, l in enumerate(show_table[1:]):
+            console.add_line("%s. %s" % ((num + 1), l))
 
 
 class MenuOption(object):
