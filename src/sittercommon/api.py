@@ -36,7 +36,6 @@ class ClusterState(object):
         self.raw = None
 
     def reload(self):
-        sys.stderr.write("Loading data from cerebrod...\n")
         url = "%s/overview?nohtml=1&format=json" % self.url
         # 3 attempts, since sometimes downloading json is a bit flaky
         for _ in xrange(3):
@@ -54,7 +53,6 @@ class ClusterState(object):
             sys.stderr.write("Couldn't load data!")
             sys.exit(1)
 
-        sys.stderr.write("Data loaded, parsing...\n")
         self.raw = data
         self.jobs = [ProductionJob.deserialize(j) for j in data['jobs']]
         self.machines = [MonitoredMachine.deserialize(
@@ -64,8 +62,6 @@ class ClusterState(object):
 
         self.keys = self.load_keys(data['keys'])
         self.login_user = data.get("login_user", data.get("username"))
-
-        sys.stderr.write("Reload complete.\n")
 
     def find_key(self, key):
         return self.keys.get(key)

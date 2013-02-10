@@ -63,7 +63,9 @@ class ManagementScreen(object):
                                        self.add_line,
                                        self.remove_line)
 
+            self.add_line("-" * self.scr.getmaxyx()[1])
             self.basic_tasks()
+            self.add_line("-" * self.scr.getmaxyx()[1])
             if self.current_loc == "mainmenu":
                 self.mainmenu()
             else:
@@ -104,8 +106,6 @@ class MachineManagementScreen(ManagementScreen):
         menu.render()
 
     def basic_tasks(self):
-        self.add_line("-" * self.scr.getmaxyx()[1])
-
         self.reload_data()
 
         running = []
@@ -183,7 +183,6 @@ class MachineManagementScreen(ManagementScreen):
         for num, l in enumerate(not_running_lines):
             self.add_line("%s. %s" % ((len(running) + num + 1), l))
 
-        self.add_line("-" * self.scr.getmaxyx()[1])
 
 SCREEN = MachineManagementScreen()
 

@@ -7,6 +7,7 @@ from machineconsole.main import (
     start_task, stop_task, restart_task,
     ManagementScreen
 )
+from machineconsole.menu import Table
 from sittercommon import arg_parser
 from sittercommon.api import ClusterState
 from sittercommon.machinedata import MachineData
@@ -29,7 +30,17 @@ class ClusterManagementScreen(ManagementScreen):
         CLUSTER_DATA.reload()
 
     def basic_tasks(self):
-        pass
+        self.reload_data()
+
+        table = Table(self.scr.getmaxyx()[1],
+                      ["Running Job Name", "Active Instances",
+                       "Command"])
+        for job in CLUSTER_DATA.jobs:
+            table.add_row([job.name,
+                           sum([len(v) for v in job.fill_machines.values()]),
+                          job.task_configuration['command']])
+
+        table.render(self)
 
     def mainmenu(self):
         menu = self.factory.new_menu("Main Menu")
