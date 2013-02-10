@@ -22,7 +22,7 @@ class MachineConfig(object):
 
     def serialize(self):
         return {
-            'hostname': self.hostname
+            'hostname': self.hostname,
             'cpus': self.cpus,
             'mem': self.mem,
             'shared_fate_zone': self.shared_fate_zone,
