@@ -1,6 +1,7 @@
 import os
 import sys
 
+from clustersitter import MonitoredMachine, ProductionJob
 from sittercommon.api import ClusterState
 
 
@@ -26,11 +27,19 @@ def get_options(state, name):
         return state.jobs
     else:
         name = name.lower()
-        if name in state.get_job_names():
-            return state.get_machines_for_job(state.get_job(name))
-        else:
-            # Look for a partial match
-            pass
+        algos = [
+            lambda x, y: x == y,
+            lambda x, y: x.startswith(y),
+            lambda x, y: x in y]
+
+        for algo in algos:
+            for jobname in state.get_job_names():
+                if algo(jobname.lower(), name):
+                    sys.stderr.write("\nUsing **%s** as a match for %s\n\n" % (
+                        jobname, name))
+                    return state.get_machines_for_job(state.get_job(jobname))
+
+    return []
 
 
 def login(state, machine):
@@ -45,10 +54,20 @@ def login(state, machine):
 
     sys.stderr.write("opening shell to %s...\n" % machine)
     options = "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
-    os.system("ssh %s -i '%s' %s@%s" % (
+    cmd = "ssh %s -i '%s' %s@%s" % (
         options, key_loc,
         login_user,
-        machine.hostname))
+        machine.hostname)
+
+    # Try 3 times to login
+    for i in xrange(3):
+        sys.stderr.write("%s\n" % cmd)
+        ret = os.system(cmd)
+        if ret == 0:
+            return
+        else:
+            sys.stderr.write("Login failed, trying again (%s/3)...\n" % (
+                i + 1))
 
 
 def run_command(clustersitter_url=None,
@@ -57,12 +76,31 @@ def run_command(clustersitter_url=None,
     if isinstance(name, list):
         name = ' '.join(name)
 
+    def menu(options):
+        if not options:
+            sys.stderr.write("No matches for %s found, trying all\n" % name)
+            options = get_options(state, None)
+
+        if len(options) == 1 and isinstance(options[0], MonitoredMachine):
+            sys.stderr.write("Only one machine found, logging in...\n")
+            return login(state, options[0])
+
+        selected = None
+        while not selected:
+            for index, option in enumerate(options):
+                print "%s. %s" % (index, option)
+
+            result = raw_input("Chose a machine or job to log into: ")
+            try:
+                selected = options[int(result)]
+            except:
+                continue
+
+        if isinstance(selected, ProductionJob):
+            return menu(get_options(state, selected.name))
+
+        if isinstance(selected, MonitoredMachine):
+            return login(state, selected)
+
     options = get_options(state, name)
-    if len(options) == 1:
-        return login(state, options[0])
-
-    for index, option in enumerate(options):
-        print "%s. %s" % (index, option)
-
-    result = raw_input("Chose a machine or job to log into:")
-    print result
+    menu(options)
