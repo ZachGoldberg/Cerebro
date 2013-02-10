@@ -1,5 +1,6 @@
 import logging
 from sittercommon.machinedata import MachineData
+from sittercommon.utils import strip_html
 
 logger = logging.getLogger(__name__)
 
@@ -179,3 +180,41 @@ class MonitoredMachine(HasMachineSitter):
 
     def __repr__(self):
         return str(self)
+
+    def serialize(self):
+        machine_data = {}
+        machine_data['repr'] = repr(self)
+        machine_data['zone'] = self.config.shared_fate_zone
+        machine_data['bits'] = self.config.bits
+        machine_data['cpus'] = self.config.cpus
+        machine_data['mem'] = self.config.mem
+        machine_data['url'] = self.datamanager.url
+        machine_data['disk'] = self.config.disk
+        machine_data['dns_name'] = self.config.dns_name
+        machine_data['hostname'] = self.hostname
+        machine_data['tasks'] = self.get_tasks()
+        for task in machine_data['tasks'].values():
+            # task is running
+            if 'monitoring' in task:
+                filenum = int(task.get('num_task_starts', 1))
+
+                # Counting starts at 0
+                filenum -= 1
+
+                files = ["stdout", "stderr"]
+                for filename in files:
+                    link = strip_html(
+                        "%s/logfile?logname=%s.%s&tail=100" % (
+                            task['monitoring'],
+                            filename,
+                            filenum))
+
+                    task[filename] = "<a href='%s'>%s</a>" % (
+                        link, filename)
+
+        machine_data['running_tasks'] = self.get_running_tasks()
+        machine_data['is_in_deployment'] = self.is_in_deployment()
+        machine_data['number'] = self.machine_number
+        machine_data['initialized'] = self.is_initialized()
+        machine_data['has_loaded_data'] = self.has_loaded_data()
+        return machine_data

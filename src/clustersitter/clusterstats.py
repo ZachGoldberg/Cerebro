@@ -1,15 +1,10 @@
 import os
-import re
 import threading
 
 from tenjin.helpers import *
 
 from eventmanager import ClusterEventManager
 from tasksitter.stats_collector import StatsCollector
-
-
-def strip_html(text):
-    return re.sub('<[^<]+?>', '', text)
 
 
 class ClusterStats(StatsCollector):
@@ -46,48 +41,6 @@ class ClusterStats(StatsCollector):
         monitors = []
         machines = []
 
-        def serialize_machine(machine):
-            machine_data = {}
-            machine_data['repr'] = repr(machine)
-            machine_data['zone'] = machine.config.shared_fate_zone
-            machine_data['bits'] = machine.config.bits
-            machine_data['cpus'] = machine.config.cpus
-            machine_data['mem'] = machine.config.mem
-            machine_data['url'] = machine.datamanager.url
-            machine_data['disk'] = machine.config.disk
-            machine_data['dns_name'] = machine.config.dns_name
-            machine_data['hostname'] = machine.hostname
-            machine_data['tasks'] = machine.get_tasks()
-            for task in machine_data['tasks'].values():
-                # task is running
-                if 'monitoring' in task:
-                    filenum = int(task.get('num_task_starts', 1))
-
-                    # Counting starts at 0
-                    filenum -= 1
-
-                    files = ["stdout", "stderr"]
-                    for filename in files:
-                        link = strip_html(
-                            "%s/logfile?logname=%s.%s&tail=100" % (
-                                task['monitoring'],
-                                filename,
-                                filenum))
-
-                        task[filename] = "<a href='%s'>%s</a>" % (
-                            link, filename)
-
-            machine_data['running_tasks'] = machine.get_running_tasks()
-            machine_data['is_in_deployment'] = machine.is_in_deployment()
-            machine_data['number'] = machine.machine_number
-            machine_data['initialized'] = machine.is_initialized()
-            machine_data['has_loaded_data'] = machine.has_loaded_data()
-            machine_data['pull_failures'] = pull_failures.get(machine, 0)
-            machine_data['idle'] = machine in (zoned_idle_machines.get(
-                machine_data['zone'], []))
-
-            return machine_data
-
         for monitor, thread in state.monitors:
             monitor_data = {}
             monitor_data['monitored_machines'] = [
@@ -102,7 +55,11 @@ class ClusterStats(StatsCollector):
             pull_failures = dict(monitor.pull_failures)
 
             for machine in monitor.monitored_machines:
-                machine_data = serialize_machine(machine)
+                machine_data = machine.serialize()
+                machine_data['pull_failures'] = pull_failures.get(self, 0)
+                machine_data['idle'] = self in (zoned_idle_machines.get(
+                    machine_data['zone'], []))
+
                 machines.append(machine_data)
 
         data['machines'] = machines
