@@ -1,5 +1,5 @@
 import logging
-from clustersitter.machineconfig import MachineConfig
+
 from sittercommon.machinedata import MachineData
 from sittercommon.utils import strip_html
 
@@ -218,6 +218,7 @@ class MonitoredMachine(HasMachineSitter):
 
     @classmethod
     def deserialize(cls, data):
+        from clustersitter.machineconfig import MachineConfig
         obj = cls(config=MachineConfig.deserialize(data['config']),
                   machine_number=data.get('machine_number'))
 

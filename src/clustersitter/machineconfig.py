@@ -29,9 +29,9 @@ class MachineConfig(object):
             'bits': self.bits,
             'disk': self.disk,
             'login_name': self.login_name,
-            'login_key': self.login_key
+            'login_key': self.login_key,
             'data': self.data,
-            'dns_name': self.dns_name
+            'dns_name': self.dns_name,
             'ip': self.ip,
         }
 
