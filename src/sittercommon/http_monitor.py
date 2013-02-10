@@ -4,10 +4,11 @@ Reads data from a stats collector and exposes it via HTTP
 import cgi
 import os
 import simplejson
+import sys
 import threading
 import tenjin
 import urlparse
-import sys
+import zlib
 import SocketServer
 import BaseHTTPServer
 from pkg_resources import resource_filename
@@ -132,7 +133,7 @@ class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def _get_stats(self, args):
         stats = self.monitor.get_stats()
         if "nohtml" in args:
-            return self._format_dict(stats, args)
+            return stats
         else:
             return self.engine.render('stats.html', {'data': stats})
 
@@ -182,7 +183,11 @@ class HTTPMonitorHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 output = "No Data"
 
             if isinstance(output, dict):
-                self.wfile.write(self._format_dict(output, args))
+                output = self._format_dict(output, args)
+                if args.get('compress'):
+                    output = zlib.compress(output)
+
+                self.wfile.write(output)
             else:
                 self.wfile.write(output)
         except:

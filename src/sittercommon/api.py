@@ -2,6 +2,7 @@ import os
 import requests
 import simplejson
 import sys
+import zlib
 
 from clustersitter.monitoredmachine import MonitoredMachine
 from clustersitter.productionjob import ProductionJob
@@ -36,7 +37,7 @@ class ClusterState(object):
         self.raw = None
 
     def reload(self):
-        url = "%s/overview?nohtml=1&format=json" % self.url
+        url = "%s/overview?nohtml=1&format=json&compress=1" % self.url
         # 3 attempts, since sometimes downloading json is a bit flaky
         for _ in xrange(3):
             response = requests.get(url)
@@ -44,7 +45,8 @@ class ClusterState(object):
                 continue
 
             try:
-                data = simplejson.loads(response.content)
+                raw_data = zlib.decompress(response.content)
+                data = simplejson.loads(raw_data)
                 break
             except:
                 continue

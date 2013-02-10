@@ -26,7 +26,7 @@ class StatsCollector(object):
 
     def update_hostname(self):
         now = time.time()
-        if (self.hostname_create is None or 
+        if (self.hostname_create is None or
                 now - self.hostname_create >= self.hostname_expire):
             self.hostname_create = now
             self.hostname_external = ExternalAddress.lookup(True)
@@ -52,7 +52,7 @@ class StatsCollector(object):
         data = {
             'process_start_time': str(self.harness.child_proc.start_time),
             'num_task_starts': self.harness.start_count,
-            }
+        }
 
         for constraint, count in self.harness.violations.items():
             data['violated_%s' % constraint] = count
