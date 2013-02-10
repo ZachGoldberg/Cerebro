@@ -9,46 +9,44 @@ from menu import MenuFactory, MenuOption, MenuChanger, Table
 from sittercommon.machinedata import MachineData
 
 MACHINE_DATA = None
-MENUFACTORY = None
-SCR = None
-YPOS = 0
-CURRENT_LOC = "mainmenu"
-AUX = None
 
 
-def add_line(msg):
-    global YPOS
-    SCR.addstr(YPOS, 0, msg)
-    YPOS += 1
+class ManagementScreen(object):
 
+    def __init__(self):
+        self.factory = None
+        self.scr = None
+        self.ypos = 0
+        self.current_loc = "mainmenu"
+        self.aux = None
 
-def remove_line():
-    global YPOS
-    SCR.clrtoeol()
-    y, x = SCR.getyx()
-    SCR.move(y - 1, x)
-    YPOS -= 1
+    def add_line(self, msg):
+        self.scr.addstr(self.ypos, 0, msg)
+        self.ypos += 1
 
+    def remove_line(self):
+        self.scr.clrtoeol()
+        y, x = self.scr.getyx()
+        self.scr.move(y - 1, x)
+        self.ypos -= 1
 
-def refresh():
-    global YPOS
-    SCR.clear()
-    SCR.refresh()
-    YPOS = 0
+    def refresh(self):
+        self.scr.clear()
+        self.scr.refresh()
+        self.ypos = 0
 
+    def header(self):
+        self.add_line("#" * self.scr.getmaxyx()[1])
+        self.add_line(
+            "MachineSitter at %s - Curses UI %s" % (
+                MACHINE_DATA.url, datetime.now()))
+        self.add_line("#" * self.scr.getmaxyx()[1])
 
-def header():
-    add_line("#" * SCR.getmaxyx()[1])
-    add_line(
-        "MachineSitter at %s - Curses UI %s" % (
-            MACHINE_DATA.url, datetime.now()))
-    add_line("#" * SCR.getmaxyx()[1])
+    def change_menu(self, newmenu, aux=None):
+        self.current_loc = newmenu
+        self.aux = aux
 
-
-def change_menu(newmenu, aux=None):
-    global CURRENT_LOC, AUX
-    CURRENT_LOC = newmenu
-    AUX = aux
+SCREEN = ManagementScreen()
 
 
 def stop_sitter():
@@ -57,16 +55,20 @@ def stop_sitter():
 
 
 def mainmenu():
-    menu = MENUFACTORY.new_menu("Main Menu")
+    menu = SCREEN.factory.new_menu("Main Menu")
     menu.add_option_vals("Refresh Window", action=dir, hotkey="*")
     menu.add_option_vals("Add a new task",
-                    action=lambda: change_menu('addtask'))
+                         action=lambda: SCREEN.change_menu('addtask'))
 
-    menu.add_option_vals("Show task definitions",
-                    action=lambda: change_menu('show_task_definitions'))
+    menu.add_option_vals(
+        "Show task definitions",
+        action=lambda: SCREEN.change_menu(
+            'show_task_definitions'))
 
-    menu.add_option_vals("Show machine sitter logs",
-                    action=lambda: change_menu('show_machinesitter_logs'))
+    menu.add_option_vals(
+        "Show machine sitter logs",
+        action=lambda: SCREEN.change_menu(
+            'show_machinesitter_logs'))
 
     menu.add_option_vals("Stop machine sitter",
                          action=stop_sitter)
@@ -80,15 +82,17 @@ def show_machinesitter_logs():
 
 
 def show_task_logs():
-    task = AUX
+    task = SCREEN.AUX
     logs = MACHINE_DATA.get_task_logs(task)
     show_logs(logs, "%s Logs" % task['name'])
 
 
 def show_logs(logs, title):
-    menu = MENUFACTORY.new_menu(title)
-    menu.add_option_vals("Main Menu",
-                    action=lambda: change_menu('mainmenu'), hotkey="*")
+    menu = SCREEN.factory.new_menu(title)
+    menu.add_option_vals(
+        "Main Menu",
+        action=lambda: SCREEN.change_menu('mainmenu'),
+        hotkey="*")
 
     lognames = logs.keys()
     lognames.sort()
@@ -96,7 +100,7 @@ def show_logs(logs, title):
     for logname in lognames:
         logfile = logs[logname]['location']
         menu.add_option_vals("%s (%s)" % (logname, logfile),
-                         action=MenuChanger(tail_file, [logfile]))
+                             action=MenuChanger(tail_file, [logfile]))
 
     menu.render()
 
@@ -115,8 +119,8 @@ def tail_file(filenames):
 
 def show_log(task):
     tail_file([
-            MACHINE_DATA.get_logfile(task)['location'],
-            MACHINE_DATA.get_logfile(task, True)['location']])
+        MACHINE_DATA.get_logfile(task)['location'],
+        MACHINE_DATA.get_logfile(task, True)['location']])
 
 
 def start_task(task):
@@ -132,24 +136,26 @@ def restart_task(task):
 
 
 def remove_task(task):
-    global CURRENT_LOC
     MACHINE_DATA.remove_task(task)
-    CURRENT_LOC = "mainmenu"
+    SCREEN.current_loc = "mainmenu"
 
 
 def show_task():
-    name, task = AUX
+    name, task = SCREEN.aux
     reload_data()
     task = MACHINE_DATA.tasks[name]
 
-    menu = MENUFACTORY.new_menu("%s (%s) (%s)" % (
+    menu = SCREEN.factory.new_menu(
+        "%s (%s) (%s)" % (
             name,
             task['command'],
             MACHINE_DATA.strip_html(task.get('monitoring', 'Not Running'))
-            ))
+        ))
 
-    menu.add_option_vals("Main Menu",
-                    action=lambda: change_menu('mainmenu'), hotkey="*")
+    menu.add_option_vals(
+        "Main Menu",
+        action=lambda: SCREEN.change_menu(
+            'mainmenu'), hotkey="*")
 
     if not task['running']:
         menu.add_option_vals("Start Task",
@@ -163,24 +169,26 @@ def show_task():
                              action=lambda: restart_task(task))
 
         menu.add_option_vals("Show stdout/stderr",
-                         action=lambda: show_log(task))
+                             action=lambda: show_log(task))
 
-    menu.add_option_vals("Show historic task log files",
-                         action=lambda: change_menu('show_task_logs', task))
+    menu.add_option_vals(
+        "Show historic task log files",
+        action=lambda: SCREEN.change_menu('show_task_logs', task))
 
     menu.render()
 
 
 def basic_tasks():
-    global MENUFACTORY
-    add_line("-" * SCR.getmaxyx()[1])
+    global screen
+    SCREEN.add_line("-" * SCREEN.scr.getmaxyx()[1])
 
     reload_data()
 
     running = []
     not_running = []
     not_running_lines = []
-    MENUFACTORY = MenuFactory(SCR, add_line, remove_line)
+    SCREEN.factory = MenuFactory(SCREEN.scr,
+                                 SCREEN.add_line, SCREEN.remove_line)
 
     for name, task in MACHINE_DATA.tasks.items():
         if task['running']:
@@ -190,7 +198,7 @@ def basic_tasks():
 
     hotkey = 1
 
-    table = Table(SCR.getmaxyx()[1],
+    table = Table(SCREEN.scr.getmaxyx()[1],
                   ["Running Task Name", "Restarts",
                    "Runtime", "Stdout", "Stderr"])
 
@@ -203,7 +211,7 @@ def basic_tasks():
                 datetime.now() - datetime.strptime(
                     task['process_start_time'],
                     '%Y-%m-%d %H:%M:%S.%f')
-                )
+            )
 
             # strip useconds
             runtime = runtime[:runtime.find('.')]
@@ -225,39 +233,39 @@ def basic_tasks():
                        "%.0f kB" % stderr_kb])
 
         option = MenuOption(
-                task['name'],
-                action=MenuChanger(change_menu, "show_task",
-                                   (name, task)),
-                hotkey=str(hotkey),
-                hidden=True)
+            task['name'],
+            action=MenuChanger(SCREEN.change_menu, "show_task",
+                               (name, task)),
+            hotkey=str(hotkey),
+            hidden=True)
 
-        MENUFACTORY.add_default_option(option)
+        SCREEN.factory.add_default_option(option)
         hotkey += 1
 
     for name, task in not_running:
         line = task['name']
         not_running_lines.append(line)
         option = MenuOption(
-                task['name'],
-                action=MenuChanger(change_menu, "show_task",
-                                   (name, task)),
-                hotkey=str(hotkey),
-                hidden=True)
+            task['name'],
+            action=MenuChanger(SCREEN.change_menu, "show_task",
+                               (name, task)),
+            hotkey=str(hotkey),
+            hidden=True)
 
-        MENUFACTORY.add_default_option(option)
+        SCREEN.factory.add_default_option(option)
         hotkey += 1
 
     show_table = str(table).split('\n')
-    add_line("   %s" % show_table[0])
+    SCREEN.add_line("   %s" % show_table[0])
 
     for num, l in enumerate(show_table[1:]):
-        add_line("%s. %s" % ((num + 1), l))
+        SCREEN.add_line("%s. %s" % ((num + 1), l))
 
-    add_line("Stopped Tasks:")
+    SCREEN.add_line("Stopped Tasks:")
     for num, l in enumerate(not_running_lines):
-        add_line("%s. %s" % ((len(running) + num + 1), l))
+        SCREEN.add_line("%s. %s" % ((len(running) + num + 1), l))
 
-    add_line("-" * SCR.getmaxyx()[1])
+    SCREEN.add_line("-" * SCREEN.scr.getmaxyx()[1])
 
 
 def reload_data():
@@ -266,17 +274,16 @@ def reload_data():
 
 
 def run():
-    global SCR, MENUFACTORY
-    SCR = curses.initscr()
+    SCREEN.scr = curses.initscr()
+    SCREEN.refresh()
 
-    refresh()
     reload_data()
 
     while True:
-        refresh()
-        header()
+        SCREEN.refresh()
+        SCREEN.header()
         basic_tasks()
-        globals()[CURRENT_LOC]()
+        globals()[SCREEN.current_loc]()
 
 
 def main():
