@@ -44,17 +44,30 @@ class ManagementScreen(object):
     def basic_tasks(self):
         pass
 
+    def mainmenu(self):
+        pass
+
+    def reload_data(self):
+        pass
+
     def run(self):
         self.scr = curses.initscr()
         self.refresh()
 
-        reload_data()
+        self.reload_data()
 
         while True:
             self.refresh()
             self.header()
+            self.factory = MenuFactory(self.scr,
+                                       self.add_line,
+                                       self.remove_line)
+
             self.basic_tasks()
-            globals()[self.current_loc]()
+            if self.current_loc == "mainmenu":
+                self.mainmenu()
+            else:
+                globals()[self.current_loc]()
 
 
 class MachineManagementScreen(ManagementScreen):
@@ -65,17 +78,39 @@ class MachineManagementScreen(ManagementScreen):
                 MACHINE_DATA.url, datetime.now()))
         self.add_line("#" * self.scr.getmaxyx()[1])
 
+    def reload_data(self):
+        global MACHINE_DATA
+        MACHINE_DATA.reload()
+
+    def mainmenu(self):
+        menu = self.factory.new_menu("Main Menu")
+        menu.add_option_vals("Refresh Window", action=dir, hotkey="*")
+        menu.add_option_vals("Add a new task",
+                             action=lambda: SCREEN.change_menu('addtask'))
+
+        menu.add_option_vals(
+            "Show task definitions",
+            action=lambda: SCREEN.change_menu(
+                'show_task_definitions'))
+
+        menu.add_option_vals(
+            "Show machine sitter logs",
+            action=lambda: SCREEN.change_menu(
+                'show_machinesitter_logs'))
+
+        menu.add_option_vals("Stop machine sitter",
+                             action=stop_sitter)
+
+        menu.render()
+
     def basic_tasks(self):
         self.add_line("-" * self.scr.getmaxyx()[1])
 
-        reload_data()
+        self.reload_data()
 
         running = []
         not_running = []
         not_running_lines = []
-        self.factory = MenuFactory(self.scr,
-                                   self.add_line,
-                                   self.remove_line)
 
         for name, task in MACHINE_DATA.tasks.items():
             if task['running']:
@@ -162,28 +197,6 @@ def stop_sitter():
     sys.exit(0)
 
 
-def mainmenu():
-    menu = SCREEN.factory.new_menu("Main Menu")
-    menu.add_option_vals("Refresh Window", action=dir, hotkey="*")
-    menu.add_option_vals("Add a new task",
-                         action=lambda: SCREEN.change_menu('addtask'))
-
-    menu.add_option_vals(
-        "Show task definitions",
-        action=lambda: SCREEN.change_menu(
-            'show_task_definitions'))
-
-    menu.add_option_vals(
-        "Show machine sitter logs",
-        action=lambda: SCREEN.change_menu(
-            'show_machinesitter_logs'))
-
-    menu.add_option_vals("Stop machine sitter",
-                         action=stop_sitter)
-
-    menu.render()
-
-
 def show_machinesitter_logs():
     logs = MACHINE_DATA.get_sitter_logs()
     show_logs(logs, "Machine Sitter Logs")
@@ -250,7 +263,7 @@ def remove_task(task):
 
 def show_task():
     name, task = SCREEN.aux
-    reload_data()
+    SCREEN.reload_data()
     task = MACHINE_DATA.tasks[name]
 
     menu = SCREEN.factory.new_menu(
@@ -284,11 +297,6 @@ def show_task():
         action=lambda: SCREEN.change_menu('show_task_logs', task))
 
     menu.render()
-
-
-def reload_data():
-    global MACHINE_DATA
-    MACHINE_DATA.reload()
 
 
 def main():

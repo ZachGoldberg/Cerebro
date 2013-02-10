@@ -73,6 +73,7 @@ def login(state, machine):
 def run_command(clustersitter_url=None,
                 name=None):
     state = ClusterState(clustersitter_url)
+    state.reload()
     if isinstance(name, list):
         name = ' '.join(name)
 

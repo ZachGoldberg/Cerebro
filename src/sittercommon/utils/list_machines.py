@@ -16,6 +16,7 @@ def get_parser(parser):
 def run_command(clustersitter_url=None):
 
     state = ClusterState(clustersitter_url)
+    state.reload()
     for machine in state.machines:
         print "%s (%s)" % (machine.hostname, machine.config.ip)
         for taskname, taskdata in machine.tasks.iteritems():

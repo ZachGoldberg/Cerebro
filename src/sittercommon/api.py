@@ -34,7 +34,6 @@ class ClusterState(object):
         self.provider_config = {}
         self.login_user = None
         self.raw = None
-        self.reload()
 
     def reload(self):
         sys.stderr.write("Loading data from cerebrod...\n")
