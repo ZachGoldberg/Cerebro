@@ -333,8 +333,8 @@ ul
     <table>
       <tr>
 	<th colspan='5'>
-	  <a href='${machine['url']}'><b>${machine['hostname']}</b></a> (aka ${machine['dns_name']}) in
-	  ${machine['config']['zone']}.  ${machine['config']['cpus']}x ${machine['config']['bits']}-bit ${machine['config']['mem']}MBx${machine['config']['disk']}GB
+	  <a href='${machine['url']}'><b>${machine['hostname']}</b></a> (aka ${machine['config']['dns_name']}) in
+	  ${machine['config']['shared_fate_zone']}.  ${machine['config']['cpus']}x ${machine['config']['bits']}-bit ${machine['config']['mem']}MBx${machine['config']['disk']}GB
 	  <?py if machine['is_in_deployment']: ?>
 	  In Deployment,
 	  <?py #endif ?>
