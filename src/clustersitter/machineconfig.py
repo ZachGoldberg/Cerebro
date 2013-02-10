@@ -19,3 +19,34 @@ class MachineConfig(object):
 
     def __repr__(self):
         return str(self)
+
+    def serialize(self):
+        return {
+            'hostname': self.hostname
+            'cpus': self.cpus,
+            'mem': self.mem,
+            'shared_fate_zone': self.shared_fate_zone,
+            'bits': self.bits,
+            'disk': self.disk,
+            'login_name': self.login_name,
+            'login_key': self.login_key
+            'data': self.data,
+            'dns_name': self.dns_name
+            'ip': self.ip,
+        }
+
+    @classmethod
+    def deserialize(cls, data):
+        obj = cls(hostname=data['hostname'],
+                  shared_fate_zone=data['shared_fate_zone'],
+                  cpus=data['cpus'],
+                  mem=data['mem'],
+                  bits=data['bits'],
+                  disk=data['disk'],
+                  data=data['data'],
+                  ip=data['ip'], )
+        obj.login_name = data['login_name']
+        obj.login_key = data['login_key']
+        obj.dns_name = data['dns_name']
+
+        return obj
