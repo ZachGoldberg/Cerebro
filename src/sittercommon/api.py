@@ -39,6 +39,7 @@ class ClusterState(object):
     def reload(self):
         url = "%s/overview?nohtml=1&format=json&compress=1" % self.url
         # 3 attempts, since sometimes downloading json is a bit flaky
+        data = None
         for _ in xrange(3):
             response = requests.get(url)
             if response.status_code != 200:
