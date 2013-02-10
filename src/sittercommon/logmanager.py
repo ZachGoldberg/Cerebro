@@ -16,8 +16,10 @@ class LogManager(object):
 
         # Enable others to write to the log locations incase the child
         # Process is run as another user.
-        os.system("chmod o+rwx %s" % stdout_location)
-        os.system("chmod o+rwx %s" % stderr_location)
+        if stdout_location != "-":
+            os.system("chmod o+rwx %s" % stdout_location)
+        if stderr_location != "-":
+            os.system("chmod o+rwx %s" % stderr_location)
         self.harness = None
         self.extra_logfiles = {}
 
