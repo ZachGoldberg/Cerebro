@@ -334,7 +334,7 @@ ul
       <tr>
 	<th colspan='5'>
 	  <a href='${machine['url']}'><b>${machine['hostname']}</b></a> (aka ${machine['dns_name']}) in
-	  ${machine['zone']}.  ${machine['cpus']}x ${machine['bits']}-bit ${machine['mem']}MBx${machine['disk']}GB
+	  ${machine['config']['zone']}.  ${machine['config']['cpus']}x ${machine['config']['bits']}-bit ${machine['config']['mem']}MBx${machine['config']['disk']}GB
 	  <?py if machine['is_in_deployment']: ?>
 	  In Deployment,
 	  <?py #endif ?>

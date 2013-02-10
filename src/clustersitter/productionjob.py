@@ -55,6 +55,24 @@ class ProductionJob(object):
             self.deployment_layout[zone]['num_machines'] = \
                 self.deployment_layout[zone]['cpu']
 
+    @classmethod
+    def deserialize(cls, data, sitter=None):
+        obj = cls(sitter=sitter,
+                  dns_basename=data.get('dns_basename'),
+                  task_configuration=data.get('task_configuration'),
+                  deployment_layout=data.get('deployment_layout'),
+                  deployment_recipe=data.get('deployment_recipe'),
+                  recipe_options=data.get('recipe_options'),
+                  persistent=data.get('persistent', False),
+                  linked_job=data.get('linked_job'),
+                  )
+        obj.currently_spawning = data.get('spawning')
+        obj.fillers = data.get('fillers')
+        obj.fill = data.get('fill')
+        obj.fill_machines = data.get('fill_machines')
+
+        return obj
+
     def get_shared_fate_zones(self):
         return self.deployment_layout.keys()
 

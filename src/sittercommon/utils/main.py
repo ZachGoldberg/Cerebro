@@ -9,12 +9,16 @@ import sys
 from sittercommon import arg_parser
 from sittercommon.utils import (
     update_job, update_job_cfg, change_debug_level,
-    update_idle_limit)
+    update_idle_limit, list_jobs, list_machines)
 
-COMMANDS = [update_job_cfg,
-            change_debug_level,
-            update_job,
-            update_idle_limit]
+COMMANDS = [
+    change_debug_level,
+    list_jobs,
+    list_machines,
+    update_idle_limit,
+    update_job,
+    update_job_cfg,
+]
 
 
 def get_parser(default_options):
@@ -43,7 +47,6 @@ def main(sys_args=None):
         pass
 
     command_parsers = {}
-    print default_options
     parser = get_parser(default_options)
     subparsers = parser.add_subparsers(help='Cerebro Command')
     for command in COMMANDS:
@@ -75,3 +78,6 @@ def main(sys_args=None):
             newargs = dict(args._get_kwargs())
             del newargs['command']
             command.run_command(**newargs)
+
+if __name__ == '__main__':
+    main()

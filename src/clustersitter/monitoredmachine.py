@@ -183,14 +183,10 @@ class MonitoredMachine(HasMachineSitter):
 
     def serialize(self):
         machine_data = {}
+
+        machine_data['config'] = self.config
         machine_data['repr'] = repr(self)
-        machine_data['zone'] = self.config.shared_fate_zone
-        machine_data['bits'] = self.config.bits
-        machine_data['cpus'] = self.config.cpus
-        machine_data['mem'] = self.config.mem
         machine_data['url'] = self.datamanager.url
-        machine_data['disk'] = self.config.disk
-        machine_data['dns_name'] = self.config.dns_name
         machine_data['hostname'] = self.hostname
         machine_data['tasks'] = self.get_tasks()
         for task in machine_data['tasks'].values():
@@ -214,7 +210,20 @@ class MonitoredMachine(HasMachineSitter):
 
         machine_data['running_tasks'] = self.get_running_tasks()
         machine_data['is_in_deployment'] = self.is_in_deployment()
-        machine_data['number'] = self.machine_number
+        machine_data['machine_number'] = self.machine_number
         machine_data['initialized'] = self.is_initialized()
         machine_data['has_loaded_data'] = self.has_loaded_data()
         return machine_data
+
+    @classmethod
+    def deserialize(cls, data):
+        obj = cls(config=data['config'],
+                  machine_number=data.get('machine_number'))
+
+        obj.hostname = data['hostname']
+        obj.tasks = data['tasks']
+        obj.machine_number = data['machine_number']
+        obj.has_loaded_data = data['has_loaded_data']
+        obj.initialized = data['initialized']
+
+        return obj

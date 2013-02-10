@@ -70,6 +70,7 @@ class ClusterStats(StatsCollector):
         for job in check_jobs:
             job_data = {}
             job_data['name'] = job.name
+            job_data['dns_basename'] = job.dns_basename
             job_data['task_configuration'] = job.task_configuration
             job_data['deployment_layout'] = job.deployment_layout
             job_data['deployment_recipe'] = job.deployment_recipe
