@@ -218,7 +218,7 @@ class MachineManagementScreen(ManagementScreen):
 
         menu.add_option_vals(
             "Show historic task log files",
-            action=lambda: SCREEN.change_menu('show_task_logs', task))
+            action=lambda: self.change_menu('show_task_logs', task))
 
         menu.render()
 
