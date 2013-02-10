@@ -30,7 +30,7 @@ class MachineConfig(object):
             'disk': self.disk,
             'login_name': self.login_name,
             'login_key': self.login_key,
-            'data': self.data,
+            'data': repr(self.data),
             'dns_name': self.dns_name,
             'ip': self.ip,
         }
