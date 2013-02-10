@@ -83,7 +83,7 @@ def main(sys_args=None):
     sitter = ClusterSitter(daemon=args.daemon,
                            provider_config=settings.provider_config,
                            dns_provider_config=settings.dns_provider_config,
-                           keys=settings.keys, user=settings.login_user,
+                           keys=settings.keys, login_user=settings.login_user,
                            log_location=settings.log_location,
                            launch_location=launch_location)
     sitter.start()

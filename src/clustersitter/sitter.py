@@ -45,13 +45,13 @@ class ClusterSitter(object):
     def __init__(self, log_location, daemon,
                  provider_config,
                  dns_provider_config,
-                 keys=None, user=None,
+                 keys=None, login_user=None,
                  starting_port=30000,
                  launch_location=None):
         self.worker_thread_count = 4
         self.daemon = daemon
         self.keys = keys
-        self.user = user
+        self.login_user = login_user
         self.provider_config = provider_config
         self.dns_provider_config = dns_provider_config
         self.log_location = log_location
@@ -291,7 +291,7 @@ class ClusterSitter(object):
     def build_recipe(self, recipe_class, machine,
                      post_callback=None, options=None,
                      given_logger=None):
-        username = self.user
+        username = self.login_user
         keys = self.keys
         if machine.config.login_name:
             username = machine.config.login_name

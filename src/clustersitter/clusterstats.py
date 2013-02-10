@@ -136,7 +136,7 @@ class ClusterStats(StatsCollector):
         data['log_location'] = self.harness.log_location
         data['provider_config'] = self.harness.provider_config
         data['dns_provider_config'] = self.harness.dns_provider_config
-        data['username'] = self.harness.user
+        data['login_user'] = self.harness.login_user
         data['keys'] = self.harness.keys
         data['launch_time'] = str(self.harness.launch_time)
         data['launch_location'] = self.harness.launch_location
