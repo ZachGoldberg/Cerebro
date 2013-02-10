@@ -2,11 +2,11 @@ from sittercommon.api import ClusterState
 
 
 def get_help_string():
-    return "List jobs active in clustersitter"
+    return "List machines in clustersitter"
 
 
 def get_command():
-    return "listjobs"
+    return "listmachines"
 
 
 def get_parser(parser):
@@ -14,5 +14,6 @@ def get_parser(parser):
 
 
 def run_command(clustersitter_url=None):
+
     state = ClusterState(clustersitter_url)
-    print '\n'.join([j.name for j in state.jobs])
+    print '\n'.join([m.config.ip for m in state.machines])

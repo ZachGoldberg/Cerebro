@@ -9,12 +9,14 @@ import sys
 from sittercommon import arg_parser
 from sittercommon.utils import (
     update_job, update_job_cfg, change_debug_level,
-    update_idle_limit, list_jobs, list_machines)
+    update_idle_limit, list_jobs, list_machines,
+    login)
 
 COMMANDS = [
     change_debug_level,
     list_jobs,
     list_machines,
+    login,
     update_idle_limit,
     update_job,
     update_job_cfg,
