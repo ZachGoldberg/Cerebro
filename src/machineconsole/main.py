@@ -171,7 +171,7 @@ class MachineManagementScreen(ManagementScreen):
             not_running_lines.append(line)
             option = MenuOption(
                 task['name'],
-                action=MenuChanger(SCREEN.change_menu, "show_task",
+                action=MenuChanger(self.change_menu, "show_task",
                                    (name, task)),
                 hotkey=str(hotkey),
                 hidden=True)
