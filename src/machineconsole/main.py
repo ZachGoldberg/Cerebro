@@ -90,7 +90,8 @@ class MachineManagementScreen(ManagementScreen):
 
     def mainmenu(self):
         menu = self.factory.new_menu("Main Menu")
-        menu.add_option_vals("Refresh Window", action=dir, hotkey="*")
+        menu.add_option_vals("Main Menu", hotkey="*",
+                             action=lambda: self.change_menu('mainmenu'))
         menu.add_option_vals("Add a new task",
                              action=lambda: self.change_menu('addtask'))
 
