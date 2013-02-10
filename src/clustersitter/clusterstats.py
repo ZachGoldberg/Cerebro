@@ -58,7 +58,7 @@ class ClusterStats(StatsCollector):
                 machine_data = machine.serialize()
                 machine_data['pull_failures'] = pull_failures.get(self, 0)
                 machine_data['idle'] = self in (zoned_idle_machines.get(
-                    machine_data['zone'], []))
+                    machine_data['config']['zone'], []))
 
                 machines.append(machine_data)
 
