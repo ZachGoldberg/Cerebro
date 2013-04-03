@@ -14,6 +14,10 @@ def get_command():
 
 
 def get_parser(parser):
+    parser.add_argument("--remotecommand",
+                        dest="remote_command",
+                        help='Command to run on machine or a @file to run')
+
     parser.add_argument(dest="name",
                         nargs='*',
                         help='Job or machine to log in to')
@@ -42,7 +46,7 @@ def get_options(state, name):
     return []
 
 
-def login(state, machine):
+def login(state, machine, command=None):
     key = state.provider_config.get_key_for_zone(
         machine.config.shared_fate_zone)
 
@@ -54,10 +58,15 @@ def login(state, machine):
 
     sys.stderr.write("opening shell to %s...\n" % machine)
     options = "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
-    cmd = "ssh %s -i '%s' %s@%s" % (
+    remote_cmd = ''
+    if command:
+        remote_cmd = "'%s'" % command
+
+    cmd = "ssh %s -i '%s' %s@%s %s" % (
         options, key_loc,
         login_user,
-        machine.hostname)
+        machine.hostname,
+        remote_cmd)
 
     # Try 3 times to login
     for i in xrange(3):
@@ -71,7 +80,11 @@ def login(state, machine):
 
 
 def run_command(clustersitter_url=None,
-                name=None):
+                name=None,
+                remote_command=None):
+    if remote_command and remote_command.startswith('@'):
+        remote_command = open(remote_command[1:]).read()
+
     state = ClusterState(clustersitter_url)
     state.reload()
     if isinstance(name, list):
@@ -84,7 +97,7 @@ def run_command(clustersitter_url=None,
 
         if len(options) == 1 and isinstance(options[0], MonitoredMachine):
             sys.stderr.write("Only one machine found, logging in...\n")
-            return login(state, options[0])
+            return login(state, options[0], remote_command)
 
         selected = None
         while not selected:
@@ -101,7 +114,7 @@ def run_command(clustersitter_url=None,
             return menu(get_options(state, selected.name))
 
         if isinstance(selected, MonitoredMachine):
-            return login(state, selected)
+            return login(state, selected, remote_command)
 
     options = get_options(state, name)
     menu(options)
