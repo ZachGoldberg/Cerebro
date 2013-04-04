@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 
 from clustersitter import MonitoredMachine, ProductionJob
 from sittercommon.api import ClusterState
@@ -62,7 +63,7 @@ def login(state, machine, command=None):
     if command:
         remote_cmd = "'%s'" % command
 
-    cmd = "ssh %s -i '%s' %s@%s %s" % (
+    cmd = "ssh -t %s -i '%s' %s@%s %s" % (
         options, key_loc,
         login_user,
         machine.hostname,
@@ -71,8 +72,10 @@ def login(state, machine, command=None):
     # Try 3 times to login
     for i in xrange(3):
         sys.stderr.write("%s\n" % cmd)
+        start = time.time()
         ret = os.system(cmd)
-        if ret == 0:
+        elapsed = time.time() - start
+        if ret != 255 or elapsed > 30:
             return
         else:
             sys.stderr.write("Login failed, trying again (%s/3)...\n" % (
