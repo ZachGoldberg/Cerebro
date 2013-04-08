@@ -1,9 +1,24 @@
 import json
 import re
 import os
-
+import sys
 
 CFG_FILE = os.path.expanduser("~/.cerebro.cfg")
+
+
+class Output(object):
+    def __init__(self):
+        self.quiet = False
+
+    def echo(self, msg):
+        if not self.quiet:
+            print msg
+
+    def stderr(self, msg):
+        if not self.quiet:
+            sys.stderr.write(msg)
+
+output = Output()
 
 
 def strip_html(text):

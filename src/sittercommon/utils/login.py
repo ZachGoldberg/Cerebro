@@ -4,6 +4,7 @@ import time
 
 from clustersitter import MonitoredMachine, ProductionJob
 from sittercommon.api import ClusterState
+from sittercommon.utils import output
 
 
 def get_help_string():
@@ -40,7 +41,7 @@ def get_options(state, name):
         for algo in algos:
             for jobname in state.get_job_names():
                 if algo(jobname.lower(), name):
-                    sys.stderr.write("\nUsing **%s** as a match for %s\n\n" % (
+                    output.stderr("\nUsing **%s** as a match for %s\n\n" % (
                         jobname, name))
                     return state.get_machines_for_job(state.get_job(jobname))
 
@@ -54,11 +55,12 @@ def login(state, machine, command=None):
     key_loc = state.find_key(key)
     login_user = state.login_user
     if not key_loc:
-        sys.stderr.write("Couldn't find key to login to %s" % machine)
+        output.stderr("Couldn't find key to login to %s" % machine)
         sys.exit(1)
 
-    sys.stderr.write("opening shell to %s...\n" % machine)
-    options = "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+    output.stderr("opening shell to %s...\n" % machine)
+    options = ("-o LogLevel=quiet -o UserKnownHostsFile=/dev/null " +
+               "-o StrictHostKeyChecking=no")
     remote_cmd = ''
     if command:
         remote_cmd = "'%s'" % command
@@ -71,14 +73,14 @@ def login(state, machine, command=None):
 
     # Try 3 times to login
     for i in xrange(3):
-        sys.stderr.write("%s\n" % cmd)
+        output.stderr("%s\n" % cmd)
         start = time.time()
         ret = os.system(cmd)
         elapsed = time.time() - start
         if ret != 255 or elapsed > 30:
             return
         else:
-            sys.stderr.write("Login failed, trying again (%s/3)...\n" % (
+            output.stderr("Login failed, trying again (%s/3)...\n" % (
                 i + 1))
 
 
@@ -95,17 +97,17 @@ def run_command(clustersitter_url=None,
 
     def menu(options):
         if not options:
-            sys.stderr.write("No matches for %s found, trying all\n" % name)
+            output.stderr("No matches for %s found, trying all\n" % name)
             options = get_options(state, None)
 
         if len(options) == 1 and isinstance(options[0], MonitoredMachine):
-            sys.stderr.write("Only one machine found, logging in...\n")
+            output.stderr("Only one machine found, logging in...\n")
             return login(state, options[0], remote_command)
 
         selected = None
         while not selected:
             for index, option in enumerate(options):
-                print "%s. %s" % (index, option)
+                output.echo("%s. %s" % (index, option))
 
             result = raw_input("Chose a machine or job to log into: ")
             try:

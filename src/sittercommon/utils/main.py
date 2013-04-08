@@ -9,7 +9,7 @@ from sittercommon.utils import (
     update_job, update_job_cfg, change_debug_level,
     update_idle_limit, list_jobs, list_machines,
     login)
-from sittercommon.utils import load_defaults, write_defaults
+from sittercommon.utils import load_defaults, write_defaults, output
 
 COMMANDS = [
     change_debug_level,
@@ -30,6 +30,10 @@ def get_parser(default_options):
         "--clustersitterurl", dest="clustersitter_url",
         help="URL to the root of the clustersitter",
         default=default_options.get('clustersitter_url'))
+
+    parser.add_argument(
+        "--quiet", dest="quiet",
+        action="store_true")
 
     return parser
 
@@ -62,6 +66,9 @@ def main(sys_args=None):
         print "Please pass a clustersitter URL the first time you run cerebro"
         sys.exit(0)
 
+    if args.quiet:
+        output.quiet = True
+
     default_options['clustersitter_url'] = args.clustersitter_url
     write_defaults(default_options)
 
@@ -69,6 +76,7 @@ def main(sys_args=None):
         if command.get_command() == args.command:
             newargs = dict(args._get_kwargs())
             del newargs['command']
+            del newargs['quiet']
             command.run_command(**newargs)
 
 if __name__ == '__main__':
