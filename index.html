@@ -37,16 +37,16 @@
 <p>Cerebro is a job deployment and monitoring system created for the purpose of automating common system administration tasks, including but not limited to: job deployment, job growth (i.e. adding new nodes to a cluster) and machine maintenance (EC2 instance degradation, for example).   For example, deploy a cluster of 4 MongoDB nodes with a push of a button, and if, 3 weeks later, one of them somehow disappears on a Saturday at 2AM when all your sysadmins are out on the town finishing their last round of drinks before last call, a new instance will automatically be provisioned, Mongo deployed to the machine and booted, all without needing to force anybody to sober up and get to a console.</p>
 
 <h2>
-<a name="capabilities-in-a-bit-more-depth" class="anchor" href="#capabilities-in-a-bit-more-depth"><span class="octicon octicon-link"></span></a>Capabilities in a bit more depth</h2>
+<a name="capabilities" class="anchor" href="#capabilities"><span class="octicon octicon-link"></span></a>Capabilities</h2>
 
 <ul>
 <li>Monitor an individual process on a cloud hosted VM</li>
-<li>Reboot the process when certain conditions are met/exceeded</li>
+<li>Reboot the process when certain conditions (e.g. using too much RAM) are met/exceeded</li>
 <li>Provide STDUOT/STDERR as well as process metadata and statistics via HTML (human readable) and JSON (machine readable) HTTP APIs.  No more SSHing into a machine and manually tailing log files.</li>
 <li>Monitor and manage multiple "jobs" or processes per machine</li>
 <li>Monitor many machines across a cluster</li>
 <li>Provision new machines in various cloud environments (currently only EC2 is supported, but plugins for rackspace and others are in the works)</li>
-<li>Customizable job deployment via a python script with <a href="http://docs.fabfile.org/en/1.6/">Fabric</a>-like API.</li>
+<li>Customizable job deployment via python with a <a href="http://docs.fabfile.org/en/1.6/">Fabric</a>-like API.  (i.e. codify the deployment of your custom processes so cerebro can do it in a repeatable manner).</li>
 <li>Cluster management via a JSON API, with command line tools and wrappers</li>
 <li>The ability to auto-detect if a machine goes bad / disappears, decommission it
 and spin up an identical replacement and redeploy to it, without any admin intervention.</li>
