@@ -4,7 +4,7 @@
   <head>
     <meta charset='utf-8' />
     <meta http-equiv="X-UA-Compatible" content="chrome=1" />
-    <meta name="description" content="Cerebro : Never wake up at 3AM because a cloud instance went down ever again.  " />
+    <meta name="description" content="Cerebro : Never wake up at 3AM because an instance went down ever again.  " />
 
     <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
 
@@ -19,7 +19,7 @@
           <a id="forkme_banner" href="https://github.com/ZachGoldberg/Cerebro">View on GitHub</a>
 
           <h1 id="project_title">Cerebro</h1>
-          <h2 id="project_tagline">Never wake up at 3AM because a cloud instance went down ever again.  </h2>
+          <h2 id="project_tagline">Never wake up at 3AM because an instance went down ever again.  </h2>
 
             <section id="downloads">
               <a class="zip_download_link" href="https://github.com/ZachGoldberg/Cerebro/zipball/master">Download this project as a .zip file</a>
@@ -42,7 +42,7 @@
 <ul>
 <li>Monitor an individual process on a cloud hosted VM</li>
 <li>Reboot the process when certain conditions are met/exceeded</li>
-<li>Provide STDUOT/STDERR as well as process metadata and statistics via HTML (human readable) and JSON (machien readable) HTTP APIs.  No more SSHing into a machine and manually tailing log files.</li>
+<li>Provide STDUOT/STDERR as well as process metadata and statistics via HTML (human readable) and JSON (machine readable) HTTP APIs.  No more SSHing into a machine and manually tailing log files.</li>
 <li>Monitor and manage multiple "jobs" or processes per machine</li>
 <li>Monitor many machines across a cluster</li>
 <li>Provision new machines in various cloud environments (currently only EC2 is supported, but plugins for rackspace and others are in the works)</li>
@@ -62,18 +62,16 @@ and total machine utilization.</li>
 </ul>
 </li>
 </ul><h2>
-<a name="workflow" class="anchor" href="#workflow"><span class="octicon octicon-link"></span></a>Workflow</h2>
-
-<p>A basic workflow for using Cerebro, start to finish, is as follows in 6 easy steps:</p>
+<a name="getting-started-in-6-steps" class="anchor" href="#getting-started-in-6-steps"><span class="octicon octicon-link"></span></a>Getting Started in 6 steps</h2>
 
 <ol>
 <li>Bundle your software into an easily deployable package (Using python buildout, or an egg, or a WAR file, or a .deb etc.  If you don't already do this it's not a bad idea to start now).<br>
 </li>
 <li>Write a python "deployment class" (see docs below) for your package </li>
 <li>Write a system-deployment configuration file which defines how many machines you want your code to run on and provides credentials to needed cloud APIs (VM provider, DNS provider etc.)</li>
-<li>Easy install cerebrod on a management server and start the daemon.  (More docs on this below).</li>
-<li>Run the "updatejobcfg" command and pass it your configuration and the location of your clustersitter you've already created.</li>
-<li>Checkout the cerebro web UI and watch things happen.  You'll find the generated DNS names for your machines and lots more info there.</li>
+<li>Easy install cerebrod on a management server and start the daemon with "cerebrod" (see cerebrod --help for more).</li>
+<li>Easy install cerebrod on your development machine and run "cerebro updatejobcfg" on your local machine and pass it your configuration and the location of your clustersitter you've created in step 3.</li>
+<li>Checkout the cerebro web UI (http://managementserver:30000/overview) and watch things happen.  You'll find the generated DNS names for your machines and lots more info there.</li>
 </ol><p>And, if all goes well and you need to scale up, that's a simple 2 step process:</p>
 
 <ol>
@@ -180,7 +178,7 @@ that it should be very simple to expand to other providers (linode, rackspace et
 </ul><h2>
 <a name="configuration" class="anchor" href="#configuration"><span class="octicon octicon-link"></span></a>Configuration</h2>
 
-<p>Cerebro Configuration File:
+<hr><p>Cerebro Configuration File:
  # See settings.py</p>
 
 <p>Example Job Configuration Format</p>
@@ -220,14 +218,16 @@ that it should be very simple to expand to other providers (linode, rackspace et
 },
 </code></pre>
 
-<p>Deployment Recipe Interface</p>
+<h3>
+<a name="deployment-recipe-interface" class="anchor" href="#deployment-recipe-interface"><span class="octicon octicon-link"></span></a>Deployment Recipe Interface</h3>
 
 <pre><code>def run_deploy(options):
     # API?
     logger.*()
 </code></pre>
 
-<p>How to do DNS </p>
+<h3>
+<a name="dns-setup" class="anchor" href="#dns-setup"><span class="octicon octicon-link"></span></a>DNS Setup</h3>
 
 <ul>
 <li> In the job configuration format there is a field called "dns_basename"</li>
@@ -269,6 +269,11 @@ aws-us-east-1.redis.startup.com (Admin Created)
   aws-us-east-1.redis.startup.com based on the callers location</li>
 <li>or both CNAMEs</li>
 </ol><p>The cname returns an A record for each machine of that type.  e.g. redis.startup.com -&gt; aws-us-west-1.redis.startup.com -&gt; 12.67.20.106</p>
+
+<h2>
+<a name="security" class="anchor" href="#security"><span class="octicon octicon-link"></span></a>Security</h2>
+
+<p>I've had a few questions on Cerebro's security model.  Namely, that there is none.   This is for two reasons: time, and it's not immediately obvious to me that one is required.  You're cloud should, in an ideal world, be completely firewalled off from the outside world.  All of cerebro's management is done via TCP connections on non-standard ports which should be accessible only within your firewalled cloud or VPC.  To manage my machines within this environment I usually poke a hole or two with a reverse SSH port forward, or simply VPN beyond the firewall.  This isn't a perfect scenario, anybody within your cloud can do some bad things, but it seems 'good enough' until somebody cares enough to beef up the internal security model.</p>
       </section>
     </div>
 
