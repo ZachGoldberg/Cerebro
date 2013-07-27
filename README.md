@@ -1,70 +1,64 @@
-Welcome to Cerebro!
-===================
+## Overview
 
-Cerebro is a job deployment and monitoring system.  Cerebro fills the gap between having code working on your local machine and deploying and managing it in a cloud environment.  The simplest usecase is taking a code package and deploying it across multiple machines in ec2 with monitoring and supervising on each process.
+Cerebro is a job deployment and monitoring system created for the purpose of automating common system administration tasks, including but not limited to: job deployment, job growth (i.e. adding new nodes to a cluster) and machine maintenance (EC2 instance degradation, for example).   For example, deploy a cluster of 4 MongoDB nodes with a push of a button, and if, 3 weeks later, one of them somehow disappears on a Saturday at 2AM when all your sysadmins are out on the town finishing their last round of drinks before last call, a new instance will automatically be provisioned, Mongo deployed to the machine and booted, all without needing to force anybody to sober up and get to a console.
 
-Basic Feature List
---------------------
+## Capabilities
 
  * Monitor an individual process on a cloud hosted VM
- * Reboot the process if it does something bad or consumes too many resources.
- * Provide log access via a JSON API and a web interface
- * Monitor and manage multiple of these processes per machine
+ * Reboot the process when certain conditions (e.g. using too much RAM) are met/exceeded
+ * Provide STDUOT/STDERR as well as process metadata and statistics via HTML (human readable) and JSON (machine readable) HTTP APIs.  No more SSHing into a machine and manually tailing log files.
+ * Monitor and manage multiple "jobs" or processes per machine
  * Monitor many machines across a cluster
- * Deploy new machines with your code
- * Configurable deployment via simle python classes
- * Accept a job configuration via an JSON API which defines how many of
-   each process to deploy in which datacenters on which cloud providers
- * The ability to autodetect if a machine/VM hangs or disappears, decomission it
+ * Provision new machines in various cloud environments (currently only EC2 is supported, but plugins for rackspace and others are in the works)
+ * Customizable job deployment via python with a [Fabric](http://docs.fabfile.org/en/1.6/)-like API.  (i.e. codify the deployment of your custom processes so cerebro can do it in a repeatable manner).
+ * Cluster management via a JSON API, with command line tools and wrappers
+ * The ability to auto-detect if a machine goes bad / disappears, decommission it
    and spin up an identical replacement and redeploy to it, without any admin intervention.
- * Provides a web ui at the cluster level which gives you:
-   - The ability to update jobs in place
+ * Provides an HTML interface at the cluster level which has:
+   - The ability to update jobs in place (aka update code)
    - An overview of what jobs are running on what machines, and where
-   - Links to the STDOUT/STDERR of every process in every job on every machine,
+   - Links to the STDOUT/STDERR of every process in every job on every machine, 
      across the cluster.
    - Basic machine vitals for all machines, including ram/cpu usage per process
      and total machine utilization.
- * Provides an admin utility on each machine for viewing running tasks on the machine
-   and easy access to tailing log files.
+ * Provide a curses command line tool (think top or aptitude) at the machine and cluster level which mirrors the functionality of the web UI -- start and stop processes, tail logs from withing the "machineconsole" and "clusterconsole" (all installed as part of the main cerebrod package).
 
-Workflow
----------
+## Getting Started in 6 steps
 
-A basic workflow and scaling scenario with Cerebro, start to finish, in 10 easy steps:
+ 0. Bundle your software into an easily deployable package (Using python buildout, or an egg, or a WAR file, or a .deb etc.  If you don't already do this it's not a bad idea to start now).  
+ 1. Write a python "deployment class" (see docs below) for your package 
+ 2. Write a system-deployment configuration file which defines how many machines you want your code to run on and provides credentials to needed cloud APIs (VM provider, DNS provider etc.)
+ 3. Easy install cerebrod on a management server and start the daemon with "cerebrod" (see cerebrod --help for more).
+ 4. Easy install cerebrod on your development machine and run "cerebro updatejobcfg" on your local machine and pass it your configuration and the location of your clustersitter you've created in step 3.
+ 5. Checkout the cerebro web UI (http://managementserver:30000/overview) and watch things happen.  You'll find the generated DNS names for your machines and lots more info there.
 
- 0. Bundle your software into an easily deployable package (Using python buildout, for example)
- 1. Write a python "deployment class" (see docs below) for your package (short, maybe 15 lines of code)
- 2. Write a system-deployment configuration file which defines how many machines you want your code to run
-    on, what your credentials are for various cloud providers, dns provider etc.
- 3. Spinup a clustersitter on a cloud node (following simple deployment steps)
- 4. Run the "job_update_cfg" commnd and pass it your configuration and the location of your clustersitter
- 5. Look at the web UI, see things happen and find the provided DNS names for your machines
- 6. Get more customers, increase load, need more machines
- 7. Update the config file to require more machines
- 8. Again run job_update_cfg with your config file
- 9. Watch cerebro spin up more machines, and load to go back to acceptable levels
+And, if all goes well and you need to scale up, that's a simple 2 step process:
+ 0. Update your job config file to require more machines. 
+ 1. Run "updatejobcfg" with your updated config file
 
-Under the Hood
-----------------
 
-Cerebro is made up of three parts: Task Sitter a Machine Sitter and a Cluster Sitter
+## Alternatives
+There are a lot of really cool tools in this space.  (Elastic Beanstalk)[http://aws.amazon.com/elasticbeanstalk/], (Netflix Asgard)[https://github.com/Netflix/asgard] to name a couple. are all really awesome similar tools.  Cerebro, to the best I can find though, is the only lightweight tool (its only a few thousand lines of python in a fairly well organized package with a single configuration file) for deployment and management and is also platform agnostic (there is a pluggable interface for Cloud and DNS providers).
+
+Cerebro can also be compared to (Puppet)[http://puppetlabs.com/] and (Chef)[http://www.opscode.com/chef/].  The key distinction is that Puppet and Chef really are more configuration-focused, whereas Cerebro is deployment and management-focused.  Many deployments are very sophisticated and will not work well with Cerebro, in which case Puppet and Chef may be better solutions.  There may even be a world in which both tools are used in the same stack -- Cerebro to manage machines and supervise processes and puppet/chef to do deployments though this is not actively supported at present.
+
+## Under the Hood
+
+Cerebro is made up of three parts: Task (process) Sitter, a Machine Sitter and a Cluster Sitter (think 3 different kind of babysitters)
 
 ### Task Sitter
 Task Sitter -- A harness to manage an arbitrary task or process.
 
 Goal: Instead of thinking about how many machines you need to run a process on
-the task sitter's goal is to force the admin to think instead in terms of CPU
-and RAM, an to plan how much of each resource a process should use ahead of time.
+the task sitter's goal is to force the admin to think in a different language, CPU and RAM requirements instead of machine counts.
 
 The Task Sitter's job is to enforce the limits that the admin thinks a process
-should obey.  It can handle the cases where a process disobeys these limits.
+should obey.  It then handles the cases where a process disobeys these limits.
 
 Together with a machine sitter a machine can be completely managed to run
 various tasks efficiently within the resource constraints of the machine.
 
-With a cluster sitter an admin can define how many CPUs and how much RAM a particular
-task can use and it can go to machines, look for available CPU and RAM where
-the process fits and slot it in there.
+At the moment Cerebro doesn't attempt to solve the bin-packing problem of slotting processes into machines efficiently.  Not because we can't, there just haven't been the time for it.  Instead, tasks are linked together by specifying a 'linked_job' in the configuration of a child task to force it to run on the same machine as its parent.
 
 Task Sitter Details
 
@@ -88,7 +82,7 @@ Task Sitter Details
 Machine Sitter Details
 
   * Monitor a set of TaskSitters
-  * Reboot TaskSitters if they fail (should never happen)
+  * Reboot TaskSitters should they somehow disappear
   * Provide an API to add new tasks and start/stop tasks on a machine
   * Provides central log access for all tasks
 
@@ -124,8 +118,8 @@ Cluster Sitter Details
  * The interface is sufficiently minimal (aka create_instances() or dns_add_record()/dns_delete_record())
     that it should be very simple to expand to other providers (linode, rackspace etc.)
 
-Configuration
---------------
+## Configuration
+-------------
 
 Cerebro Configuration File:
  # See settings.py
@@ -152,7 +146,7 @@ Example Job Configuration Format
         "persistent": true,
         "task_configuration":
             {
-                # Tasksitter configuration.
+                # Tasksitter configuration. 
                 "allow_exit": false,
                 "name": "Portal Server",
                 "command": "/opt/wifast/run_wsgi",
@@ -167,13 +161,13 @@ Example Job Configuration Format
     },
 
 
-Deploymet Recipe Interface
+### Deployment Recipe Interface
 
     def run_deploy(options):
         # API?
         logger.*()
 
-How to do DNS
+### DNS Setup
 
   *  In the job configuration format there is a field called "dns_basename"
   *  This should be set to something like "myjobname.mydomain.com" e.g. "redis.startup.com"
@@ -184,7 +178,6 @@ How to do DNS
 
   * You should manually setup, e.g. "redis.startup.com" to be a cname to all of the PROVIDER_REGION.redis.startup.com.  A complete DNS layout looks as follows
 
-
         startup.com
         redis.startup.com (Admin Created)
            -> CNAME aws-us-west-1.redis.startup.com (Admin Created)
@@ -193,7 +186,7 @@ How to do DNS
         aws-us-west-1.redis.startup.com (Admin Created)
            -> A 45.67.20.106 (Cerebro Created)
            -> A 45.67.20.105 (Cerebro Created)
-
+ 
         0.aws-uswest-1.redis.startup.com (Cerebro Created)
            -> A 45.67.20.106 (Cerebro Created)
         1.aws-uswest-1.redis.startup.com (Cerebro Created)
@@ -201,15 +194,18 @@ How to do DNS
 
         aws-us-east-1.redis.startup.com (Admin Created)
            -> A 12.67.20.106 (Cerebro Created)
-
+ 
         0.aws-us-east-1.redis.startup.com (Cerebro Created)
            -> A 12.67.20.106 (Cerebro Created)
 
 
-So, if you point your servers to redis.startup.com they should get either
+So, if you point your servers to redis.startup.com they should get either 
 
-  1. If your using global load balancing, a cname to one of aws-us-west-1.redis.startup.com or
+  1. If your using global load balancing, a cname to one of aws-us-west-1.redis.startup.com or 
       aws-us-east-1.redis.startup.com based on the callers location
   2. or both CNAMEs
 
 The cname returns an A record for each machine of that type.  e.g. redis.startup.com -> aws-us-west-1.redis.startup.com -> 12.67.20.106
+
+## Security
+I've had a few questions on Cerebro's security model.  Namely, that there is none.   This is for two reasons: time, and it's not immediately obvious to me that one is required.  You're cloud should, in an ideal world, be completely firewalled off from the outside world.  All of cerebro's management is done via TCP connections on non-standard ports which should be accessible only within your firewalled cloud or VPC.  To manage my machines within this environment I usually poke a hole or two with a reverse SSH port forward, or simply VPN beyond the firewall.  This isn't a perfect scenario, anybody within your cloud can do some bad things, but it seems 'good enough' until somebody cares enough to beef up the internal security model.
