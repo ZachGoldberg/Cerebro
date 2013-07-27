@@ -1,5 +1,5 @@
 /*******************************************************************************
-Slate Theme for Github Pages
+Slate Theme for GitHub Pages
 by Jason Costello, @jsncostello
 *******************************************************************************/
 
@@ -45,10 +45,6 @@ blockquote, q {
 table {
   border-collapse: collapse;
   border-spacing: 0;
-}
-
-a:focus {
-  outline: none;
 }
 
 /*******************************************************************************
@@ -115,6 +111,8 @@ a {
 
   transition: color 0.5s ease;
   transition: text-shadow 0.5s ease;
+  -webkit-transition: color 0.5s ease;
+  -webkit-transition: text-shadow 0.5s ease;
   -moz-transition: color 0.5s ease;
   -moz-transition: text-shadow 0.5s ease;
   -o-transition: color 0.5s ease;

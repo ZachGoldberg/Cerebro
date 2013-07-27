@@ -4,7 +4,7 @@
   <head>
     <meta charset='utf-8' />
     <meta http-equiv="X-UA-Compatible" content="chrome=1" />
-    <meta name="description" content="Cerebro : Self hosted automated cloud deployment and management." />
+    <meta name="description" content="Cerebro : Never wake up at 3AM because a cloud instance went down ever again.  " />
 
     <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
 
@@ -16,46 +16,44 @@
     <!-- HEADER -->
     <div id="header_wrap" class="outer">
         <header class="inner">
-          <a id="forkme_banner" href="https://github.com/ZachGoldberg/Cerebro">Fork Me on GitHub</a>
+          <a id="forkme_banner" href="https://github.com/ZachGoldberg/Cerebro">View on GitHub</a>
 
           <h1 id="project_title">Cerebro</h1>
-          <h2 id="project_tagline">Self hosted automated cloud deployment and management.</h2>
+          <h2 id="project_tagline">Never wake up at 3AM because a cloud instance went down ever again.  </h2>
 
-          <section id="downloads">
-            <a class="zip_download_link" href="https://github.com/ZachGoldberg/Cerebro/zipball/master">Download this project as a .zip file</a>
-            <a class="tar_download_link" href="https://github.com/ZachGoldberg/Cerebro/tarball/master">Download this project as a tar.gz file</a>
-          </section>
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/ZachGoldberg/Cerebro/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/ZachGoldberg/Cerebro/tarball/master">Download this project as a tar.gz file</a>
+            </section>
         </header>
     </div>
 
     <!-- MAIN CONTENT -->
     <div id="main_content_wrap" class="outer">
       <section id="main_content" class="inner">
-        <h1>Welcome to Cerebro!</h1>
+        <h2>
+<a name="overview" class="anchor" href="#overview"><span class="octicon octicon-link"></span></a>Overview</h2>
 
-<p>Cerebro is a job deployment and monitoring system.    Cerebro fills the gap of having some code and deploying and managing it in a cloud environment.  The simplest usecase is taking a code package and deploying it on multiple machines in ec2 with monitoring and supervising on each process.</p>
+<p>Cerebro is a job deployment and monitoring system created for the purpose of automating common system administration tasks, including but not limited to: job deployment, job growth (i.e. adding new nodes to a cluster) and machine maintenance (EC2 instance degradation, for example).   For example, deploy a cluster of 4 MongoDB nodes with a push of a button, and if, 3 weeks later, one of them somehow disappears on a Saturday at 2AM when all your sysadmins are out on the town finishing their last round of drinks before last call, a new instance will automatically be provisioned, Mongo deployed to the machine and booted, all without needing to force anybody to sober up and get to a console.</p>
 
-<p>Cerebro is a process <strong>supervisor</strong>,   <strong>deployment</strong> and <strong>management</strong> solution.  </p>
-
-<h2>Basic Feature List</h2>
+<h2>
+<a name="capabilities-in-a-bit-more-depth" class="anchor" href="#capabilities-in-a-bit-more-depth"><span class="octicon octicon-link"></span></a>Capabilities in a bit more depth</h2>
 
 <ul>
 <li>Monitor an individual process on a cloud hosted VM</li>
-<li>Reboot the process if necessary</li>
-<li>Define constraints that the process cannot pass, or it'll be rebooted</li>
-<li>Provide log access via an HTTP interface</li>
-<li>Monitor and manage multiple of these processes per machine</li>
+<li>Reboot the process when certain conditions are met/exceeded</li>
+<li>Provide STDUOT/STDERR as well as process metadata and statistics via HTML (human readable) and JSON (machien readable) HTTP APIs.  No more SSHing into a machine and manually tailing log files.</li>
+<li>Monitor and manage multiple "jobs" or processes per machine</li>
 <li>Monitor many machines across a cluster</li>
-<li>Deploy new machines, including process harness and job code</li>
-<li>Accepts python classes to define how to deploy a process or job</li>
-<li>Accept a job configuration via an HTTP API which defines how many of 
-each process to deploy in which datacenters on which cloud providers</li>
-<li>The ability to autodetect if a machine goes bad / disappears, decomission it
-and spin up an identcal replacement and redeploy to it, without any admin intervention.</li>
-<li>Provides an HTML interface at the cluster level which gives you:
+<li>Provision new machines in various cloud environments (currently only EC2 is supported, but plugins for rackspace and others are in the works)</li>
+<li>Customizable job deployment via a python script with <a href="http://docs.fabfile.org/en/1.6/">Fabric</a>-like API.</li>
+<li>Cluster management via a JSON API, with command line tools and wrappers</li>
+<li>The ability to auto-detect if a machine goes bad / disappears, decommission it
+and spin up an identical replacement and redeploy to it, without any admin intervention.</li>
+<li>Provides an HTML interface at the cluster level which has:
 
 <ul>
-<li>The ability to update jobs in place</li>
+<li>The ability to update jobs in place (aka update code)</li>
 <li>An overview of what jobs are running on what machines, and where</li>
 <li>Links to the STDOUT/STDERR of every process in every job on every machine, 
 across the cluster.</li>
@@ -63,27 +61,31 @@ across the cluster.</li>
 and total machine utilization.</li>
 </ul>
 </li>
-</ul><h2>Workflow</h2>
+</ul><h2>
+<a name="workflow" class="anchor" href="#workflow"><span class="octicon octicon-link"></span></a>Workflow</h2>
 
-<p>A basic workflow for using Cerebro, start to finish, is as follows in 10 easy steps:</p>
+<p>A basic workflow for using Cerebro, start to finish, is as follows in 6 easy steps:</p>
 
 <ol>
-<li>Bundle your software into an easily deployable package (Using python buildout, for example)</li>
-<li>Write a python "deployment class" (see docs below) for your package (short, maybe 30 lines of code)</li>
-<li>Write a system-deployment configuration file which defines how many machines you want your code to run
-on, what your credentials are for various cloud providers, dns provider etc.</li>
-<li>Spinup a clustersitter on a cloud node (following simple deployment steps)</li>
-<li>Run the "job_update_cfg" commnd and pass it your configuration and the location of your clustersitter</li>
-<li>Look at the HTML UI, see things happen and find the provided DNS names for your machines</li>
-<li>Get more customers, increase load, need more machines</li>
-<li>Update the config file to require more machines</li>
-<li>Again run job_update_cfg with your config file</li>
-<li>Watch cerebro spin up more machines, and load to go back to acceptable levels</li>
-</ol><h2>Under the Hood</h2>
+<li>Bundle your software into an easily deployable package (Using python buildout, or an egg, or a WAR file, or a .deb etc.  If you don't already do this it's not a bad idea to start now).<br>
+</li>
+<li>Write a python "deployment class" (see docs below) for your package </li>
+<li>Write a system-deployment configuration file which defines how many machines you want your code to run on and provides credentials to needed cloud APIs (VM provider, DNS provider etc.)</li>
+<li>Easy install cerebrod on a management server and start the daemon.  (More docs on this below).</li>
+<li>Run the "updatejobcfg" command and pass it your configuration and the location of your clustersitter you've already created.</li>
+<li>Checkout the cerebro web UI and watch things happen.  You'll find the generated DNS names for your machines and lots more info there.</li>
+</ol><p>And, if all goes well and you need to scale up, that's a simple 2 step process:</p>
+
+<ol>
+<li>Update your job config file to require more machines. </li>
+<li>Run "updatejobcfg" with your updated config file</li>
+</ol><h2>
+<a name="under-the-hood" class="anchor" href="#under-the-hood"><span class="octicon octicon-link"></span></a>Under the Hood</h2>
 
 <p>Cerebro is made up of three parts: Task Sitter a Machine Sitter and a Cluster Sitter</p>
 
-<h3>Task Sitter</h3>
+<h3>
+<a name="task-sitter" class="anchor" href="#task-sitter"><span class="octicon octicon-link"></span></a>Task Sitter</h3>
 
 <p>Task Sitter -- A harness to manage an arbitrary task or process.</p>
 
@@ -131,7 +133,8 @@ the process fits and slot it in there.</p>
 <li>HTTP Based Monitor (--http-monitoring, --http-monitoring-port)</li>
 </ul>
 </li>
-</ul><h3>Machine Sitter</h3>
+</ul><h3>
+<a name="machine-sitter" class="anchor" href="#machine-sitter"><span class="octicon octicon-link"></span></a>Machine Sitter</h3>
 
 <p>Machine Sitter Details</p>
 
@@ -140,7 +143,8 @@ the process fits and slot it in there.</p>
 <li>Reboot TaskSitters if they fail (should never happen)</li>
 <li>Provide an API to add new tasks and start/stop tasks on a machine</li>
 <li>Provides central log access for all tasks</li>
-</ul><h3>Cluster Sitter</h3>
+</ul><h3>
+<a name="cluster-sitter" class="anchor" href="#cluster-sitter"><span class="octicon octicon-link"></span></a>Cluster Sitter</h3>
 
 <p>Cluster Sitter Details</p>
 
@@ -165,14 +169,16 @@ every and only the machines job A is placed on.  Job B will also be
 rebooted whenever job A is updated.</li>
 <li>Keeps track of how many idle machiens you own, and can decomission them
 to keep to a predefined limit.</li>
-</ul><h3>Providers</h3>
+</ul><h3>
+<a name="providers" class="anchor" href="#providers"><span class="octicon octicon-link"></span></a>Providers</h3>
 
 <ul>
 <li>Cerebro uses an interface for talking to both a cloud provider and a DNS provider</li>
 <li>Presently only AWS/EC2 is implemented as a cloud-VM provider and Dynect is the only DNS providr</li>
 <li>The interface is sufficiently minimal (aka create_instances() or dns_add_record()/dns_delete_record())
 that it should be very simple to expand to other providers (linode, rackspace etc.)</li>
-</ul><h2>Configuration</h2>
+</ul><h2>
+<a name="configuration" class="anchor" href="#configuration"><span class="octicon octicon-link"></span></a>Configuration</h2>
 
 <p>Cerebro Configuration File:
  # See settings.py</p>
@@ -214,7 +220,7 @@ that it should be very simple to expand to other providers (linode, rackspace et
 },
 </code></pre>
 
-<p>Deploymet Recipe Interface</p>
+<p>Deployment Recipe Interface</p>
 
 <pre><code>def run_deploy(options):
     # API?
@@ -226,14 +232,12 @@ that it should be very simple to expand to other providers (linode, rackspace et
 <ul>
 <li> In the job configuration format there is a field called "dns_basename"</li>
 <li> This should be set to something like "myjobname.mydomain.com" e.g. "redis.startup.com"</li>
-<li>
-<p>Cerebro will then add two new records underneath that name for each machine.  It will</p>
+<li> Cerebro will then add two new records underneath that name for each machine.  It will</li>
+</ul><pre><code>  1. Create #.PROVIDER_REGION.basename as a A record to the machine
+  2. Add another CNAME to PROVIDER_REGION.basename to #.PROVIDER_REGION etc.
+</code></pre>
 
-<ol>
-<li>Create #.PROVIDER_REGION.basename as a A record to the machine</li>
-<li>Add another CNAME to PROVIDER_REGION.basename to #.PROVIDER_REGION etc.</li>
-</ol>
-</li>
+<ul>
 <li>
 <p>You should manually setup, e.g. "redis.startup.com" to be a cname to all of the PROVIDER_REGION.redis.startup.com.  A complete DNS layout looks as follows</p>
 
@@ -276,7 +280,17 @@ aws-us-east-1.redis.startup.com (Admin Created)
       </footer>
     </div>
 
-    
+              <script type="text/javascript">
+            var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+            document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+          </script>
+          <script type="text/javascript">
+            try {
+              var pageTracker = _gat._getTracker("UA-42767602-1");
+            pageTracker._trackPageview();
+            } catch(err) {}
+          </script>
+
 
   </body>
 </html>
