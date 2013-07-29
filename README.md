@@ -2,6 +2,9 @@
 
 Cerebro is a job deployment and monitoring system created for the purpose of automating common system administration tasks, including but not limited to: job deployment, job growth (i.e. adding new nodes to a cluster) and machine maintenance (EC2 instance degradation, for example).   For example, deploy a cluster of 4 MongoDB nodes with a push of a button, and if, 3 weeks later, one of them somehow disappears on a Saturday at 2AM when all your sysadmins are out on the town finishing their last round of drinks before last call, a new instance will automatically be provisioned, Mongo deployed to the machine and booted, all without needing to force anybody to sober up and get to a console.
 
+## Project Status
+Cerebro has mostly been developed by [me](https://github.com/ZachGoldberg) and with some help and brainstorming from [Ryan Borgeouix](https://github.com/BlueDragonX).  Cerebro is in use in at least one production environment and a number of development/testing environment and "works".  That said, it is sorely lacking in documentation and is probably not yet as easy as it will be to get a fully working stack up.  Patches, forks, bug reports. etc are all more than welcome on the project's [github](https://github.com/ZachGoldberg/Cerebro) page, or you can contact me directly at zach@zachgoldberg.com with any issues you may be having.
+
 ## Capabilities
 
  * Monitor an individual process on a cloud hosted VM
@@ -21,7 +24,6 @@ Cerebro is a job deployment and monitoring system created for the purpose of aut
      across the cluster.
    - Basic machine vitals for all machines, including ram/cpu usage per process
      and total machine utilization.
- * Provide a curses command line tool (think top or aptitude) at the machine and cluster level which mirrors the functionality of the web UI -- start and stop processes, tail logs from withing the "machineconsole" and "clusterconsole" (all installed as part of the main cerebrod package).
 
 ## Getting Started in 6 steps
 
@@ -36,29 +38,26 @@ And, if all goes well and you need to scale up, that's a simple 2 step process:
  0. Update your job config file to require more machines. 
  1. Run "updatejobcfg" with your updated config file
 
-
-## Alternatives
-There are a lot of really cool tools in this space.  (Elastic Beanstalk)[http://aws.amazon.com/elasticbeanstalk/], (Netflix Asgard)[https://github.com/Netflix/asgard] to name a couple. are all really awesome similar tools.  Cerebro, to the best I can find though, is the only lightweight tool (its only a few thousand lines of python in a fairly well organized package with a single configuration file) for deployment and management and is also platform agnostic (there is a pluggable interface for Cloud and DNS providers).
-
-Cerebro can also be compared to (Puppet)[http://puppetlabs.com/] and (Chef)[http://www.opscode.com/chef/].  The key distinction is that Puppet and Chef really are more configuration-focused, whereas Cerebro is deployment and management-focused.  Many deployments are very sophisticated and will not work well with Cerebro, in which case Puppet and Chef may be better solutions.  There may even be a world in which both tools are used in the same stack -- Cerebro to manage machines and supervise processes and puppet/chef to do deployments though this is not actively supported at present.
-
 ## Under the Hood
 
-Cerebro is made up of three parts: Task (process) Sitter, a Machine Sitter and a Cluster Sitter (think 3 different kind of babysitters)
+Cerebro is made up of three parts: Task Sitter a Machine Sitter and a Cluster Sitter
 
 ### Task Sitter
 Task Sitter -- A harness to manage an arbitrary task or process.
 
 Goal: Instead of thinking about how many machines you need to run a process on
-the task sitter's goal is to force the admin to think in a different language, CPU and RAM requirements instead of machine counts.
+the task sitter's goal is to force the admin to think instead in terms of CPU
+and RAM, an to plan how much of each resource a process should use ahead of time.
 
 The Task Sitter's job is to enforce the limits that the admin thinks a process
-should obey.  It then handles the cases where a process disobeys these limits.
+should obey.  It can handle the cases where a process disobeys these limits.
 
 Together with a machine sitter a machine can be completely managed to run
 various tasks efficiently within the resource constraints of the machine.
 
-At the moment Cerebro doesn't attempt to solve the bin-packing problem of slotting processes into machines efficiently.  Not because we can't, there just haven't been the time for it.  Instead, tasks are linked together by specifying a 'linked_job' in the configuration of a child task to force it to run on the same machine as its parent.
+With a cluster sitter an admin can define how many CPUs and how much RAM a particular
+task can use and it can go to machines, look for available CPU and RAM where
+the process fits and slot it in there.
 
 Task Sitter Details
 
@@ -82,7 +81,7 @@ Task Sitter Details
 Machine Sitter Details
 
   * Monitor a set of TaskSitters
-  * Reboot TaskSitters should they somehow disappear
+  * Reboot TaskSitters if they fail (should never happen)
   * Provide an API to add new tasks and start/stop tasks on a machine
   * Provides central log access for all tasks
 
@@ -149,7 +148,7 @@ Example Job Configuration Format
                 # Tasksitter configuration. 
                 "allow_exit": false,
                 "name": "Portal Server",
-                "command": "/opt/wifast/run_wsgi",
+                "command": "/opt/code/run_portal_server",
                 "auto_start": false,
                 "ensure_alive": true,
                 "max_restarts": -1,
@@ -208,4 +207,4 @@ So, if you point your servers to redis.startup.com they should get either
 The cname returns an A record for each machine of that type.  e.g. redis.startup.com -> aws-us-west-1.redis.startup.com -> 12.67.20.106
 
 ## Security
-I've had a few questions on Cerebro's security model.  Namely, that there is none.   This is for two reasons: time, and it's not immediately obvious to me that one is required.  You're cloud should, in an ideal world, be completely firewalled off from the outside world.  All of cerebro's management is done via TCP connections on non-standard ports which should be accessible only within your firewalled cloud or VPC.  To manage my machines within this environment I usually poke a hole or two with a reverse SSH port forward, or simply VPN beyond the firewall.  This isn't a perfect scenario, anybody within your cloud can do some bad things, but it seems 'good enough' until somebody cares enough to beef up the internal security model.
+I've had a few questions on Cerebro's security model.  Namely, that there is none.   This is for two reasons: time, and it's not immediately obvious to me that one is required.  Your cloud should, in an ideal world, be completely firewalled off from the outside world.  All of cerebro's management is done via TCP connections on non-standard ports which should be accessible only within your firewalled cloud or VPC.  To manage my machines within this environment I usually poke a hole or two with a reverse SSH port forward, or simply VPN beyond the firewall.  This isn't a perfect scenario, anybody within your cloud can do some bad things, but it seems 'good enough' until somebody cares enough to beef up the internal security model.
