@@ -7,9 +7,9 @@ log_location = "/mnt/data/clustersitter"
 
 # Keys used to login to machines
 # TODO -- should define this again inside provider_config
-keys = ["/opt/wifast/keys/WiFastAWSus-west-1.pem",
-        "/opt/wifast/keys/WiFastAWSus-west-2.pem",
-        "/opt/wifast/keys/WiFastAWSus-east-1.pem"]
+keys = ["/opt/code/keys/codeAWSus-west-1.pem",
+        "/opt/code/keys/codeAWSus-west-2.pem",
+        "/opt/code/keys/codeAWSus-east-1.pem"]
 
 # The user to login as in machines created by providers
 # TODO -- this should be inside provider_config
@@ -21,19 +21,19 @@ provider_config = {
         'us-east-1a': {
             '32b_image_id': 'ami-8b78afe2',
             '64b_image_id': 'ami-eb915a82',
-            'key_name': 'WiFastAWS',
+            'key_name': 'codeAWS',
             'security_groups': ['clustersitter'],
             },
         'us-west-2a': {
             '32b_image_id': 'ami-d862efe8',
             '64b_image_id': 'ami-6c15985c',
-            'key_name': 'WiFastAWSus-west-2',
+            'key_name': 'codeAWSus-west-2',
             'security_groups': ['clustersitter'],
             },
         'us-west-1a': {
             '32b_image_id': 'ami-7dd48a38',
             '64b_image_id': 'ami-cb8ed48e',
-            'key_name': 'WiFastAWSus-west-1',
+            'key_name': 'codeAWSus-west-1',
             'security_groups': ['clustersitter'],
             }
         },
