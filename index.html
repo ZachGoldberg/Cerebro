@@ -278,7 +278,7 @@ aws-us-east-1.redis.startup.com (Admin Created)
 <h2>
 <a name="security" class="anchor" href="#security"><span class="octicon octicon-link"></span></a>Security</h2>
 
-<p>I've had a few questions on Cerebro's security model.  Namely, that there is none.   This is for two reasons: time, and it's not immediately obvious to me that one is required.  You're cloud should, in an ideal world, be completely firewalled off from the outside world.  All of cerebro's management is done via TCP connections on non-standard ports which should be accessible only within your firewalled cloud or VPC.  To manage my machines within this environment I usually poke a hole or two with a reverse SSH port forward, or simply VPN beyond the firewall.  This isn't a perfect scenario, anybody within your cloud can do some bad things, but it seems 'good enough' until somebody cares enough to beef up the internal security model.</p>
+<p>I've had a few questions on Cerebro's security model.  Namely, that there is none.   This is for two reasons: time, and it's not immediately obvious to me that one is required.  Your cloud should, in an ideal world, be completely firewalled off from the outside world.  All of cerebro's management is done via TCP connections on non-standard ports which should be accessible only within your firewalled cloud or VPC.  To manage my machines within this environment I usually poke a hole or two with a reverse SSH port forward, or simply VPN beyond the firewall.  This isn't a perfect scenario, anybody within your cloud can do some bad things, but it seems 'good enough' until somebody cares enough to beef up the internal security model.</p>
       </section>
     </div>
 
