@@ -34,15 +34,17 @@
         <h2>
 <a name="overview" class="anchor" href="#overview"><span class="octicon octicon-link"></span></a>Overview</h2>
 
-<p>Cerebro is a job deployment and monitoring system created for the purpose of automating common system administration tasks, including but not limited to: job deployment, job growth (i.e. adding new nodes to a cluster) and machine maintenance (EC2 instance degradation, for example).   For example, deploy a cluster of 4 MongoDB nodes with a push of a button, and if, 3 weeks later, one of them somehow disappears on a Saturday at 2AM when all your sysadmins are out on the town finishing their last round of drinks before last call, a new instance will automatically be provisioned, Mongo deployed to the machine and booted, all without needing to force anybody to sober up and get to a console.</p>
+<p>Cerebro's goal is to be a job deployment and monitoring system created for the purpose of automating common system administration tasks, including but not limited to: job deployment, job growth (i.e. adding new nodes to a cluster) and machine maintenance (EC2 instance degradation, for example).   For example, deploy a cluster of 4 MongoDB nodes with a push of a button, and if, 3 weeks later, one of them somehow disappears on a Saturday at 2AM when all your sysadmins are out on the town finishing their last round of drinks before last call, a new instance will automatically be provisioned, Mongo deployed to the machine and booted, all without needing to force anybody to sober up and get to a console.</p>
 
 <h2>
 <a name="project-status" class="anchor" href="#project-status"><span class="octicon octicon-link"></span></a>Project Status</h2>
 
-<p>Cerebro has mostly been developed by <a href="https://github.com/ZachGoldberg">me</a> and with some help and brainstorming from <a href="https://github.com/BlueDragonX">Ryan Borgeouix</a>.  Cerebro is in use in at least one production environment and a number of development/testing environment and "works".  That said, it is sorely lacking in documentation and is probably not yet as easy as it will be to get a fully working stack up.  Patches, forks, bug reports. etc are all more than welcome on the project's <a href="https://github.com/ZachGoldberg/Cerebro">github</a> page, or you can contact me directly at <a href="mailto:zach@zachgoldberg.com">zach@zachgoldberg.com</a> with any issues you may be having.</p>
+<p>Cerebro has mostly been developed by <a href="https://github.com/ZachGoldberg">me</a> and with some help and brainstorming from <a href="https://github.com/BlueDragonX">Ryan Borgeouix</a>.  Most of the features described in the overview are implemented in some way shape or form.  It is also in use in at least one production environment and a number of development/testing environment.  That said, it is sorely lacking in documentation and is probably not yet as easy as it will be to get a fully working stack up.  </p>
+
+<p><strong>Our goal right now is to get a few more people using the system and contributing in any way shape form.</strong>  Patches, forks, bug reports. etc are all more than welcome on the project's <a href="https://github.com/ZachGoldberg/Cerebro">github</a> page, or you can contact me directly at <a href="mailto:zach@zachgoldberg.com">zach@zachgoldberg.com</a> with any issues you may be having.</p>
 
 <h2>
-<a name="capabilities" class="anchor" href="#capabilities"><span class="octicon octicon-link"></span></a>Capabilities</h2>
+<a name="current-capabilities" class="anchor" href="#current-capabilities"><span class="octicon octicon-link"></span></a>Current Capabilities</h2>
 
 <ul>
 <li>Monitor an individual process on a cloud hosted VM</li>
@@ -227,12 +229,14 @@ that it should be very simple to expand to other providers (linode, rackspace et
 <a name="deployment-recipe-interface" class="anchor" href="#deployment-recipe-interface"><span class="octicon octicon-link"></span></a>Deployment Recipe Interface</h3>
 
 <pre><code>def run_deploy(options):
-    # API?
+    # API?  Kickoff your chef recipe?  TODO: More work and structure is needed here.
     logger.*()
 </code></pre>
 
 <h3>
 <a name="dns-setup" class="anchor" href="#dns-setup"><span class="octicon octicon-link"></span></a>DNS Setup</h3>
+
+<p>(This is all a bit complex right now, some simplification and optionality is needed)</p>
 
 <ul>
 <li> In the job configuration format there is a field called "dns_basename"</li>
@@ -278,7 +282,7 @@ aws-us-east-1.redis.startup.com (Admin Created)
 <h2>
 <a name="security" class="anchor" href="#security"><span class="octicon octicon-link"></span></a>Security</h2>
 
-<p>I've had a few questions on Cerebro's security model.  Namely, that there is none.   This is for two reasons: time, and it's not immediately obvious to me that one is required.  Your cloud should, in an ideal world, be completely firewalled off from the outside world.  All of cerebro's management is done via TCP connections on non-standard ports which should be accessible only within your firewalled cloud or VPC.  To manage my machines within this environment I usually poke a hole or two with a reverse SSH port forward, or simply VPN beyond the firewall.  This isn't a perfect scenario, anybody within your cloud can do some bad things, but it seems 'good enough' until somebody cares enough to beef up the internal security model.</p>
+<p>I've had a few questions on Cerebro's security model.  Namely, that there is none.   This is for two reasons: time, and it's not immediately obvious to me that one is required.  Your cloud should, in an ideal world, be completely firewalled off from the outside world.  All of cerebro's management is done via HTTP connections on non-standard ports which should be accessible only within your firewalled cloud or VPC.  To manage my machines within this environment I usually poke a hole or two with a reverse SSH port forward, or simply VPN beyond the firewall.  This isn't a perfect scenario, anybody within your cloud can do some bad things, but it seems 'good enough' until somebody cares to beef up the internal security model.</p>
       </section>
     </div>
 
