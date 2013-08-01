@@ -1,36 +1,35 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-
   <head>
-    <meta charset='utf-8' />
-    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
-    <meta name="description" content="Cerebro : Never wake up at 3AM because an instance went down ever again.  " />
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Cerebro by ZachGoldberg</title>
 
-    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
-
-    <title>Cerebro</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <script src="javascripts/scale.fix.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
   </head>
-
   <body>
+    <div class="wrapper">
+      <header>
+        <h1 class="header">Cerebro</h1>
+        <p class="header">Never wake up at 3AM because an instance went down ever again.  </p>
 
-    <!-- HEADER -->
-    <div id="header_wrap" class="outer">
-        <header class="inner">
-          <a id="forkme_banner" href="https://github.com/ZachGoldberg/Cerebro">View on GitHub</a>
+        <ul>
+          <li class="download"><a class="buttons" href="https://github.com/ZachGoldberg/Cerebro/zipball/master">Download ZIP</a></li>
+          <li class="download"><a class="buttons" href="https://github.com/ZachGoldberg/Cerebro/tarball/master">Download TAR</a></li>
+          <li><a class="buttons github" href="https://github.com/ZachGoldberg/Cerebro">View On GitHub</a></li>
+        </ul>
 
-          <h1 id="project_title">Cerebro</h1>
-          <h2 id="project_tagline">Never wake up at 3AM because an instance went down ever again.  </h2>
+        <p class="header">This project is maintained by <a class="header name" href="https://github.com/ZachGoldberg">ZachGoldberg</a></p>
 
-            <section id="downloads">
-              <a class="zip_download_link" href="https://github.com/ZachGoldberg/Cerebro/zipball/master">Download this project as a .zip file</a>
-              <a class="tar_download_link" href="https://github.com/ZachGoldberg/Cerebro/tarball/master">Download this project as a tar.gz file</a>
-            </section>
-        </header>
-    </div>
 
-    <!-- MAIN CONTENT -->
-    <div id="main_content_wrap" class="outer">
-      <section id="main_content" class="inner">
+      </header>
+      <section>
         <p>(Most everything on this page is a work in progress.  Feel free to send any feedback directly to me, <a href="mailto:zach@zachgoldberg.com">zach@zachgoldberg.com</a> or file bugs on <a href="https://github.com/ZachGoldberg/Cerebro/issues">github</a>).</p>
 
 <h2>
@@ -300,17 +299,12 @@ aws-us-east-1.redis.startup.com (Admin Created)
 
 <p>I've had a few questions on Cerebro's security model.  Namely, that there is none.   This is for two reasons: time, and it's not immediately obvious to me that one is required.  Your cloud should, in an ideal world, be completely firewalled off from the outside world.  All of cerebro's management is done via HTTP connections on non-standard ports which should be accessible only within your firewalled cloud or VPC.  To manage my machines within this environment I usually poke a hole or two with a reverse SSH port forward, or simply VPN beyond the firewall.  This isn't a perfect scenario, anybody within your cloud can do some bad things, but it seems 'good enough' until somebody cares to beef up the internal security model.</p>
       </section>
-    </div>
-
-    <!-- FOOTER  -->
-    <div id="footer_wrap" class="outer">
-      <footer class="inner">
-        <p class="copyright">Cerebro maintained by <a href="https://github.com/ZachGoldberg">ZachGoldberg</a></p>
-        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      <footer>
+        <p><small>Hosted on <a href="https://pages.github.com">GitHub Pages</a> using the Dinky theme</small></p>
       </footer>
     </div>
-
-              <script type="text/javascript">
+    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
+		          <script type="text/javascript">
             var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
             document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
           </script>
@@ -320,7 +314,6 @@ aws-us-east-1.redis.startup.com (Admin Created)
             pageTracker._trackPageview();
             } catch(err) {}
           </script>
-
 
   </body>
 </html>
