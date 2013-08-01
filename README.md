@@ -1,11 +1,32 @@
+(Most everything on this page is a work in progress.  Feel free to send any feedback directly to me, zach@zachgoldberg.com or file bugs on [github](https://github.com/ZachGoldberg/Cerebro/issues)).
+
 ## Overview
 
-Cerebro is a job deployment and monitoring system created for the purpose of automating common system administration tasks, including but not limited to: job deployment, job growth (i.e. adding new nodes to a cluster) and machine maintenance (EC2 instance degradation, for example).   For example, deploy a cluster of 4 MongoDB nodes with a push of a button, and if, 3 weeks later, one of them somehow disappears on a Saturday at 2AM when all your sysadmins are out on the town finishing their last round of drinks before last call, a new instance will automatically be provisioned, Mongo deployed to the machine and booted, all without needing to force anybody to sober up and get to a console.
+Cerebro simplifies and automates some of the most common system administration/ops headaches: building and scaling a cluster of virtual instances in the cloud, and covering common 'problematic scenarios' with the goal of minimizing infrastructure related 3:00 AM headaches.  For example, deploy a cluster of 4 MongoDB nodes with the push of a button, and if, 3 weeks later, one of them somehow disappears on a Saturday at 3:00 AM when all your sysadmins are out on the town finishing their last round of drinks before last call, a new instance will automatically be provisioned, Mongo deployed to the machine and booted, all without needing to force anybody to sober up and get to a terminal.
 
 ## Project Status
-Cerebro has mostly been developed by [me](https://github.com/ZachGoldberg) and with some help and brainstorming from [Ryan Borgeouix](https://github.com/BlueDragonX).  Cerebro is in use in at least one production environment and a number of development/testing environment and "works".  That said, it is sorely lacking in documentation and is probably not yet as easy as it will be to get a fully working stack up.  Patches, forks, bug reports. etc are all more than welcome on the project's [github](https://github.com/ZachGoldberg/Cerebro) page, or you can contact me directly at zach@zachgoldberg.com with any issues you may be having.
+Cerebro has mostly been developed by [me](https://github.com/ZachGoldberg) and with some help and brainstorming from [Ryan Borgeouix](https://github.com/BlueDragonX).  Most of the features described in the overview are at least partially implemented.  It is also in use in at least one production environment and a number of development/testing environment.  That said, it is sorely lacking in documentation and is probably not yet as easy as it will be to get a fully working stack up.  
 
-## Capabilities
+**Our goal right now is to get a few more people using the system and contributing in one way or another.**  Patches, forks, bug reports. etc are all more than welcome on the project's [github](https://github.com/ZachGoldberg/Cerebro) page, or you can contact me directly at zach@zachgoldberg.com with any issues you may be having.
+
+## Comparison to other tools
+
+**(Puppet)[http://puppetlabs.com/] and (Chef)[http://www.opscode.com/chef/]**
+Puppet's (self description)[https://puppetlabs.com/puppet/puppet-enterprise/]_Puppet Enterprise is IT automation software that gives system administrators the power to easily **automate repetitive tasks, quickly deploy critical applications, and proactively manage infrastructure**, on-premises or in the cloud._  
+
+Cerebro's focus is not on automating repetitive tasks.  Cerebro focuses on automating the random problematic tasks that wake you up in the morning.  Processes that have bloated too much, instances that fall over etc.  
+
+The key distinction between Cerebro is that Cerebro focuses a lot on your code as a running entity in the cloud.  That is, where is it, how many instances of it are there, is it alive, is it using too much RAM, etc.  All of the things you usually monitor with Nagios etc.  Chef and puppet tackle problems earlier on in the production lifecycle, namely in the machine setup phase -- ensuring code and configuration is deployed appropriately etc.  Many deployments are very sophisticated and will need more automation in the code deployment phase than Cerebro provides. in which case Puppet and Chef may be better solutions.  There may even be a world in which both tools are used in the same stack -- Cerebro to manage machines and supervise processes and puppet/chef to do deployments though this is not actively supported at present.
+
+
+**Chef**'s (self description)[http://www.opscode.com/chef/#which-chef]: _Chef is an automation platform that transforms infrastructure into code_ (find me a better description... ).  Anyway, that means something along the lines of writing ruby to describe your infrastructure, and then it gives you tools to deploy that infrastructure.  If a machine that you've deployed goes down, an admin will have to get a page (from another system, not Chef, maybe a Nagios or a NewRelic) and spinup a new one manually.
+
+
+**[MCollective](https://puppetlabs.com/mcollective/introduction/)**, **[Capistrano](http://www.capistranorb.com/)**, **[Func](https://fedorahosted.org/func/)** and **[Fabric](http://docs.fabfile.org/en/1.6/)**
+These are self described _remote server automation and deployment tools_.  Effectively, managing servers that are already part of your cluster.  Similar to puppet and chef, the core focus is on an earlier part of the sysadmin/ops lifecycle than Cerebro.  That said, Cerebro does have a remote automation step, during which it would be perfectly appropriate to invoke your fabric/chef/func/mcollective etc. scripts to setup a machine before the Cerebro process supervisor initiates and manages your jobs.
+
+
+## Current Capabilities
 
  * Monitor an individual process on a cloud hosted VM
  * Reboot the process when certain conditions (e.g. using too much RAM) are met/exceeded
@@ -163,10 +184,11 @@ Example Job Configuration Format
 ### Deployment Recipe Interface
 
     def run_deploy(options):
-        # API?
+        # API?  Kickoff your chef recipe?  TODO: More work and structure is needed here.
         logger.*()
 
 ### DNS Setup
+(This is all a bit complex right now, some simplification and optionality is needed)
 
   *  In the job configuration format there is a field called "dns_basename"
   *  This should be set to something like "myjobname.mydomain.com" e.g. "redis.startup.com"
@@ -207,4 +229,4 @@ So, if you point your servers to redis.startup.com they should get either
 The cname returns an A record for each machine of that type.  e.g. redis.startup.com -> aws-us-west-1.redis.startup.com -> 12.67.20.106
 
 ## Security
-I've had a few questions on Cerebro's security model.  Namely, that there is none.   This is for two reasons: time, and it's not immediately obvious to me that one is required.  Your cloud should, in an ideal world, be completely firewalled off from the outside world.  All of cerebro's management is done via TCP connections on non-standard ports which should be accessible only within your firewalled cloud or VPC.  To manage my machines within this environment I usually poke a hole or two with a reverse SSH port forward, or simply VPN beyond the firewall.  This isn't a perfect scenario, anybody within your cloud can do some bad things, but it seems 'good enough' until somebody cares enough to beef up the internal security model.
+I've had a few questions on Cerebro's security model.  Namely, that there is none.   This is for two reasons: time, and it's not immediately obvious to me that one is required.  Your cloud should, in an ideal world, be completely firewalled off from the outside world.  All of cerebro's management is done via HTTP connections on non-standard ports which should be accessible only within your firewalled cloud or VPC.  To manage my machines within this environment I usually poke a hole or two with a reverse SSH port forward, or simply VPN beyond the firewall.  This isn't a perfect scenario, anybody within your cloud can do some bad things, but it seems 'good enough' until somebody cares to beef up the internal security model.
