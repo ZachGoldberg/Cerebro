@@ -1,62 +1,64 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
+
   <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="chrome=1">
-    <title>Cerebro by ZachGoldberg</title>
+    <meta charset='utf-8' />
+    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+    <meta name="description" content="Cerebro : Never wake up at 3:00 AM because an instance went down ever again.  " />
 
-    <link rel="stylesheet" href="stylesheets/styles.css">
-    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
-    <script src="javascripts/scale.fix.js"></script>
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-    <!--[if lt IE 9]>
-    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]-->
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Cerebro</title>
   </head>
+
   <body>
-    <div class="wrapper">
-      <header>
-        <h1 class="header">Cerebro</h1>
-        <p class="header">Never wake up at 3AM because an instance went down ever again.  </p>
 
-        <ul>
-          <li class="download"><a class="buttons" href="https://github.com/ZachGoldberg/Cerebro/zipball/master">Download ZIP</a></li>
-          <li class="download"><a class="buttons" href="https://github.com/ZachGoldberg/Cerebro/tarball/master">Download TAR</a></li>
-          <li><a class="buttons github" href="https://github.com/ZachGoldberg/Cerebro">View On GitHub</a></li>
-        </ul>
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/ZachGoldberg/Cerebro">View on GitHub</a>
 
-        <p class="header">This project is maintained by <a class="header name" href="https://github.com/ZachGoldberg">ZachGoldberg</a></p>
+          <h1 id="project_title">Cerebro</h1>
+          <h2 id="project_tagline">Never wake up at 3:00 AM because an instance went down ever again.  </h2>
 
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/ZachGoldberg/Cerebro/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/ZachGoldberg/Cerebro/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
 
-      </header>
-      <section>
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
         <p>(Most everything on this page is a work in progress.  Feel free to send any feedback directly to me, <a href="mailto:zach@zachgoldberg.com">zach@zachgoldberg.com</a> or file bugs on <a href="https://github.com/ZachGoldberg/Cerebro/issues">github</a>).</p>
 
 <h2>
 <a name="overview" class="anchor" href="#overview"><span class="octicon octicon-link"></span></a>Overview</h2>
 
-<p>Cerebro's goal is to be a job deployment and monitoring system created for the purpose of automating common system administration tasks, including but not limited to: job deployment, job growth (i.e. adding new nodes to a cluster) and machine maintenance (EC2 instance degradation, for example).   For example, deploy a cluster of 4 MongoDB nodes with a push of a button, and if, 3 weeks later, one of them somehow disappears on a Saturday at 2AM when all your sysadmins are out on the town finishing their last round of drinks before last call, a new instance will automatically be provisioned, Mongo deployed to the machine and booted, all without needing to force anybody to sober up and get to a console.</p>
+<p>Cerebro simplifies and automates some of the most common system administration/ops headaches: building and scaling a cluster of virtual instances in the cloud, and covering common 'problematic scenarios' with the goal of minimizing infrastructure related 3:00 AM headaches.  For example, deploy a cluster of 4 MongoDB nodes with the push of a button, and if, 3 weeks later, one of them somehow disappears on a Saturday at 3:00 AM when all your sysadmins are out on the town finishing their last round of drinks before last call, a new instance will automatically be provisioned, Mongo deployed to the machine and booted, all without needing to force anybody to sober up and get to a terminal.</p>
 
 <h2>
 <a name="project-status" class="anchor" href="#project-status"><span class="octicon octicon-link"></span></a>Project Status</h2>
 
-<p>Cerebro has mostly been developed by <a href="https://github.com/ZachGoldberg">me</a> and with some help and brainstorming from <a href="https://github.com/BlueDragonX">Ryan Borgeouix</a>.  Most of the features described in the overview are implemented in some way shape or form.  It is also in use in at least one production environment and a number of development/testing environment.  That said, it is sorely lacking in documentation and is probably not yet as easy as it will be to get a fully working stack up.  </p>
+<p>Cerebro has mostly been developed by <a href="https://github.com/ZachGoldberg">me</a> and with some help and brainstorming from <a href="https://github.com/BlueDragonX">Ryan Borgeouix</a>.  Most of the features described in the overview are at least partially implemented.  It is also in use in at least one production environment and a number of development/testing environment.  That said, it is sorely lacking in documentation and is probably not yet as easy as it will be to get a fully working stack up.  </p>
 
-<p><strong>Our goal right now is to get a few more people using the system and contributing in any way shape form.</strong>  Patches, forks, bug reports. etc are all more than welcome on the project's <a href="https://github.com/ZachGoldberg/Cerebro">github</a> page, or you can contact me directly at <a href="mailto:zach@zachgoldberg.com">zach@zachgoldberg.com</a> with any issues you may be having.</p>
+<p><strong>Our goal right now is to get a few more people using the system and contributing in one way or another.</strong>  Patches, forks, bug reports. etc are all more than welcome on the project's <a href="https://github.com/ZachGoldberg/Cerebro">github</a> page, or you can contact me directly at <a href="mailto:zach@zachgoldberg.com">zach@zachgoldberg.com</a> with any issues you may be having.</p>
 
 <h2>
 <a name="comparison-to-other-tools" class="anchor" href="#comparison-to-other-tools"><span class="octicon octicon-link"></span></a>Comparison to other tools</h2>
 
-<p><strong>Capistrano</strong>
-MCollective, Func, Capistrano and RunDeck paired with Nagios
-<strong>(Puppet)[<a href="http://puppetlabs.com/">http://puppetlabs.com/</a>] and (Chef)[<a href="http://www.opscode.com/chef/">http://www.opscode.com/chef/</a>]</strong>
+<p><strong>(Puppet)[<a href="http://puppetlabs.com/">http://puppetlabs.com/</a>] and (Chef)[<a href="http://www.opscode.com/chef/">http://www.opscode.com/chef/</a>]</strong>
 Puppet's (self description)[<a href="https://puppetlabs.com/puppet/puppet-enterprise/%5D_Puppet">https://puppetlabs.com/puppet/puppet-enterprise/]_Puppet</a> Enterprise is IT automation software that gives system administrators the power to easily <strong>automate repetitive tasks, quickly deploy critical applications, and proactively manage infrastructure</strong>, on-premises or in the cloud._  </p>
 
 <p>Cerebro's focus is not on automating repetitive tasks.  Cerebro focuses on automating the random problematic tasks that wake you up in the morning.  Processes that have bloated too much, instances that fall over etc.  </p>
 
 <p>The key distinction between Cerebro is that Cerebro focuses a lot on your code as a running entity in the cloud.  That is, where is it, how many instances of it are there, is it alive, is it using too much RAM, etc.  All of the things you usually monitor with Nagios etc.  Chef and puppet tackle problems earlier on in the production lifecycle, namely in the machine setup phase -- ensuring code and configuration is deployed appropriately etc.  Many deployments are very sophisticated and will need more automation in the code deployment phase than Cerebro provides. in which case Puppet and Chef may be better solutions.  There may even be a world in which both tools are used in the same stack -- Cerebro to manage machines and supervise processes and puppet/chef to do deployments though this is not actively supported at present.</p>
 
-<p>Chef's (self description)[<a href="http://www.opscode.com/chef/#which-chef">http://www.opscode.com/chef/#which-chef</a>] <em>Chef is an automation platform that transforms infrastructure into code</em> (find me a better description... ).  Anyway, that means something along the lines of writing ruby to describe your infrastructure, and then it gives you tools to deploy that infrastructure.  If a machine that you've deployed goes down, an admin will have to get a page (from another system, not Chef, maybe a Nagios or a NewRelic) and spinup a new one manually.</p>
+<p><strong>Chef</strong>'s (self description)[<a href="http://www.opscode.com/chef/#which-chef%5D:">http://www.opscode.com/chef/#which-chef]:</a> <em>Chef is an automation platform that transforms infrastructure into code</em> (find me a better description... ).  Anyway, that means something along the lines of writing ruby to describe your infrastructure, and then it gives you tools to deploy that infrastructure.  If a machine that you've deployed goes down, an admin will have to get a page (from another system, not Chef, maybe a Nagios or a NewRelic) and spinup a new one manually.</p>
+
+<p><strong><a href="https://puppetlabs.com/mcollective/introduction/">MCollective</a></strong>, <strong><a href="http://www.capistranorb.com/">Capistrano</a></strong>, <strong><a href="https://fedorahosted.org/func/">Func</a></strong> and <strong><a href="http://docs.fabfile.org/en/1.6/">Fabric</a></strong>
+These are self described <em>remote server automation and deployment tools</em>.  Effectively, managing servers that are already part of your cluster.  Similar to puppet and chef, the core focus is on an earlier part of the sysadmin/ops lifecycle than Cerebro.  That said, Cerebro does have a remote automation step, during which it would be perfectly appropriate to invoke your fabric/chef/func/mcollective etc. scripts to setup a machine before the Cerebro process supervisor initiates and manages your jobs.</p>
 
 <h2>
 <a name="current-capabilities" class="anchor" href="#current-capabilities"><span class="octicon octicon-link"></span></a>Current Capabilities</h2>
@@ -299,12 +301,17 @@ aws-us-east-1.redis.startup.com (Admin Created)
 
 <p>I've had a few questions on Cerebro's security model.  Namely, that there is none.   This is for two reasons: time, and it's not immediately obvious to me that one is required.  Your cloud should, in an ideal world, be completely firewalled off from the outside world.  All of cerebro's management is done via HTTP connections on non-standard ports which should be accessible only within your firewalled cloud or VPC.  To manage my machines within this environment I usually poke a hole or two with a reverse SSH port forward, or simply VPN beyond the firewall.  This isn't a perfect scenario, anybody within your cloud can do some bad things, but it seems 'good enough' until somebody cares to beef up the internal security model.</p>
       </section>
-      <footer>
-        <p><small>Hosted on <a href="https://pages.github.com">GitHub Pages</a> using the Dinky theme</small></p>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Cerebro maintained by <a href="https://github.com/ZachGoldberg">ZachGoldberg</a></p>
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
       </footer>
     </div>
-    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
-		          <script type="text/javascript">
+
+              <script type="text/javascript">
             var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
             document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
           </script>
@@ -314,6 +321,7 @@ aws-us-east-1.redis.startup.com (Admin Created)
             pageTracker._trackPageview();
             } catch(err) {}
           </script>
+
 
   </body>
 </html>
